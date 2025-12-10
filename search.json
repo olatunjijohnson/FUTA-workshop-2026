@@ -1,0 +1,114 @@
+[
+  {
+    "objectID": "slides/day3_slides.html#todays-goal",
+    "href": "slides/day3_slides.html#todays-goal",
+    "title": "Day 3 – Hybrid Machine Learning + Geostatistics",
+    "section": "Today’s Goal",
+    "text": "Today’s Goal\nIntegrate:\n\nMachine learning\n\nSpatial geostatistics\n\nHybrid prediction modelling"
+  },
+  {
+    "objectID": "slides/day3_slides.html#load-data",
+    "href": "slides/day3_slides.html#load-data",
+    "title": "Day 3 – Hybrid Machine Learning + Geostatistics",
+    "section": "Load Data",
+    "text": "Load Data\n\nlibrary(readr)\nhybrid_ml_geo &lt;- read_csv(\"../data/hybrid_ml_geostatistical_data.csv\")\nhead(hybrid_ml_geo)\n\n# A tibble: 6 × 11\n     id    utm_x    utm_y n_tested n_pos prevalence_true ml_signal_true\n  &lt;dbl&gt;    &lt;dbl&gt;    &lt;dbl&gt;    &lt;dbl&gt; &lt;dbl&gt;           &lt;dbl&gt;          &lt;dbl&gt;\n1     1  387215. 1485399.       59     0     0.000334            -7.06 \n2     2 1046370.  758144.      180     8     0.0496              -1.66 \n3     3  681525. 1102741.      164    22     0.167               -0.980\n4     4  713355. 1127489.       62     0     0.00476             -4.17 \n5     5  276748. 1384709.       84     0     0.00000423         -11.6  \n6     6 -112576. 1315376.       60     0     0.000000669        -12.5  \n# ℹ 4 more variables: S_residual_true &lt;dbl&gt;, elevation &lt;dbl&gt;, ndvi &lt;dbl&gt;,\n#   urban &lt;dbl&gt;"
+  },
+  {
+    "objectID": "slides/day1_slides.html#welcome-to-day-1",
+    "href": "slides/day1_slides.html#welcome-to-day-1",
+    "title": "Day 1 – Spatial & Spatio-temporal Modelling",
+    "section": "Welcome to Day 1",
+    "text": "Welcome to Day 1\n\nSpatial geostatistical modelling\n\nSpatio-temporal extensions\n\nMalaria data simulated for Nigeria\n\nAll modelling uses UTM coordinates"
+  },
+  {
+    "objectID": "slides/day1_slides.html#load-the-data",
+    "href": "slides/day1_slides.html#load-the-data",
+    "title": "Day 1 – Spatial & Spatio-temporal Modelling",
+    "section": "Load the Data",
+    "text": "Load the Data\n\nlibrary(readr) \nspatial_binom &lt;- read_csv(\"../data/spatial_binomial_data.csv\")\nhead(spatial_binom)\n\n# A tibble: 6 × 10\n     id   utm_x    utm_y n_tested n_pos prevalence_true       S elevation  ndvi\n  &lt;dbl&gt;   &lt;dbl&gt;    &lt;dbl&gt;    &lt;dbl&gt; &lt;dbl&gt;           &lt;dbl&gt;   &lt;dbl&gt;     &lt;dbl&gt; &lt;dbl&gt;\n1     1 385648. 1454675.      182    72           0.351  0.0139    363.   0.934\n2     2  58859. 1077815.       64    30           0.632  0.680     165.   0.827\n3     3 437997.  476112.       67    17           0.287  0.489     359.   0.158\n4     4 380293. 1341662.      188    77           0.419 -0.101       8.90 0.981\n5     5 319034.  570466.       97    22           0.272 -0.244     484.   0.941\n6     6 980518.  974256.       88    48           0.427  0.809     474.   0.173\n# ℹ 1 more variable: urban &lt;dbl&gt;"
+  },
+  {
+    "objectID": "day1_spatial.html#overview",
+    "href": "day1_spatial.html#overview",
+    "title": "Day 1 – Spatial & Spatio-temporal Modelling",
+    "section": "Overview",
+    "text": "Overview\nOn Day 1 we will:\n\nLoad the spatial malaria datasets\nWork with UTM coordinates\nBuild SPDE meshes\nFit spatial and spatio-temporal models with inlabru"
+  },
+  {
+    "objectID": "day1_spatial.html#load-data-once-csvs-are-in-data",
+    "href": "day1_spatial.html#load-data-once-csvs-are-in-data",
+    "title": "Day 1 – Spatial & Spatio-temporal Modelling",
+    "section": "Load data (once CSVs are in data/)",
+    "text": "Load data (once CSVs are in data/)\n\n\nCode\nlibrary(tidyverse)\n\nspatial_binom &lt;- read_csv(\"data/spatial_binomial_data.csv\")\nhead(spatial_binom)\n\n\n# A tibble: 6 × 10\n     id   utm_x    utm_y n_tested n_pos prevalence_true       S elevation  ndvi\n  &lt;dbl&gt;   &lt;dbl&gt;    &lt;dbl&gt;    &lt;dbl&gt; &lt;dbl&gt;           &lt;dbl&gt;   &lt;dbl&gt;     &lt;dbl&gt; &lt;dbl&gt;\n1     1 385648. 1454675.      182    72           0.351  0.0139    363.   0.934\n2     2  58859. 1077815.       64    30           0.632  0.680     165.   0.827\n3     3 437997.  476112.       67    17           0.287  0.489     359.   0.158\n4     4 380293. 1341662.      188    77           0.419 -0.101       8.90 0.981\n5     5 319034.  570466.       97    22           0.272 -0.244     484.   0.941\n6     6 980518.  974256.       88    48           0.427  0.809     474.   0.173\n# ℹ 1 more variable: urban &lt;dbl&gt;"
+  },
+  {
+    "objectID": "day1_spatial.html#quick-plot-of-locations-utm",
+    "href": "day1_spatial.html#quick-plot-of-locations-utm",
+    "title": "Day 1 – Spatial & Spatio-temporal Modelling",
+    "section": "Quick plot of locations (UTM)",
+    "text": "Quick plot of locations (UTM)\n\n\nCode\nggplot(spatial_binom, aes(utm_x, utm_y, colour = n_pos / n_tested)) +\ngeom_point() +\ncoord_equal() +\nscale_colour_viridis_c(name = \"Prevalence\") +\ntheme_minimal()"
+  },
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "Geostatistical Modelling with inlabru",
+    "section": "",
+    "text": "This workshop is funded by the London Mathematical Society (LMS) Scheme 5.\n\nWelcome to the Geostatistical Modelling with inlabru workshop.\nThis 3-day workshop covers:\n\nSpatial and spatio-temporal analysis (different likelihoods)\nJoint modelling of multiple malaria processes\nNon-stationary spatial processes\nHybrid machine learning + geostatistical models"
+  },
+  {
+    "objectID": "day2.html",
+    "href": "day2.html",
+    "title": "Day 2 – Joint modelling and Non-stationary processes",
+    "section": "",
+    "text": "Today we will cover two key advanced topics in spatial modelling:\n\nJoint modelling of multiple malaria processes\n\nShared spatial fields\n\nProcess-specific fields\n\nMultiple outcomes (e.g., children vs pregnant women)\n\nNon-stationary spatial processes\n\nRegion-varying smoothness\n\nCovariate-driven nonstationarity\n\nCombining multiple spatial SPDEs"
+  },
+  {
+    "objectID": "day2.html#overview",
+    "href": "day2.html#overview",
+    "title": "Day 2 – Joint modelling and Non-stationary processes",
+    "section": "",
+    "text": "Today we will cover two key advanced topics in spatial modelling:\n\nJoint modelling of multiple malaria processes\n\nShared spatial fields\n\nProcess-specific fields\n\nMultiple outcomes (e.g., children vs pregnant women)\n\nNon-stationary spatial processes\n\nRegion-varying smoothness\n\nCovariate-driven nonstationarity\n\nCombining multiple spatial SPDEs"
+  },
+  {
+    "objectID": "day2.html#load-day-2-datasets",
+    "href": "day2.html#load-day-2-datasets",
+    "title": "Day 2 – Joint modelling and Non-stationary processes",
+    "section": "Load Day 2 datasets",
+    "text": "Load Day 2 datasets\n\n\nCode\nlibrary(tidyverse)\n\njoint_malaria &lt;- read_csv(\"data/joint_malaria_processes.csv\")\nnonstat_malaria &lt;- read_csv(\"data/nonstationary_malaria_data.csv\")\n\nhead(joint_malaria)\n\n\n# A tibble: 6 × 12\n     id group    utm_x  utm_y n_tested n_pos prevalence_true S_shared S_specific\n  &lt;dbl&gt; &lt;chr&gt;    &lt;dbl&gt;  &lt;dbl&gt;    &lt;dbl&gt; &lt;dbl&gt;           &lt;dbl&gt;    &lt;dbl&gt;      &lt;dbl&gt;\n1     1 childr… 2.71e5 6.47e5      156    68           0.470   0.680     -0.0220\n2     2 childr… 1.03e6 1.07e6      199    57           0.253  -0.0229    -0.324 \n3     3 childr… 1.03e6 1.23e6       83    18           0.216  -0.600     -0.428 \n4     4 childr… 8.62e5 1.11e6      193   137           0.712   0.976     -0.236 \n5     5 childr… 8.08e4 8.40e5       76    45           0.491   0.656     -0.286 \n6     6 childr… 5.42e5 9.87e5      117    61           0.552   1.42      -0.266 \n# ℹ 3 more variables: elevation &lt;dbl&gt;, ndvi &lt;dbl&gt;, urban &lt;dbl&gt;\n\n\nQuick visualisation\n\n\nCode\nlibrary(ggplot2)\n\nggplot(joint_malaria, aes(utm_x, utm_y, colour = group)) +\ngeom_point() +\ncoord_equal() +\ntheme_minimal()\n\n\n\n\n\n\n\n\n\nQuick visualisation (non-stationary dataset)\n\n\nCode\nggplot(nonstat_malaria, aes(utm_x, utm_y, colour = prevalence_true)) +\ngeom_point() +\ncoord_equal() +\nscale_colour_viridis_c() +\ntheme_minimal()"
+  },
+  {
+    "objectID": "day3.html",
+    "href": "day3.html",
+    "title": "Day 3 – Hybrid Machine Learning + Geostatistics",
+    "section": "",
+    "text": "Today we combine:\n\nMachine learning models (e.g., Random Forest, XGBoost)\nSpatial residual modelling via SPDE + inlabru\nHybrid prediction pipelines for malaria prevalence\n\nThe goal:\nUse ML to model complex covariate effects, and INLA/SPDE to model spatial dependence in the residuals."
+  },
+  {
+    "objectID": "day3.html#overview",
+    "href": "day3.html#overview",
+    "title": "Day 3 – Hybrid Machine Learning + Geostatistics",
+    "section": "",
+    "text": "Today we combine:\n\nMachine learning models (e.g., Random Forest, XGBoost)\nSpatial residual modelling via SPDE + inlabru\nHybrid prediction pipelines for malaria prevalence\n\nThe goal:\nUse ML to model complex covariate effects, and INLA/SPDE to model spatial dependence in the residuals."
+  },
+  {
+    "objectID": "day3.html#load-day-3-dataset",
+    "href": "day3.html#load-day-3-dataset",
+    "title": "Day 3 – Hybrid Machine Learning + Geostatistics",
+    "section": "Load Day 3 dataset",
+    "text": "Load Day 3 dataset\n\n\nCode\nlibrary(tidyverse)\n\nhybrid_ml_geo &lt;- read_csv(\"data/hybrid_ml_geostatistical_data.csv\")\n\nhead(hybrid_ml_geo)\n\n\n# A tibble: 6 × 11\n     id    utm_x    utm_y n_tested n_pos prevalence_true ml_signal_true\n  &lt;dbl&gt;    &lt;dbl&gt;    &lt;dbl&gt;    &lt;dbl&gt; &lt;dbl&gt;           &lt;dbl&gt;          &lt;dbl&gt;\n1     1  387215. 1485399.       59     0     0.000334            -7.06 \n2     2 1046370.  758144.      180     8     0.0496              -1.66 \n3     3  681525. 1102741.      164    22     0.167               -0.980\n4     4  713355. 1127489.       62     0     0.00476             -4.17 \n5     5  276748. 1384709.       84     0     0.00000423         -11.6  \n6     6 -112576. 1315376.       60     0     0.000000669        -12.5  \n# ℹ 4 more variables: S_residual_true &lt;dbl&gt;, elevation &lt;dbl&gt;, ndvi &lt;dbl&gt;,\n#   urban &lt;dbl&gt;\n\n\nVisualise ML signal + spatial residuals\n\n\nCode\nlibrary(ggplot2)\n\nggplot(hybrid_ml_geo, aes(utm_x, utm_y, colour = ml_signal_true)) +\ngeom_point() +\ncoord_equal() +\ntheme_minimal()"
+  },
+  {
+    "objectID": "slides/day2_slides.html#todays-focus",
+    "href": "slides/day2_slides.html#todays-focus",
+    "title": "Day 2 – Joint Modelling + Non-stationarity",
+    "section": "Today’s Focus",
+    "text": "Today’s Focus\n\nJoint models\nShared vs group-specific fields\nNon-stationary spatial processes"
+  },
+  {
+    "objectID": "slides/day2_slides.html#load-datasets",
+    "href": "slides/day2_slides.html#load-datasets",
+    "title": "Day 2 – Joint Modelling + Non-stationarity",
+    "section": "Load Datasets",
+    "text": "Load Datasets\n\nlibrary(readr)\n\njoint_malaria &lt;- read_csv(\"../data/joint_malaria_processes.csv\")\nnonstat_malaria &lt;- read_csv(\"../data/nonstationary_malaria_data.csv\")\nhead(joint_malaria)\n\n# A tibble: 6 × 12\n     id group    utm_x  utm_y n_tested n_pos prevalence_true S_shared S_specific\n  &lt;dbl&gt; &lt;chr&gt;    &lt;dbl&gt;  &lt;dbl&gt;    &lt;dbl&gt; &lt;dbl&gt;           &lt;dbl&gt;    &lt;dbl&gt;      &lt;dbl&gt;\n1     1 childr… 2.71e5 6.47e5      156    68           0.470   0.680     -0.0220\n2     2 childr… 1.03e6 1.07e6      199    57           0.253  -0.0229    -0.324 \n3     3 childr… 1.03e6 1.23e6       83    18           0.216  -0.600     -0.428 \n4     4 childr… 8.62e5 1.11e6      193   137           0.712   0.976     -0.236 \n5     5 childr… 8.08e4 8.40e5       76    45           0.491   0.656     -0.286 \n6     6 childr… 5.42e5 9.87e5      117    61           0.552   1.42      -0.266 \n# ℹ 3 more variables: elevation &lt;dbl&gt;, ndvi &lt;dbl&gt;, urban &lt;dbl&gt;"
+  }
+]
