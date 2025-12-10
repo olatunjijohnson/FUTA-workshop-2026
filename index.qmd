@@ -1,0 +1,26 @@
+---
+title: "Geostatistical Modelling with inlabru"
+author: "Olatunji Johnson"
+format: html
+editor: visual
+---
+
+<div style="display: flex; justify-content: center; align-items: center; gap: 0px; margin-top: 20px; margin-bottom: 30px;">
+  <img src="images/uni_logo.png" alt="University Logo" style="height: 120px;">
+  <img src="images/lms_logo.png" alt="LMS Funder Logo" style="height: 120px;">
+  <img src="images/futa_logo.png" alt="FUTA Logo" style="height: 120px;">
+</div>
+
+<div style="text-align: center; font-size: 1.1em; margin-bottom: 25px;">
+  <strong>This workshop is funded by the London Mathematical Society (LMS) Scheme 5.</strong>
+</div>
+
+
+Welcome to the **Geostatistical Modelling with inlabru** workshop.
+
+This 3-day workshop covers:
+
+- Spatial and spatio-temporal analysis (different likelihoods)
+- Joint modelling of multiple malaria processes
+- Non-stationary spatial processes
+- Hybrid machine learning + geostatistical models

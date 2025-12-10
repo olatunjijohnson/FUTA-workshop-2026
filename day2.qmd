@@ -1,0 +1,58 @@
+---
+title: "Day 2 – Joint modelling and Non-stationary processes"
+author: "Olatunji Johnson"
+format: html
+editor: visual
+---
+
+
+## Overview
+
+Today we will cover two key advanced topics in spatial modelling:
+
+1. **Joint modelling** of multiple malaria processes  
+   - Shared spatial fields  
+   - Process-specific fields  
+   - Multiple outcomes (e.g., children vs pregnant women)
+
+2. **Non-stationary spatial processes**  
+   - Region-varying smoothness  
+   - Covariate-driven nonstationarity  
+   - Combining multiple spatial SPDEs
+
+---
+
+## Load Day 2 datasets
+
+```{r}
+library(tidyverse)
+
+joint_malaria <- read_csv("data/joint_malaria_processes.csv")
+nonstat_malaria <- read_csv("data/nonstationary_malaria_data.csv")
+
+head(joint_malaria)
+```
+
+Quick visualisation
+
+```{r}
+library(ggplot2)
+
+ggplot(joint_malaria, aes(utm_x, utm_y, colour = group)) +
+geom_point() +
+coord_equal() +
+theme_minimal()
+```
+
+Quick visualisation (non-stationary dataset)
+
+```{r}
+ggplot(nonstat_malaria, aes(utm_x, utm_y, colour = prevalence_true)) +
+geom_point() +
+coord_equal() +
+scale_colour_viridis_c() +
+theme_minimal()
+```
+
+
+

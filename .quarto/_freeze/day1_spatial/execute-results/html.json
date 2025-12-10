@@ -1,0 +1,17 @@
+{
+  "hash": "0c59d3b19e1cba3f2fce7249cf493ce4",
+  "result": {
+    "engine": "knitr",
+    "markdown": "---\ntitle: \"Day 1 – Spatial & Spatio-temporal Modelling\"\nauthor: \"Olatunji Johnson\"\nformat: html\neditor: visual\n---\n\n\n\n\n## \n\n\n\n\n---\ntitle: \"Day 1 – Spatial & Spatio-temporal Modelling\"\n---\n\n\n\n\n## Overview\n\nOn Day 1 we will:\n\n-   Load the spatial malaria datasets\n-   Work with UTM coordinates\n-   Build SPDE meshes\n-   Fit spatial and spatio-temporal models with **inlabru**\n\n\n## Load data (once CSVs are in data/)\n\n\n\n\n::: {.cell}\n\n```{.r .cell-code}\nlibrary(tidyverse)\n\nspatial_binom <- read_csv(\"data/spatial_binomial_data.csv\")\nhead(spatial_binom)\n```\n\n::: {.cell-output .cell-output-stdout}\n\n```\n# A tibble: 6 × 10\n     id   utm_x    utm_y n_tested n_pos prevalence_true       S elevation  ndvi\n  <dbl>   <dbl>    <dbl>    <dbl> <dbl>           <dbl>   <dbl>     <dbl> <dbl>\n1     1 385648. 1454675.      182    72           0.351  0.0139    363.   0.934\n2     2  58859. 1077815.       64    30           0.632  0.680     165.   0.827\n3     3 437997.  476112.       67    17           0.287  0.489     359.   0.158\n4     4 380293. 1341662.      188    77           0.419 -0.101       8.90 0.981\n5     5 319034.  570466.       97    22           0.272 -0.244     484.   0.941\n6     6 980518.  974256.       88    48           0.427  0.809     474.   0.173\n# ℹ 1 more variable: urban <dbl>\n```\n\n\n:::\n:::\n\n\n\n\n## Quick plot of locations (UTM)\n\n\n\n\n::: {.cell}\n\n```{.r .cell-code}\nggplot(spatial_binom, aes(utm_x, utm_y, colour = n_pos / n_tested)) +\ngeom_point() +\ncoord_equal() +\nscale_colour_viridis_c(name = \"Prevalence\") +\ntheme_minimal()\n```\n\n::: {.cell-output-display}\n![](day1_spatial_files/figure-html/unnamed-chunk-2-1.png){width=672}\n:::\n:::\n",
+    "supporting": [
+      "day1_spatial_files"
+    ],
+    "filters": [
+      "rmarkdown/pagebreak.lua"
+    ],
+    "includes": {},
+    "engineDependencies": {},
+    "preserve": {},
+    "postProcess": true
+  }
+}

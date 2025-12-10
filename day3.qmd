@@ -1,0 +1,40 @@
+---
+title: "Day 3 – Hybrid Machine Learning + Geostatistics"
+author: "Olatunji Johnson"
+format: html
+editor: visual
+---
+
+## Overview
+
+Today we combine:
+
+- **Machine learning models** (e.g., Random Forest, XGBoost)
+- **Spatial residual modelling** via SPDE + inlabru
+- **Hybrid prediction pipelines** for malaria prevalence
+
+The goal:  
+Use ML to model complex covariate effects, and INLA/SPDE to model spatial dependence in the residuals.
+
+---
+
+## Load Day 3 dataset
+
+```{r}
+library(tidyverse)
+
+hybrid_ml_geo <- read_csv("data/hybrid_ml_geostatistical_data.csv")
+
+head(hybrid_ml_geo)
+```
+
+Visualise ML signal + spatial residuals
+
+```{r}
+library(ggplot2)
+
+ggplot(hybrid_ml_geo, aes(utm_x, utm_y, colour = ml_signal_true)) +
+geom_point() +
+coord_equal() +
+theme_minimal()
+```

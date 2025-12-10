@@ -1,0 +1,40 @@
+% uom-beamer.tex — custom styling for University of Manchester
+
+\usepackage{graphicx}
+\usepackage{xcolor}
+
+% --- Define a UoM-style purple (adjust hex if you have the exact brand code) ---
+\definecolor{uomPurple}{HTML}{6A1B9A} % placeholder purple, change if needed
+
+% Use this colour for structural elements (titles, bullets, etc.)
+\setbeamercolor{structure}{fg=uomPurple}
+\setbeamercolor{title}{fg=uomPurple}
+\setbeamercolor{frametitle}{fg=uomPurple}
+
+% Optional: make links purple too
+\hypersetup{
+  colorlinks=true,
+  linkcolor=uomPurple,
+  urlcolor=uomPurple,
+  citecolor=uomPurple
+}
+
+% --- Put the UoM logo on the title slide ---
+\titlegraphic{%
+  \vspace{-0.5cm}
+  \includegraphics[height=1.5cm]{images/uom_logo.png}%
+}
+
+% Optional: simple footer with short title and slide number
+\setbeamertemplate{footline}{%
+  \leavevmode%
+  \hbox{%
+    \begin{beamercolorbox}[wd=.8\paperwidth,ht=2.5ex,dp=1.0ex,left]{author in head/foot}%
+      \hspace{1em}\insertshorttitle
+    \end{beamercolorbox}%
+    \begin{beamercolorbox}[wd=.2\paperwidth,ht=2.5ex,dp=1.0ex,right]{date in head/foot}%
+      \insertframenumber{} / \inserttotalframenumber\hspace{1em}
+    \end{beamercolorbox}%
+  }%
+  \vskip0pt%
+}

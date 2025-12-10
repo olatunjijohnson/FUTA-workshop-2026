@@ -1,0 +1,14 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+.Rprofile
+
+# Quarto output
+*_cache/
+*_files/
+_site/
+
+# renv
+renv/library/
+renv/staging/

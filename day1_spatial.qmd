@@ -1,0 +1,43 @@
+---
+title: "Day 1 – Spatial & Spatio-temporal Modelling"
+author: "Olatunji Johnson"
+format: html
+editor: visual
+---
+
+## 
+
+---
+title: "Day 1 – Spatial & Spatio-temporal Modelling"
+---
+
+## Overview
+
+On Day 1 we will:
+
+-   Load the spatial malaria datasets
+-   Work with UTM coordinates
+-   Build SPDE meshes
+-   Fit spatial and spatio-temporal models with **inlabru**
+
+
+## Load data (once CSVs are in data/)
+
+```{r}
+library(tidyverse)
+
+spatial_binom <- read_csv("data/spatial_binomial_data.csv")
+head(spatial_binom)
+```
+
+## Quick plot of locations (UTM)
+
+```{r}
+ggplot(spatial_binom, aes(utm_x, utm_y, colour = n_pos / n_tested)) +
+geom_point() +
+coord_equal() +
+scale_colour_viridis_c(name = "Prevalence") +
+theme_minimal()
+```
+
+

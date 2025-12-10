@@ -1,0 +1,27 @@
+---
+title: "Day 2 – Joint Modelling + Non-stationarity"
+format:
+  revealjs:
+    theme: solar
+    slide-number: true
+    toc: true
+  # pdf: default
+---
+
+## Today’s Focus
+
+- Joint models
+- Shared vs group-specific fields
+- Non-stationary spatial processes
+
+---
+
+## Load Datasets
+
+```{r}
+library(readr)
+
+joint_malaria <- read_csv("../data/joint_malaria_processes.csv")
+nonstat_malaria <- read_csv("../data/nonstationary_malaria_data.csv")
+head(joint_malaria)
+```

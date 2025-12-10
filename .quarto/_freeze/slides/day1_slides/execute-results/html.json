@@ -1,0 +1,19 @@
+{
+  "hash": "e3244c031ab9beafa10e3c7305bbc37e",
+  "result": {
+    "engine": "knitr",
+    "markdown": "---\ntitle: \"Day 1 – Spatial & Spatio-temporal Modelling\"\nformat:\n  revealjs:\n    theme: simple\n    slide-number: true\n    toc: true\n  beamer:\n    theme: default        # Madrid works nicely; you can change later\n    aspectratio: 169\n    header-includes: |\n      \\usepackage{graphicx}\n      \\usepackage{xcolor}\n\n      % UoM-style purple (change hex if you have exact brand colour)\n      \\definecolor{uomPurple}{HTML}{6A1B9A}\n      \\setbeamercolor{structure}{fg=uomPurple}\n      \\setbeamercolor{title}{fg=uomPurple}\n      \\setbeamercolor{frametitle}{fg=uomPurple}\n\n      % Define the logo (file must be in the same folder as the .qmd/.tex)\n      \\newcommand{\\uomlogo}{\\includegraphics[height=1cm]{uom_logo.pdf}}\n\n      % Force logo into the top-right of every slide\n      \\setbeamertemplate{headline}{%\n        \\leavevmode%\n        \\hbox{%\n          \\begin{beamercolorbox}[wd=\\paperwidth,ht=1.2cm]{}\n            \\hfill\\uomlogo\\hspace{0.5cm}\n          \\end{beamercolorbox}%\n        }%\n      }\n\n      % Optional: add a bit of vertical space so the frametitle\n      % doesn't clash with the custom header\n      % \\addtobeamertemplate{frametitle}{}{%\n      %  \\vspace*{0.3cm}%\n      % }\n---\n\n\n\n\n\n\n## Welcome to Day 1\n\n-   Spatial geostatistical modelling\\\n-   Spatio-temporal extensions\\\n-   Malaria data simulated for Nigeria\\\n-   All modelling uses **UTM coordinates**\n\n------------------------------------------------------------------------\n\n## Load the Data\n\n\n\n\n\n\n::: {.cell}\n\n```{.r .cell-code}\nlibrary(readr) \nspatial_binom <- read_csv(\"../data/spatial_binomial_data.csv\")\nhead(spatial_binom)\n```\n\n::: {.cell-output .cell-output-stdout}\n\n```\n# A tibble: 6 × 10\n     id   utm_x    utm_y n_tested n_pos prevalence_true       S elevation  ndvi\n  <dbl>   <dbl>    <dbl>    <dbl> <dbl>           <dbl>   <dbl>     <dbl> <dbl>\n1     1 385648. 1454675.      182    72           0.351  0.0139    363.   0.934\n2     2  58859. 1077815.       64    30           0.632  0.680     165.   0.827\n3     3 437997.  476112.       67    17           0.287  0.489     359.   0.158\n4     4 380293. 1341662.      188    77           0.419 -0.101       8.90 0.981\n5     5 319034.  570466.       97    22           0.272 -0.244     484.   0.941\n6     6 980518.  974256.       88    48           0.427  0.809     474.   0.173\n# ℹ 1 more variable: urban <dbl>\n```\n\n\n:::\n:::\n",
+    "supporting": [],
+    "filters": [
+      "rmarkdown/pagebreak.lua"
+    ],
+    "includes": {
+      "include-after-body": [
+        "\n<script>\n  // htmlwidgets need to know to resize themselves when slides are shown/hidden.\n  // Fire the \"slideenter\" event (handled by htmlwidgets.js) when the current\n  // slide changes (different for each slide format).\n  (function () {\n    // dispatch for htmlwidgets\n    function fireSlideEnter() {\n      const event = window.document.createEvent(\"Event\");\n      event.initEvent(\"slideenter\", true, true);\n      window.document.dispatchEvent(event);\n    }\n\n    function fireSlideChanged(previousSlide, currentSlide) {\n      fireSlideEnter();\n\n      // dispatch for shiny\n      if (window.jQuery) {\n        if (previousSlide) {\n          window.jQuery(previousSlide).trigger(\"hidden\");\n        }\n        if (currentSlide) {\n          window.jQuery(currentSlide).trigger(\"shown\");\n        }\n      }\n    }\n\n    // hookup for slidy\n    if (window.w3c_slidy) {\n      window.w3c_slidy.add_observer(function (slide_num) {\n        // slide_num starts at position 1\n        fireSlideChanged(null, w3c_slidy.slides[slide_num - 1]);\n      });\n    }\n\n  })();\n</script>\n\n"
+      ]
+    },
+    "engineDependencies": {},
+    "preserve": {},
+    "postProcess": true
+  }
+}

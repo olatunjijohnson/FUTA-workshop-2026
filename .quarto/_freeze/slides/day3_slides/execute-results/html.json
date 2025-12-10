@@ -1,0 +1,19 @@
+{
+  "hash": "b48fef6f7447bb13a51ad7f9f68b9c81",
+  "result": {
+    "engine": "knitr",
+    "markdown": "---\ntitle: \"Day 3 – Hybrid Machine Learning + Geostatistics\"\nformat:\n  revealjs:\n    theme: serif\n    slide-number: true\n    toc: true\n---\n\n\n\n## Today’s Goal\n\nIntegrate:\n\n- Machine learning  \n- Spatial geostatistics  \n- Hybrid prediction modelling  \n\n---\n\n## Load Data\n\n\n\n::: {.cell}\n\n```{.r .cell-code}\nlibrary(readr)\nhybrid_ml_geo <- read_csv(\"../data/hybrid_ml_geostatistical_data.csv\")\nhead(hybrid_ml_geo)\n```\n\n::: {.cell-output .cell-output-stdout}\n\n```\n# A tibble: 6 × 11\n     id    utm_x    utm_y n_tested n_pos prevalence_true ml_signal_true\n  <dbl>    <dbl>    <dbl>    <dbl> <dbl>           <dbl>          <dbl>\n1     1  387215. 1485399.       59     0     0.000334            -7.06 \n2     2 1046370.  758144.      180     8     0.0496              -1.66 \n3     3  681525. 1102741.      164    22     0.167               -0.980\n4     4  713355. 1127489.       62     0     0.00476             -4.17 \n5     5  276748. 1384709.       84     0     0.00000423         -11.6  \n6     6 -112576. 1315376.       60     0     0.000000669        -12.5  \n# ℹ 4 more variables: S_residual_true <dbl>, elevation <dbl>, ndvi <dbl>,\n#   urban <dbl>\n```\n\n\n:::\n:::\n",
+    "supporting": [],
+    "filters": [
+      "rmarkdown/pagebreak.lua"
+    ],
+    "includes": {
+      "include-after-body": [
+        "\n<script>\n  // htmlwidgets need to know to resize themselves when slides are shown/hidden.\n  // Fire the \"slideenter\" event (handled by htmlwidgets.js) when the current\n  // slide changes (different for each slide format).\n  (function () {\n    // dispatch for htmlwidgets\n    function fireSlideEnter() {\n      const event = window.document.createEvent(\"Event\");\n      event.initEvent(\"slideenter\", true, true);\n      window.document.dispatchEvent(event);\n    }\n\n    function fireSlideChanged(previousSlide, currentSlide) {\n      fireSlideEnter();\n\n      // dispatch for shiny\n      if (window.jQuery) {\n        if (previousSlide) {\n          window.jQuery(previousSlide).trigger(\"hidden\");\n        }\n        if (currentSlide) {\n          window.jQuery(currentSlide).trigger(\"shown\");\n        }\n      }\n    }\n\n    // hookup for slidy\n    if (window.w3c_slidy) {\n      window.w3c_slidy.add_observer(function (slide_num) {\n        // slide_num starts at position 1\n        fireSlideChanged(null, w3c_slidy.slides[slide_num - 1]);\n      });\n    }\n\n  })();\n</script>\n\n"
+      ]
+    },
+    "engineDependencies": {},
+    "preserve": {},
+    "postProcess": true
+  }
+}

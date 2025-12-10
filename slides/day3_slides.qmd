@@ -1,0 +1,26 @@
+---
+title: "Day 3 – Hybrid Machine Learning + Geostatistics"
+format:
+  revealjs:
+    theme: serif
+    slide-number: true
+    toc: true
+---
+
+## Today’s Goal
+
+Integrate:
+
+- Machine learning  
+- Spatial geostatistics  
+- Hybrid prediction modelling  
+
+---
+
+## Load Data
+
+```{r}
+library(readr)
+hybrid_ml_geo <- read_csv("../data/hybrid_ml_geostatistical_data.csv")
+head(hybrid_ml_geo)
+```

@@ -1,0 +1,17 @@
+{
+  "hash": "1dc903107db08ae7c707647cab9b3322",
+  "result": {
+    "engine": "knitr",
+    "markdown": "---\ntitle: \"Day 2 – Joint Modelling + Non-stationarity\"\nformat:\n  revealjs:\n    theme: solar\n    slide-number: true\n    toc: true\n  # pdf: default\n---\n\n\n\n\n\n## Today’s Focus\n\n- Joint models\n- Shared vs group-specific fields\n- Non-stationary spatial processes\n\n---\n\n## Load Datasets\n\n\n\n\n\n::: {.cell}\n\n```{.r .cell-code}\nlibrary(readr)\n\njoint_malaria <- read_csv(\"../data/joint_malaria_processes.csv\")\nnonstat_malaria <- read_csv(\"../data/nonstationary_malaria_data.csv\")\nhead(joint_malaria)\n```\n\n::: {.cell-output .cell-output-stdout}\n\n```\n# A tibble: 6 × 12\n     id group    utm_x  utm_y n_tested n_pos prevalence_true S_shared S_specific\n  <dbl> <chr>    <dbl>  <dbl>    <dbl> <dbl>           <dbl>    <dbl>      <dbl>\n1     1 childr… 2.71e5 6.47e5      156    68           0.470   0.680     -0.0220\n2     2 childr… 1.03e6 1.07e6      199    57           0.253  -0.0229    -0.324 \n3     3 childr… 1.03e6 1.23e6       83    18           0.216  -0.600     -0.428 \n4     4 childr… 8.62e5 1.11e6      193   137           0.712   0.976     -0.236 \n5     5 childr… 8.08e4 8.40e5       76    45           0.491   0.656     -0.286 \n6     6 childr… 5.42e5 9.87e5      117    61           0.552   1.42      -0.266 \n# ℹ 3 more variables: elevation <dbl>, ndvi <dbl>, urban <dbl>\n```\n\n\n:::\n:::\n",
+    "supporting": [
+      "day2_slides_files"
+    ],
+    "filters": [
+      "rmarkdown/pagebreak.lua"
+    ],
+    "includes": {},
+    "engineDependencies": {},
+    "preserve": {},
+    "postProcess": true
+  }
+}
