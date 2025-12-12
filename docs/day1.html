@@ -214,7 +214,7 @@ window.Quarto = {
   <li><a href="#predictive-surfaces-binomial-example" id="toc-predictive-surfaces-binomial-example" class="nav-link" data-scroll-target="#predictive-surfaces-binomial-example">8. Predictive surfaces (binomial example)</a></li>
   <li><a href="#exceedance-probability-binomial" id="toc-exceedance-probability-binomial" class="nav-link" data-scroll-target="#exceedance-probability-binomial">9. Exceedance probability (binomial)</a></li>
   <li><a href="#spatio-temporal-components" id="toc-spatio-temporal-components" class="nav-link" data-scroll-target="#spatio-temporal-components">11. Spatio-temporal components</a></li>
-  <li><a href="#predict-spatio-temporal-prevalence-example-year-2020" id="toc-predict-spatio-temporal-prevalence-example-year-2020" class="nav-link" data-scroll-target="#predict-spatio-temporal-prevalence-example-year-2020">12. Predict spatio-temporal prevalence (example: year = 2020)</a></li>
+  <li><a href="#predict-spatio-temporal-prevalence-example-time-7" id="toc-predict-spatio-temporal-prevalence-example-time-7" class="nav-link" data-scroll-target="#predict-spatio-temporal-prevalence-example-time-7">12. Predict spatio-temporal prevalence (example: time = 7)</a></li>
   </ul></li>
   <li><a href="#end-of-day-1" id="toc-end-of-day-1" class="nav-link" data-scroll-target="#end-of-day-1">End of Day 1</a></li>
   </ul>
@@ -542,14 +542,15 @@ Posterior summaries for the linear predictor and the fitted values are computed
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>() <span class="sc">+</span></span>
 <span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_stars</span>(<span class="at">data=</span>pred_binom_r, <span class="at">na.rm =</span> <span class="cn">TRUE</span>) <span class="sc">+</span></span>
-<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_fill_viridis_c</span>(<span class="at">name=</span><span class="st">"Prev"</span>, <span class="at">na.value =</span> <span class="cn">NA</span>) <span class="sc">+</span></span>
-<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_sf</span>(<span class="at">data=</span>nga_admin1, <span class="at">fill=</span><span class="cn">NA</span>) <span class="sc">+</span></span>
-<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
-<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(</span>
-<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">panel.background =</span> <span class="fu">element_rect</span>(<span class="at">fill =</span> <span class="st">"white"</span>, <span class="at">colour =</span> <span class="cn">NA</span>),</span>
-<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">plot.background  =</span> <span class="fu">element_rect</span>(<span class="at">fill =</span> <span class="st">"white"</span>, <span class="at">colour =</span> <span class="cn">NA</span>),</span>
-<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">panel.grid       =</span> <span class="fu">element_blank</span>()</span>
-<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>  )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_sf</span>(<span class="at">data=</span>nga_admin1, <span class="at">fill=</span><span class="cn">NA</span>, <span class="at">color =</span> <span class="st">"black"</span>) <span class="sc">+</span></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">coord_sf</span>() <span class="sc">+</span></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_fill_viridis_c</span>(<span class="at">name =</span> <span class="st">"Predicted</span><span class="sc">\n</span><span class="st">prevalence"</span>, <span class="at">na.value =</span> <span class="cn">NA</span>) <span class="sc">+</span></span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(</span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">panel.background =</span> <span class="fu">element_rect</span>(<span class="at">fill =</span> <span class="st">"white"</span>, <span class="at">colour =</span> <span class="cn">NA</span>),</span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">plot.background  =</span> <span class="fu">element_rect</span>(<span class="at">fill =</span> <span class="st">"white"</span>, <span class="at">colour =</span> <span class="cn">NA</span>),</span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">panel.grid       =</span> <span class="fu">element_blank</span>()</span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>  )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output-display">
 <div>
@@ -727,8 +728,8 @@ Posterior summaries for the linear predictor and the fitted values are computed
 </div>
 </div>
 </section>
-<section id="predict-spatio-temporal-prevalence-example-year-2020" class="level2">
-<h2 class="anchored" data-anchor-id="predict-spatio-temporal-prevalence-example-year-2020">12. Predict spatio-temporal prevalence (example: year = 2020)</h2>
+<section id="predict-spatio-temporal-prevalence-example-time-7" class="level2">
+<h2 class="anchored" data-anchor-id="predict-spatio-temporal-prevalence-example-time-7">12. Predict spatio-temporal prevalence (example: time = 7)</h2>
 <div class="cell">
 <details class="code-fold">
 <summary>Code</summary>

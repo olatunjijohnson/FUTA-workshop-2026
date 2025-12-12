@@ -195,8 +195,9 @@ Plot:
 ```{r}
 ggplot() +
   geom_stars(data=pred_binom_r, na.rm = TRUE) +
-  scale_fill_viridis_c(name="Prev", na.value = NA) +
-  geom_sf(data=nga_admin1, fill=NA) +
+  geom_sf(data=nga_admin1, fill=NA, color = "black") +
+  coord_sf() +
+  scale_fill_viridis_c(name = "Predicted\nprevalence", na.value = NA) +
   theme_minimal() +
   theme(
     panel.background = element_rect(fill = "white", colour = NA),
@@ -307,7 +308,7 @@ fit_st_binom <- bru(components_st, lik_st)
 summary(fit_st_binom)
 ```
 
-## 12. Predict spatio-temporal prevalence (example: year = 2020)
+## 12. Predict spatio-temporal prevalence (example: time = 7)
 
 ```{r}
 pred_grid$time <- 7
