@@ -19,7 +19,7 @@ format:
       \setbeamercolor{frametitle}{fg=uomPurple}
 
       % Define the logo (file must be in the same folder as the .qmd/.tex)
-      \newcommand{\uomlogo}{\includegraphics[height=1cm]{uom_logo.pdf}}
+      \newcommand{\uomlogo}{\includegraphics[height=1cm]{images2/uom_logo.pdf}}
 
       % Force logo into the top-right of every slide
       \setbeamertemplate{headline}{%
@@ -36,7 +36,9 @@ format:
       % \addtobeamertemplate{frametitle}{}{%
       %  \vspace*{0.3cm}%
       % }
+      
 bibliography: references.bib
+
 ---
 
 ## About me
@@ -123,11 +125,11 @@ bibliography: references.bib
 
 ::: columns
 ::: column
-![Cressie 1991](images2/cressie2){fig-align="center"}
+![Cressie 1991](images2/cressie2.png){fig-align="center"}
 :::
 
 ::: column
-![Gelfand 2010](images2/gelfand){fig-align="center"}
+![Gelfand 2010](images2/gelfand.png){fig-align="center"}
 :::
 :::
 
@@ -153,13 +155,13 @@ Gelfand’s book classifies spatial statistics according to **spatial variation*
 
 ## Geostatistical data: River blindness in Cameroon
 
-![Geostatistical data: River blindness in Cameroon](images2/check){fig-align="center"}
+![Geostatistical data: River blindness in Cameroon](images2/check.png){fig-align="center"}
 
 ------------------------------------------------------------------------
 
 ## Lattice Data: COPD emergency admission
 
-![Lattice data: COPD emergency admission](images2/incidence_rate){fig-align="center"}
+![Lattice data: COPD emergency admission](images2/incidence_rate.png){fig-align="center"}
 
 ------------------------------------------------------------------------
 
@@ -167,7 +169,7 @@ Gelfand’s book classifies spatial statistics according to **spatial variation*
 
 ## Point pattern: Primary biliary cirrhosis data
 
-![Point pattern: Primary biliary cirrhosis data](images2/point_map2){fig-align="center"}
+![Point pattern: Primary biliary cirrhosis data](images2/point_map2.png){fig-align="center"}
 
 ------------------------------------------------------------------------
 
@@ -185,10 +187,5 @@ Gelfand’s book classifies spatial statistics according to **spatial variation*
 
 ------------------------------------------------------------------------
 
-## Load the Data
+## References
 
-```{r}
-library(readr) 
-spatial_binom <- read_csv("../data/spatial_binomial_data.csv")
-head(spatial_binom)
-```

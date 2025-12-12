@@ -2,10 +2,7 @@
 title: "Day 1 – Spatial & Spatio-Temporal Modelling"
 author: "Olatunji Johnson"
 freeze: auto
-format:
-  html:
-    toc: true
-    code-fold: true
+format: html
 editor: visual
 ---
 
