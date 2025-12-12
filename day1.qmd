@@ -194,10 +194,15 @@ Plot:
 
 ```{r}
 ggplot() +
-geom_stars(data=pred_binom_r) +
-scale_fill_viridis_c(name="Prev") +
-geom_sf(data=nga_admin1, fill=NA) +
-theme_minimal()
+  geom_stars(data=pred_binom_r, na.rm = TRUE) +
+  scale_fill_viridis_c(name="Prev", na.value = NA) +
+  geom_sf(data=nga_admin1, fill=NA) +
+  theme_minimal() +
+  theme(
+    panel.background = element_rect(fill = "white", colour = NA),
+    plot.background  = element_rect(fill = "white", colour = NA),
+    panel.grid       = element_blank()
+  )
 ```
 
 ## 9. Exceedance probability (binomial)
@@ -224,10 +229,15 @@ exc_r <- st_rasterize(pred_binom["exc_prob"], dx=10000, dy=10000)
 exc_r <- exc_r[st_union(nga_admin1)]
 
 ggplot() +
-geom_stars(data=exc_r) +
-scale_fill_viridis_c(name="P(prev>0.5)", limits=c(0,1)) +
-geom_sf(data=nga_admin1, fill=NA) +
-theme_minimal()
+  geom_stars(data=exc_r, na.rm = TRUE) +
+  scale_fill_viridis_c(name="P(prev>0.5)", limits=c(0,1), na.value = NA) +
+  geom_sf(data=nga_admin1, fill=NA) +
+  theme_minimal() + 
+  theme(
+    panel.background = element_rect(fill = "white", colour = NA),
+    plot.background  = element_rect(fill = "white", colour = NA),
+    panel.grid       = element_blank()
+  )
 ```
 
 ============================================================
@@ -317,10 +327,15 @@ Map for 2020:
 pred_st_r <- st_rasterize(pred_st["mean"], dx=10000, dy=10000)
 
 ggplot() +
-geom_stars(data = pred_st_r) +
-scale_fill_viridis_c(name="Prev time 7") +
-geom_sf(data=nga_admin1, fill=NA) +
-theme_minimal()
+  geom_stars(data = pred_st_r, na.rm = TRUE) +
+  scale_fill_viridis_c(name="Prev time 7", na.value = NA) +
+  geom_sf(data=nga_admin1, fill=NA) +
+  theme_minimal() +
+  theme(
+    panel.background = element_rect(fill = "white", colour = NA),
+    plot.background  = element_rect(fill = "white", colour = NA),
+    panel.grid       = element_blank()
+  )
 ```
 
 # End of Day 1
