@@ -2,10 +2,40 @@
 title: "Day 2 – Joint Modelling + Non-stationarity"
 format:
   revealjs:
-    theme: solar
+    theme: simple
     slide-number: true
     toc: true
-  # pdf: default
+  beamer:
+    theme: default        # Madrid works nicely; you can change later
+    aspectratio: 169
+    header-includes: |
+      \usepackage{graphicx}
+      \usepackage{xcolor}
+
+      % UoM-style purple (change hex if you have exact brand colour)
+      \definecolor{uomPurple}{HTML}{6A1B9A}
+      \setbeamercolor{structure}{fg=uomPurple}
+      \setbeamercolor{title}{fg=uomPurple}
+      \setbeamercolor{frametitle}{fg=uomPurple}
+
+      % Define the logo (file must be in the same folder as the .qmd/.tex)
+      \newcommand{\uomlogo}{\includegraphics[height=1cm]{uom_logo.pdf}}
+
+      % Force logo into the top-right of every slide
+      \setbeamertemplate{headline}{%
+        \leavevmode%
+        \hbox{%
+          \begin{beamercolorbox}[wd=\paperwidth,ht=1.2cm]{}
+            \hfill\uomlogo\hspace{0.5cm}
+          \end{beamercolorbox}%
+        }%
+      }
+
+      % Optional: add a bit of vertical space so the frametitle
+      % doesn't clash with the custom header
+      % \addtobeamertemplate{frametitle}{}{%
+      %  \vspace*{0.3cm}%
+      % }
 ---
 
 ## Today’s Focus

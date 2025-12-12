@@ -6,9 +6,10 @@
 
 # Quarto output
 *_cache/
-*_files/
 _site/
 
 # renv
 renv/library/
 renv/staging/
+
+/.quarto/

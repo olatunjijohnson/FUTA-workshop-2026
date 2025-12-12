@@ -1,5 +1,7 @@
 project:
   type: website
+  output-dir: docs
+
 
 website:
   title: "Geostatistical Modelling with inlabru"
@@ -7,7 +9,7 @@ website:
     left:
       - href: index.qmd
         text: Home
-      - href: day1_spatial.qmd
+      - href: day1.qmd
         text: Day 1
       - href: day2.qmd
         text: Day 2
@@ -29,6 +31,7 @@ format:
     code-fold: true
 
 execute:
+  cache: true
   echo: true
   warning: false
   message: false

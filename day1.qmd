@@ -1,0 +1,337 @@
+---
+title: "Day 1 – Spatial & Spatio-Temporal Modelling"
+author: "Olatunji Johnson"
+freeze: auto
+format:
+  html:
+    toc: true
+    code-fold: true
+editor: visual
+---
+
+# Overview
+
+Today we introduce modern geostatistical modelling using inlabru, covering:
+
+1.  Spatial models
+
+    -   Binomial likelihood (prevalence)
+    -   Poisson likelihood (case counts)
+    -   SPDE spatial random fields
+    -   Prediction surfaces
+    -   Exceedance probabilities
+
+2.  Spatio-temporal models
+
+    -   Handling time-indexed disease data
+    -   RW1/RW2 temporal structure
+    -   Spatio-temporal Gaussian fields
+    -   Predicting in time and space
+
+These form the foundation for Days 2 and 3.
+
+============================================================
+
+**PART A — Spatial models**
+
+============================================================
+
+## 1. Load data
+
+These data were generated during preprocessing and saved to data/
+
+```{r}
+library(tidyverse)
+library(INLA)
+library(inlabru)
+library(ggplot2)
+library(sf)
+library(stars)
+library(rnaturalearth)
+library(rnaturalearthdata)
+
+nga_admin1 <- ne_states("Nigeria", returnclass = "sf") %>%
+st_transform(32632)
+
+spatial_binom <- read_csv("data/spatial_binomial_data.csv")
+spatial_pois  <- read_csv("data/spatial_poisson_data.csv")
+```
+
+## 2. Convert to sf for mapping
+
+We need an `sf` layer to overlay boundaries, plot points, and feed coordinates into SPDE meshes.
+
+```{r}
+spatial_binom_sf <- spatial_binom %>%
+  st_as_sf(coords = c("utm_x", "utm_y"), crs = 32632)
+spatial_pois_sf <- spatial_pois %>%
+  st_as_sf(coords = c("utm_x", "utm_y"), crs = 32632)
+```
+
+## 3. Visualise sampling locations
+
+This helps confirm:
+
+-   UTM conversion is correct
+-   Points sit inside Nigeria
+-   Prevalence has spatial structure
+
+```{r}
+ggplot() +
+geom_sf(data = spatial_binom_sf, aes(colour = prevalence_true)) +
+geom_sf(data = nga_admin1, fill = NA) +
+scale_colour_viridis_c(name="Prevalence") +
+theme_minimal()
+```
+
+## 4. Build the SPDE mesh
+
+The mesh defines the geometry on which the latent spatial field is approximated.
+
+```{r}
+coords <- st_coordinates(spatial_binom_sf)
+
+mesh <- inla.mesh.2d(
+loc = coords,
+max.edge = c(100000, 200000), # inner and outer triangle sizes
+cutoff = 20000,  # merge points closer than 20km
+offset = c(50000, 200000)  # extend mesh beyond convex hull
+)
+
+plot(mesh)
+points(coords, col="red", pch=16)
+```
+
+A finer mesh → more accurate, more expensive.\
+A coarser mesh → faster, less precise.\
+We balance cost vs smoothness.
+
+## 5. SPDE model (PC priors)
+
+Penalised complexity (PC) priors make spatial models robust and interpretable.
+
+```{r}
+spde <- inla.spde2.pcmatern(
+mesh = mesh,
+prior.range = c(300000, 0.5),
+prior.sigma = c(1.0, 0.01)
+)
+```
+
+## 6. Spatial BINOMIAL model
+
+The model is:
+
+$$logit(pi​)=\beta_0​+\beta_1​ elevation_i​+ \beta_2​ndvi_i​+ \beta_3 ​urban_i​+ S(s_i​)$$
+
+Where $S(\mathbf{s})$ is a spatial Gaussian field.
+
+```{r}
+components_binom <- ~
+Intercept(1, model="linear") +
+beta_elev(elevation, model="linear") +
+beta_ndvi(ndvi, model="linear") +
+beta_urban(urban, model="linear") +
+field(geometry, model = spde)
+
+lik_binom <- like(
+family="binomial",
+data=spatial_binom_sf,
+formula = n_pos ~ Intercept + beta_elev + beta_ndvi + beta_urban + field,
+Ntrials = n_tested
+)
+
+#| cache: true
+fit_binom <- bru(components_binom, lik_binom)
+summary(fit_binom)
+```
+
+## 7. Spatial POISSON model
+
+Often used for malaria case counts or incidence.
+
+Model: $$\log(\lambda_i)= \beta_0 + \beta_1 X_i + S(s_i)$$
+
+```{r}
+components_pois <- ~
+Intercept(1, model="linear") +
+beta_elev(elevation, model="linear") +
+beta_ndvi(ndvi, model="linear") +
+beta_urban(urban, model="linear") +
+field(geometry, model = spde)
+
+lik_pois <- like(
+family="poisson",
+data=spatial_pois_sf,
+formula = cases ~ Intercept + beta_elev + beta_ndvi + beta_urban + field
+)
+
+#| cache: true
+fit_pois <- bru(components_pois, lik_pois)
+summary(fit_pois)
+
+```
+
+## 8. Predictive surfaces (binomial example)
+
+```{r}
+pred_grid <- read_csv("data/prediction_grid_utm.csv") %>%
+st_as_sf(coords=c("utm_x","utm_y"), crs=32632)
+
+pred_binom <- predict(
+fit_binom,
+newdata = pred_grid,
+formula = ~ plogis(Intercept + beta_elev + beta_ndvi + beta_urban + field),
+n.samples = 1000
+)
+```
+
+Rasterise:
+
+```{r}
+pred_binom_r <- st_rasterize(pred_binom["mean"], dx=10000, dy=10000)
+pred_binom_r <- pred_binom_r[st_union(nga_admin1)]
+```
+
+Plot:
+
+```{r}
+ggplot() +
+geom_stars(data=pred_binom_r) +
+scale_fill_viridis_c(name="Prev") +
+geom_sf(data=nga_admin1, fill=NA) +
+theme_minimal()
+```
+
+## 9. Exceedance probability (binomial)
+
+Goal:
+
+$$P(prevalence>0.5∣data)$$
+
+```{r}
+exc_samples <- generate(
+fit_binom,
+newdata = pred_grid,
+formula = ~ plogis(Intercept + beta_elev + beta_ndvi + beta_urban + field),
+n.samples = 1000
+)
+
+pred_binom$exc_prob <- rowMeans(exc_samples > 0.5)
+```
+
+Map:
+
+```{r}
+exc_r <- st_rasterize(pred_binom["exc_prob"], dx=10000, dy=10000)
+exc_r <- exc_r[st_union(nga_admin1)]
+
+ggplot() +
+geom_stars(data=exc_r) +
+scale_fill_viridis_c(name="P(prev>0.5)", limits=c(0,1)) +
+geom_sf(data=nga_admin1, fill=NA) +
+theme_minimal()
+```
+
+============================================================
+
+**PART B — Spatio-Temporal Modelling** ============================================================
+
+We now extend:
+
+$$S(s)⟶S(s,t)$$
+
+A common structure:
+
+1.  Spatial effect: SPDE
+
+2.  Temporal effect: random walk (RW1 or RW2)
+
+3.  Interaction: separable $S(s,t)=S_s(s)+S_t(t)$
+
+```{r}
+st_binom <- read_csv("data/spatiotemporal_binomial_data.csv") %>%
+  st_as_sf(coords=c("utm_x","utm_y"), crs=32632)
+
+head(st_binom)
+```
+
+Should contain:
+
+-   time
+
+-   n_tested, n_pos
+
+-   covariates
+
+-   UTM coordinates
+
+## 11. Spatio-temporal components
+
+Use: - RW1 for time - SPDE for space - Additive interaction
+
+```{r}
+components_st <- ~
+Intercept(1, model="linear") +
+beta_elev(elevation, model="linear") +
+beta_ndvi(ndvi, model="linear") +
+beta_urban(urban, model="linear") +
+time(time, model="rw1") +
+field(geometry, model = spde)
+```
+
+Likelihood:
+
+```{r}
+lik_st <- like(
+family="binomial",
+data = st_binom,
+formula = n_pos ~ Intercept + beta_elev + beta_ndvi + beta_urban +
+time + field,
+Ntrials = n_tested
+)
+```
+
+Fit:
+
+```{r}
+#| cache: true
+fit_st_binom <- bru(components_st, lik_st)
+summary(fit_st_binom)
+```
+
+## 12. Predict spatio-temporal prevalence (example: year = 2020)
+
+```{r}
+pred_grid$time <- 7
+
+pred_st <- predict(
+fit_st_binom,
+newdata = pred_grid,
+formula = ~ plogis(Intercept + beta_elev + beta_ndvi + beta_urban +
+time + field),
+n.samples = 500
+)
+```
+
+Map for 2020:
+
+```{r}
+pred_st_r <- st_rasterize(pred_st["mean"], dx=10000, dy=10000)
+
+ggplot() +
+geom_stars(data = pred_st_r) +
+scale_fill_viridis_c(name="Prev time 7") +
+geom_sf(data=nga_admin1, fill=NA) +
+theme_minimal()
+```
+
+# End of Day 1
+
+By the end of today participants can:
+
+-   Fit spatial binomial and Poisson models
+-   Build meshes and PC priors
+-   Predict over a grid
+-   Generate exceedance probability maps
+-   Fit basic spatio-temporal models using SPDE + RW1

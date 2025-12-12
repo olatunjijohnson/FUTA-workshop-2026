@@ -20,6 +20,22 @@ library(inlabru)
 
 set.seed(1234)
 
+
+library(sf)
+library(rnaturalearth)
+library(rnaturalearthdata)
+
+# Nigeria admin-1
+nga_admin1 <- ne_states(country = "Nigeria", returnclass = "sf")
+
+# Country polygon (dissolved)
+nga_poly <- st_union(nga_admin1)
+
+# Work in UTM 32N (same as the rest of your code)
+nga_poly_utm   <- st_transform(nga_poly, 32632)
+nga_admin1_utm <- st_transform(nga_admin1, 32632)
+
+
 ## ==========================================================
 ## 0. Common helpers
 ## ==========================================================
@@ -31,24 +47,23 @@ sample_nigeria_coords <- function(n) {
   cbind(lon = lon, lat = lat)
 }
 
-sample_nigeria_utm_only <- function(n) {
+sample_nigeria_utm_only <- function(n, polygon_utm = nga_poly_utm) {
+  pts <- st_sample(polygon_utm, size = n, type = "random") |>
+    st_as_sf()
 
-  lon <- runif(n, min = 3, max = 14)
-  lat <- runif(n, min = 4, max = 14)
-
-  pts <- st_as_sf(data.frame(lon, lat), coords = c("lon", "lat"), crs = 4326)
-  pts_utm <- st_transform(pts, 32632)
-
-  st_coordinates(pts_utm) |>
-    as.data.frame() |>
-    setNames(c("utm_x", "utm_y"))
+  coords <- st_coordinates(pts)
+  data.frame(
+    utm_x = coords[, 1],
+    utm_y = coords[, 2]
+  )
 }
 
 
 
 
+
 ## Exponential covariance function (isotropic)
-exp_covariance <- function(coords, range = 300000, sigma2 = 1) {
+exp_covariance <- function(coords, range = 700000, sigma2 = 0.5) {
   D <- as.matrix(dist(coords))
   sigma2 * exp(-D / range)
 }
@@ -72,12 +87,23 @@ simulate_AR1 <- function(T, rho = 0.8, sigma2 = 0.5) {
 
 ## Some synthetic environmental covariates
 simulate_covariates <- function(coords) {
+  # coords is a data.frame with utm_x, utm_y
+  x <- scale(coords[, "utm_x"])
+  y <- scale(coords[, "utm_y"])
+  n <- nrow(coords)
+
+  elevation <- 300 + 60 * sin(pi * y) + rnorm(n, sd = 20)   # gentle N–S gradient
+  ndvi      <- plogis(-0.5 + 0.8 * y + 0.4 * sin(pi * x))  # smoother north–south pattern
+  urban_p   <- plogis(-0.4 + 0.5 * x)                      # more urban east, say
+  urban     <- rbinom(n, 1, urban_p)
+
   data.frame(
-    elevation = runif(nrow(coords), 0, 500),        # metres
-    ndvi      = runif(nrow(coords), 0, 1),          # greenness
-    urban     = rbinom(nrow(coords), 1, 0.3)        # 30% urban
+    elevation = elevation,
+    ndvi      = ndvi,
+    urban     = urban
   )
 }
+
 
 ## ==========================================================
 ## 1. Spatial & spatio-temporal malaria data (different outcomes)
@@ -89,7 +115,7 @@ simulate_spatial_binomial <- function(n_sites = 250) {
   covs   <- simulate_covariates(coords)
 
   ## Latent spatial field
-  S <- simulate_spatial_field(coords, range = 400000, sigma2 = 0.7)
+  S <- simulate_spatial_field(coords, range = 400000, sigma2 = 2.7)
 
   ## Linear predictor (logit-prevalence)
   beta0 <- -1.2   # baseline prevalence ~ 23%
@@ -393,37 +419,29 @@ hybrid_ml_geo <- simulate_hybrid_ml_geo()
 
 
 ###################### Predictions #######################
-# Generic covariate simulator: coords can be lon/lat or UTM
-simulate_covariates <- function(coords) {
-  n <- nrow(coords)
-  data.frame(
-    elevation = runif(n, 0, 500),        # metres
-    ndvi      = runif(n, 0, 1),          # greenness
-    urban     = rbinom(n, 1, 0.3)        # 30% urban
-  )
-}
 
 
-
-# Create a prediction grid over Nigeria and return UTM + covariates
-# nx, ny = grid resolution in lon/lat (higher = finer grid)
-make_prediction_grid_utm <- function(nx = 100, ny = 100,
-                                     lon_min = 3, lon_max = 14,
-                                     lat_min = 4, lat_max = 14,
+make_prediction_grid_utm <- function(nx = 200, ny = 200,
+                                     polygon_ll  = st_transform(nga_poly_utm, 4326),
                                      crs_utm = 32632) {
-  # Step 1: regular grid in lon/lat
-  lon_seq <- seq(lon_min, lon_max, length.out = nx)
-  lat_seq <- seq(lat_min, lat_max, length.out = ny)
+
+  # 1. Bounding box from polygon (in lon/lat)
+  bb   <- st_bbox(polygon_ll)
+  lon_seq <- seq(bb["xmin"], bb["xmax"], length.out = nx)
+  lat_seq <- seq(bb["ymin"], bb["ymax"], length.out = ny)
+
   grid_ll <- expand.grid(lon = lon_seq, lat = lat_seq)
-
-  # Step 2: convert to sf and transform to UTM
   pts_ll  <- st_as_sf(grid_ll, coords = c("lon", "lat"), crs = 4326)
-  pts_utm <- st_transform(pts_ll, crs_utm)
 
-  # Step 3: extract UTM coordinates
+  # 2. Keep only points inside Nigeria
+  inside  <- st_within(pts_ll, polygon_ll, sparse = FALSE)[, 1]
+  pts_ll  <- pts_ll[inside, ]
+  grid_ll <- grid_ll[inside, ]
+
+  # 3. Transform to UTM
+  pts_utm <- st_transform(pts_ll, crs_utm)
   utm_coords <- st_coordinates(pts_utm)
 
-  # Step 4: build data.frame with both coord systems
   df <- data.frame(
     lon   = grid_ll$lon,
     lat   = grid_ll$lat,
@@ -431,14 +449,15 @@ make_prediction_grid_utm <- function(nx = 100, ny = 100,
     utm_y = utm_coords[, 2]
   )
 
-  # Step 5: simulate covariates on the grid (using UTM coords)
+  # 4. Smooth covariates
   covs <- simulate_covariates(df[, c("utm_x", "utm_y")])
 
-  bind_cols(df, covs)
+  dplyr::bind_cols(df, covs)
 }
 
-# Example: build a prediction grid
-pred_grid <- make_prediction_grid_utm(nx = 80, ny = 80)
+pred_grid <- make_prediction_grid_utm(nx = 200, ny = 200)
+
+
 
 head(pred_grid)
 
@@ -447,7 +466,7 @@ head(pred_grid)
 # -----------------------------------------------------------
 # Create an output folder for the workshop data
 # -----------------------------------------------------------
-out_dir <- "../../data/malaria_sim_data"
+out_dir <- "data"
 if (!dir.exists(out_dir)) dir.create(out_dir)
 
 # -----------------------------------------------------------

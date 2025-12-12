@@ -12,13 +12,18 @@
     "day3.html": "fa95ce5d"
   },
   "slides/day3_slides.qmd": {
-    "day3_slides.html": "8ca7dc7c"
+    "day3_slides.html": "8ca7dc7c",
+    "day3_slides.tex": "aadf446d"
   },
   "slides/day1_slides.qmd": {
     "day1_slides.html": "597f8da8",
     "day1_slides.tex": "1bc089f0"
   },
   "slides/day2_slides.qmd": {
-    "day2_slides.html": "6a9eb5d1"
+    "day2_slides.html": "6a9eb5d1",
+    "day2_slides.tex": "360128b4"
+  },
+  "day1.qmd": {
+    "day1.html": "b450d716"
   }
 }
