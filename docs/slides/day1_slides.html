@@ -1,8 +1,13 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="generator" content="quarto-1.6.42" />
+<html lang="en"><head>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-html/tabby.min.js"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/light-border.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-2f5df379a58b258e96c21c0638c20c03.css" rel="stylesheet" id="quarto-text-highlighting-styles"><meta charset="utf-8">
+  <meta name="generator" content="quarto-1.6.42">
 
   <meta name="author" content="Olatunji Johnson">
   <title>Geostatistical Modelling with inlabru – Day 1 – Spatial &amp; Spatio-temporal Modelling</title>
@@ -137,11 +142,11 @@
     }
   </style>
 </head>
-<body>
+<body class="quarto-light">
   <div class="reveal">
     <div class="slides">
 
-<section id="title-slide" class="quarto-title-block">
+<section id="title-slide" class="quarto-title-block center">
   <h1 class="title">Day 1 – Spatial &amp; Spatio-temporal Modelling</h1>
 
 <div class="quarto-title-authors">
@@ -154,7 +159,7 @@ Olatunji Johnson
 
 </section>
 <section>
-<section id="introduction" class="title-slide slide level1">
+<section id="introduction" class="title-slide slide level1 center">
 <h1>Introduction</h1>
 
 </section>
@@ -211,7 +216,7 @@ Olatunji Johnson
 <section id="why-spatial-statistics" class="slide level2 smaller">
 <h2>Why Spatial Statistics?</h2>
 <ul>
-<li><p><strong>Spatial Dependence:</strong><br />
+<li><p><strong>Spatial Dependence:</strong><br>
 Observations collected at nearby locations are often more similar than those farther apart.</p></li>
 <li><p><strong>Ignoring Spatial Structure:</strong></p>
 <ul>
@@ -221,18 +226,18 @@ Observations collected at nearby locations are often more similar than those far
 </ul></li>
 <li><p><strong>Applications:</strong></p>
 <ul>
-<li>Disease mapping<br />
+<li>Disease mapping<br>
 </li>
-<li>Environmental monitoring<br />
+<li>Environmental monitoring<br>
 </li>
 <li>Agricultural field trials</li>
 </ul></li>
-<li><p><strong>Goal:</strong><br />
+<li><p><strong>Goal:</strong><br>
 Account for spatial correlation to improve prediction and inference.</p></li>
 </ul>
 </section></section>
 <section>
-<section id="spatial-analysis" class="title-slide slide level1">
+<section id="spatial-analysis" class="title-slide slide level1 center">
 <h1>Spatial Analysis</h1>
 
 </section>
@@ -242,73 +247,57 @@ Account for spatial correlation to improve prediction and inference.</p></li>
 <div class="column">
 <div class="quarto-figure quarto-figure-center">
 <figure>
-<p><img data-src="images2/cressie2.png" /></p>
+<p><img data-src="images2/cressie2.png"></p>
 <figcaption>Cressie 1991</figcaption>
 </figure>
 </div>
 </div><div class="column">
 <div class="quarto-figure quarto-figure-center">
 <figure>
-<p><img data-src="images2/gelfand.png" /></p>
+<p><img data-src="images2/gelfand.png"></p>
 <figcaption>Gelfand 2010</figcaption>
 </figure>
 </div>
-</div>
-</div>
+</div></div>
 </section>
 <section id="classification-of-spatial-statistics" class="slide level2 smaller">
 <h2>Classification of spatial statistics</h2>
 <p>Cressie’s book classifies spatial statistics according to <strong>data format</strong>:</p>
 <ol type="1">
-<li>Geostatistical data<br />
+<li>Geostatistical data<br>
 </li>
-<li>Lattice data<br />
+<li>Lattice data<br>
 </li>
 <li>Point patterns</li>
 </ol>
 <p>Gelfand’s book classifies spatial statistics according to <strong>spatial variation</strong>:</p>
 <ol type="1">
-<li>Discrete spatial variation: Gaussian Markov Random Field (GMRF)<br />
+<li>Discrete spatial variation: Gaussian Markov Random Field (GMRF)<br>
 </li>
 <li>Continuous spatial variation: Gaussian Random Field (GMRF)</li>
 </ol>
 </section>
 <section id="geostatistical-data-river-blindness-in-cameroon" class="slide level2">
 <h2>Geostatistical data: River blindness in Cameroon</h2>
-<div class="quarto-figure quarto-figure-center">
-<figure>
-<p><img data-src="images2/check.png" /></p>
-<figcaption>Geostatistical data: River blindness in Cameroon</figcaption>
-</figure>
-</div>
-</section>
+
+<img data-src="images2/check.png" class="r-stretch quarto-figure-center"><p class="caption">Geostatistical data: River blindness in Cameroon</p></section>
 <section id="lattice-data-copd-emergency-admission" class="slide level2">
 <h2>Lattice Data: COPD emergency admission</h2>
-<div class="quarto-figure quarto-figure-center">
-<figure>
-<p><img data-src="images2/incidence_rate.png" /></p>
-<figcaption>Lattice data: COPD emergency admission</figcaption>
-</figure>
-</div>
-</section>
+
+<img data-src="images2/incidence_rate.png" class="r-stretch quarto-figure-center"><p class="caption">Lattice data: COPD emergency admission</p></section>
 <section id="point-pattern-primary-biliary-cirrhosis-data" class="slide level2">
 <h2>Point pattern: Primary biliary cirrhosis data</h2>
-<div class="quarto-figure quarto-figure-center">
-<figure>
-<p><img data-src="images2/point_map2.png" /></p>
-<figcaption>Point pattern: Primary biliary cirrhosis data</figcaption>
-</figure>
-</div>
-</section></section>
+
+<img data-src="images2/point_map2.png" class="r-stretch quarto-figure-center"><p class="caption">Point pattern: Primary biliary cirrhosis data</p></section></section>
 <section>
-<section id="model-based-geostatistics" class="title-slide slide level1">
+<section id="model-based-geostatistics" class="title-slide slide level1 center">
 <h1>Model-based Geostatistics</h1>
 
 </section>
 <section id="modelling-geostatistical-data-model-based-geostatistics" class="slide level2">
 <h2>Modelling Geostatistical Data – Model-based Geostatistics</h2>
 <ul>
-<li>The term <strong>Model-based Geostatistics (MBG)</strong> was coined by Peter Diggle in 1998 <span class="citation" data-cites="diggle1998model diggle2019model">(<a href="#/ref-diggle1998model" role="doc-biblioref">Diggle, Tawn, and Moyeed 1998</a>; <a href="#/ref-diggle2019model" role="doc-biblioref">Diggle and Giorgi 2019</a>)</span>.</li>
+<li>The term <strong>Model-based Geostatistics (MBG)</strong> was coined by Peter Diggle in 1998 <span class="citation" data-cites="diggle1998model diggle2019model">(<a href="#/references" role="doc-biblioref" onclick="">Diggle, Tawn, and Moyeed 1998</a>; <a href="#/references" role="doc-biblioref" onclick="">Diggle and Giorgi 2019</a>)</span>.</li>
 <li>MBG applies general principles of statistical modelling and inference to the analysis of geostatistical data.</li>
 <li>It emphasises the use of likelihood-based inference.</li>
 <li><strong><span style="color:red;">and the use of latent spatial process (Gaussian or stochastic process)</span></strong></li>
@@ -372,21 +361,21 @@ K_\kappa\!\left(\frac{u}{\phi}\right),
 \left(\frac{u}{\phi}\right)^\kappa
 K_\kappa\!\left(\frac{u}{\phi}\right),
 \]</span></p>
-<p><img data-src="images2/correlationfuncplot1.png" style="width:50.0%" /></p>
-<p><strong><span style="color:blue;">Exponential correlation function:</span></strong> <span class="math inline">\(\rho(u; \phi, 0.5) = \exp\{-u/\phi\}\)</span></p>
+
+<img data-src="images2/correlationfuncplot1.png" style="width:50.0%" class="r-stretch"><p><strong><span style="color:blue;">Exponential correlation function:</span></strong> <span class="math inline">\(\rho(u; \phi, 0.5) = \exp\{-u/\phi\}\)</span></p>
 </section>
 <section id="the-scale-of-the-spatial-correlation-phi" class="slide level2">
 <h2>The scale of the spatial correlation – <span class="math inline">\(\phi\)</span></h2>
-<p><img data-src="images2/spatial_cor.png" style="width:50.0%" /></p>
-</section>
+
+<img data-src="images2/spatial_cor.png" style="width:50.0%" class="r-stretch"></section>
 <section id="do-we-need-the-process-sx" class="slide level2">
 <h2>Do we need the process <span class="math inline">\(S(x)\)</span>?</h2>
 <ul>
-<li><p>Regression residuals<br />
+<li><p>Regression residuals<br>
 <span class="math display">\[
 \hat{r}_i = Y_i - \hat{Y}_i
 \]</span> from a GLM</p></li>
-<li><p>Each <span class="math inline">\(\hat{r}_i\)</span> estimates<br />
+<li><p>Each <span class="math inline">\(\hat{r}_i\)</span> estimates<br>
 <span class="math display">\[
 S(x_i) + Z_i
 \]</span></p></li>
@@ -400,55 +389,53 @@ S(x_i) + Z_i
 <li><p><strong>Empirical variogram</strong> <span class="math display">\[
 \hat{V}(u) = \frac{1}{2|N(u)|}\sum_{(i,j)\in N(u)}(\hat{r}_i-\hat{r}_j)^2
 \]</span></p></li>
-<li><p>where<br />
+<li><p>where<br>
 <span class="math display">\[
 N(u)=\{(i,j): \lVert x_i-x_j\rVert=u\}
 \]</span></p></li>
 </ul>
 </div><div class="column">
 <div class="text-end">
-<p><img data-src="images2/lead1997_vario.png" style="width:50.0%" /></p>
+<p><img data-src="images2/lead1997_vario.png" style="width:50.0%"></p>
 </div>
-</div>
-</div>
+</div></div>
 </section>
 <section id="confirming-existence-of-spatial-correlation" class="slide level2 smaller">
 <h2>Confirming existence of spatial correlation</h2>
 <div class="columns">
 <div class="column">
 <ol type="1">
-<li>Randomly permute the (_i) while holding the locations (x) fixed<br />
+<li>Randomly permute the <span class="math inline">\(\hat{r}_i\)</span> while holding the locations <span class="math inline">\(x\)</span> fixed<br>
 </li>
-<li>Compute the empirical variogram using the permuted (_i)<br />
+<li>Compute the empirical variogram using the permuted <span class="math inline">\(\hat{r}_i\)</span><br>
 </li>
-<li>Repeat steps 1–2 (B) times<br />
+<li>Repeat steps 1–2 <span class="math inline">\(B\)</span> times<br>
 </li>
-<li>Use the resulting (B) variograms to compute <strong>pointwise 95% tolerance bands</strong> at each distance bin<br />
+<li>Use the resulting <span class="math inline">\(B\)</span> variograms to compute <strong>pointwise 95% tolerance bands</strong> at each distance bin<br>
 </li>
 <li>If the observed variogram lies outside the 95% band, this indicates <strong>residual spatial correlation</strong></li>
 </ol>
 </div><div class="column">
-<p><img data-src="images2/lead1997_permuted_vario.png" style="width:75.0%" /></p>
-</div>
-</div>
+<p><img data-src="images2/lead1997_permuted_vario.png" style="width:75.0%"></p>
+</div></div>
 </section>
 <section id="inference-maximum-likelihood-estimation" class="slide level2 smaller">
 <h2>Inference: Maximum likelihood estimation</h2>
 <ul>
-<li><p><strong><span style="color:red;">Multivariate Gaussian distribution</span></strong><br />
+<li><p><strong><span style="color:red;">Multivariate Gaussian distribution</span></strong><br>
 <span class="math display">\[
 Y \sim \text{MVN}(D\beta, \sigma^2 R + \tau^2 I)
 \]</span></p>
 <ul>
-<li><span class="math inline">\(D\)</span>: matrix of covariates, <span class="math inline">\([D]_{ik} = d_k(x_i)\)</span><br />
+<li><span class="math inline">\(D\)</span>: matrix of covariates, <span class="math inline">\([D]_{ik} = d_k(x_i)\)</span><br>
 </li>
-<li><span class="math inline">\(R\)</span>: spatial correlation matrix,<br />
+<li><span class="math inline">\(R\)</span>: spatial correlation matrix,<br>
 <span class="math inline">\([R]_{ij} = \rho(u_{ij})\)</span>, with <span class="math inline">\(u_{ij} = \|x_i - x_j\|\)</span></li>
 </ul></li>
 <li><p><strong><span style="color:red;">Fitting process</span></strong></p>
 <ol type="1">
-<li>Initialise <span class="math inline">\(\beta\)</span> (e.g. using ordinary least squares)</li>
-<li>Initialise <span class="math inline">\(\theta\)</span> (e.g. using the empirical variogram)</li>
+<li>Initialise <span class="math inline">\(\beta\)</span> (e.g.&nbsp;using ordinary least squares)</li>
+<li>Initialise <span class="math inline">\(\theta\)</span> (e.g.&nbsp;using the empirical variogram)</li>
 <li>Maximise <span class="math display">\[
 \ell(\theta) = \log\{f(y; \beta, \theta)\},
 \]</span> where <span class="math inline">\(f(\cdot; \beta, \theta)\)</span> is the multivariate Gaussian density</li>
@@ -490,7 +477,7 @@ Y_i \mid \eta_i \sim \pi(y_i \mid \eta_i)
 <ul>
 <li><p><strong>Gaussian</strong> <span class="math display">\[
 Y_i \mid \eta_i \sim N(\eta_i, \sigma^2)
-\]</span> Continuous measurements (e.g. pollution levels)</p></li>
+\]</span> Continuous measurements (e.g.&nbsp;pollution levels)</p></li>
 <li><p><strong>Binomial</strong> <span class="math display">\[
 Y_i \mid \eta_i \sim \text{Binomial}(n_i, p_i),
 \qquad \text{logit}(p_i) = \eta_i
@@ -676,7 +663,7 @@ y_i \mid \eta_i, \theta \sim \pi(y_i \mid \eta_i, \theta),
 </section>
 <section id="grf-vs-gmrf-concept-vs-computation" class="slide level2">
 <h2>GRF vs GMRF: concept vs computation</h2>
-<p><span class="citation" data-cites="lindgren2011explicit">Lindgren, Rue, and Lindström (<a href="#/ref-lindgren2011explicit" role="doc-biblioref">2011</a>)</span> provides the link between the two.</p>
+<p><span class="citation" data-cites="lindgren2011explicit">Lindgren, Rue, and Lindström (<a href="#/references" role="doc-biblioref" onclick="">2011</a>)</span> provides the link between the two.</p>
 <ul>
 <li><strong>Gaussian Random Field (GRF):</strong>
 <ul>
@@ -731,7 +718,7 @@ y_i \mid \eta_i, \theta \sim \pi(y_i \mid \eta_i, \theta),
 S(x) \sim \text{GRF}(0, C(\cdot))
 \]</span></p>
 <p>with covariance function: <span class="math display">\[
-\text{Cov}\{S(x), S(x&#39;)\} = C(\|x - x&#39;\|)
+\text{Cov}\{S(x), S(x')\} = C(\|x - x'\|)
 \]</span></p>
 <ul>
 <li>The Matérn family is widely used</li>
@@ -803,7 +790,7 @@ S(x) \approx \sum_{k=1}^K w_k \psi_k(x)
 <p><strong>What is <code>inlabru</code>?</strong></p>
 <ul>
 <li><p>An R package built on top of <code>INLA</code></p></li>
-<li><p>Designed for spatial and spatio-temporal modelling using<br />
+<li><p>Designed for spatial and spatio-temporal modelling using<br>
 <strong>Integrated Nested Laplace Approximation (INLA)</strong></p></li>
 <li><p>Provides an intuitive interface for:</p>
 <ul>
@@ -819,16 +806,10 @@ S(x) \approx \sum_{k=1}^K w_k \psi_k(x)
 <li>Flexible integration with <code>sf</code>, <code>sp</code>, and <code>raster</code></li>
 </ul>
 </section>
-<section id="references" class="slide level2">
+<section id="references" class="slide level2 smaller scrollable">
 <h2>References</h2>
-<div id="quarto-meta-markdown" class="hidden">
-<p><span class="hidden quarto-markdown-envelope-contents" data-render-id="cXVhcnRvLW1ldGF0aXRsZQ==">Day 1 – Spatial &amp; Spatio-temporal Modelling – Geostatistical Modelling with inlabru</span> <span class="hidden quarto-markdown-envelope-contents" data-render-id="cXVhcnRvLXR3aXR0ZXJjYXJkdGl0bGU=">Day 1 – Spatial &amp; Spatio-temporal Modelling – Geostatistical Modelling with inlabru</span> <span class="hidden quarto-markdown-envelope-contents" data-render-id="cXVhcnRvLW9nY2FyZHRpdGxl">Day 1 – Spatial &amp; Spatio-temporal Modelling – Geostatistical Modelling with inlabru</span> <span class="hidden quarto-markdown-envelope-contents" data-render-id="cXVhcnRvLW1ldGFzaXRlbmFtZQ==">Geostatistical Modelling with inlabru</span> <span class="hidden quarto-markdown-envelope-contents" data-render-id="cXVhcnRvLXR3aXR0ZXJjYXJkZGVzYw=="></span> <span class="hidden quarto-markdown-envelope-contents" data-render-id="cXVhcnRvLW9nY2FyZGRkZXNj"></span></p>
-</div>
-<div class="quarto-auto-generated-content" style="display: none;">
-<div class="footer footer-default">
 
-</div>
-</div>
+
 <div id="refs" class="references csl-bib-body hanging-indent" data-entry-spacing="0" role="list">
 <div id="ref-diggle2019model" class="csl-entry" role="listitem">
 Diggle, Peter, and Emanuele Giorgi. 2019. <em>Model-Based Geostatistics</em>. CRC Press.
@@ -842,7 +823,11 @@ Lindgren, Finn, Håvard Rue, and Johan Lindström. 2011. <span>“An Explicit Li
 </div>
 </section></section>
     </div>
-  </div>
+  <div class="quarto-auto-generated-content" style="display: none;">
+<div class="footer footer-default">
+
+</div>
+</div></div>
 
   <script>window.backupDefine = window.define; window.define = undefined;</script>
   <script src="../site_libs/revealjs/dist/reveal.js"></script>
@@ -864,7 +849,17 @@ Lindgren, Finn, Håvard Rue, and Johan Lindström. 2011. <span>“An Explicit Li
 
       // Full list of configuration options available at:
       // https://revealjs.com/config/
-      Reveal.initialize({ 
+      Reveal.initialize({
+'controlsAuto': true,
+'previewLinksAuto': false,
+'pdfSeparateFragments': false,
+'autoAnimateEasing': "ease",
+'autoAnimateDuration': 1,
+'autoAnimateUnmatched': true,
+'jumpToSlide': true,
+'menu': {"side":"left","useTextContentForMissingTitles":true,"markers":false,"loadIcons":false,"custom":[{"title":"Tools","icon":"<i class=\"fas fa-gear\"></i>","content":"<ul class=\"slide-menu-items\">\n<li class=\"slide-tool-item active\" data-item=\"0\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.fullscreen(event)\"><kbd>f</kbd> Fullscreen</a></li>\n<li class=\"slide-tool-item\" data-item=\"1\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.speakerMode(event)\"><kbd>s</kbd> Speaker View</a></li>\n<li class=\"slide-tool-item\" data-item=\"2\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.overview(event)\"><kbd>o</kbd> Slide Overview</a></li>\n<li class=\"slide-tool-item\" data-item=\"3\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.togglePdfExport(event)\"><kbd>e</kbd> PDF Export Mode</a></li>\n<li class=\"slide-tool-item\" data-item=\"4\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.toggleScrollView(event)\"><kbd>r</kbd> Scroll View Mode</a></li>\n<li class=\"slide-tool-item\" data-item=\"5\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.keyboardHelp(event)\"><kbd>?</kbd> Keyboard Help</a></li>\n</ul>"}],"openButton":true},
+'smaller': false,
+ 
         // Display controls in the bottom right corner
         controls: false,
 
@@ -883,7 +878,7 @@ Lindgren, Finn, Håvard Rue, and Johan Lindström. 2011. <span>“An Explicit Li
         progress: true,
 
         // Display the page number of the current slide
-        slideNumber: c/t,
+        slideNumber: 'c/t',
 
         // 'all', 'print', or 'speaker'
         showSlideNumber: 'all',
@@ -1033,7 +1028,8 @@ Lindgren, Finn, Håvard Rue, and Johan Lindström. 2011. <span>“An Explicit Li
         },
 
         // reveal.js plugins
-        plugins: [
+        plugins: [QuartoLineHighlight, PdfExport, RevealMenu, QuartoSupport,
+
           RevealMath,
           RevealNotes,
           RevealSearch,
@@ -1041,7 +1037,7 @@ Lindgren, Finn, Håvard Rue, and Johan Lindström. 2011. <span>“An Explicit Li
         ]
       });
     </script>
-    <script id = "quarto-html-after-body" type="application/javascript">
+    <script id="quarto-html-after-body" type="application/javascript">
     window.document.addEventListener("DOMContentLoaded", function (event) {
       const toggleBodyColorMode = (bsSheetEl) => {
         const mode = bsSheetEl.getAttribute("data-mode");
@@ -1226,5 +1222,6 @@ Lindgren, Finn, Håvard Rue, and Johan Lindström. 2011. <span>“An Explicit Li
       }
     });
     </script>
-    </body>
-</html>
+    
+
+</body></html>

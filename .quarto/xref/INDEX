@@ -1,29 +1,26 @@
 {
   "index.qmd": {
-    "index.html": "770e2694"
+    "index.html": "1d7e1775"
   },
   "day2.qmd": {
-    "day2.html": "fed6e911"
-  },
-  "day1_spatial.qmd": {
-    "day1_spatial.html": "c9561610"
+    "day2.html": "3dce6625"
   },
   "day3.qmd": {
-    "day3.html": "fa95ce5d"
-  },
-  "slides/day3_slides.qmd": {
-    "day3_slides.html": "8ca7dc7c",
-    "day3_slides.tex": "aadf446d"
+    "day3.html": "6177baf9"
   },
   "slides/day1_slides.qmd": {
-    "day1_slides.html": "597f8da8",
-    "day1_slides.tex": "1bc089f0"
+    "day1_slides.html": "aa5d67c6",
+    "day1_slides.tex": "33780a2b"
   },
   "slides/day2_slides.qmd": {
-    "day2_slides.html": "6a9eb5d1",
-    "day2_slides.tex": "360128b4"
+    "day2_slides.html": "ae6e65b8",
+    "day2_slides.tex": "0f4ef850"
+  },
+  "slides/day3_slides.qmd": {
+    "day3_slides.html": "2d603f88",
+    "day3_slides.tex": "639f5400"
   },
   "day1.qmd": {
-    "day1.html": "b450d716"
+    "day1.html": "ce88e57b"
   }
 }

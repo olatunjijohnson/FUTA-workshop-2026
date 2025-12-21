@@ -508,3 +508,12 @@ write.csv(pred_grid,
 # Confirmation message
 # -----------------------------------------------------------
 cat("All datasets saved in folder:", out_dir, "\n")
+
+
+
+
+
+nga_admin1 <- ne_states("Nigeria", returnclass = "sf") %>%
+  st_transform(32632) %>%
+  st_write(file.path(out_dir, "nga_shapefile.shp"))
+

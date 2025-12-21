@@ -46,12 +46,14 @@ library(inlabru)
 library(ggplot2)
 library(sf)
 library(stars)
-library(rnaturalearth)
-library(rnaturalearthdata)
+# library(rnaturalearth)
+# library(rnaturalearthdata)
 library(geoR)
 
-nga_admin1 <- ne_states("Nigeria", returnclass = "sf") %>%
-st_transform(32632)
+# nga_admin1 <- ne_states("Nigeria", returnclass = "sf") %>%
+# st_transform(32632)
+
+nga_admin1 <- st_read("data/nga_shapefile.shp")
 
 spatial_binom <- read_csv("data/spatial_binomial_data.csv")
 spatial_pois  <- read_csv("data/spatial_poisson_data.csv")

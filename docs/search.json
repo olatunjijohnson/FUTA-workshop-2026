@@ -1,0 +1,723 @@
+[
+  {
+    "objectID": "day1.html",
+    "href": "day1.html",
+    "title": "Day 1 – Spatial & Spatio-Temporal Modelling",
+    "section": "",
+    "text": "Today we introduce modern geostatistical modelling using inlabru, covering:\n\nSpatial models\n\nBinomial likelihood (prevalence)\nPoisson likelihood (case counts)\nSPDE spatial random fields\nPrediction surfaces\nExceedance probabilities\n\nSpatio-temporal models\n\nHandling time-indexed disease data\nRW1/RW2 temporal structure\nSpatio-temporal Gaussian fields\nPredicting in time and space\n\n\nThese form the foundation for Days 2 and 3.\n============================================================\nPART A — Spatial models\n============================================================\n\n\nThe data used for Day 1 are a simulated malaria prevalence dataset from Nigeria. If malaria is of particular interest in your research, you can download real datasets from the DHS website. Malaria data can be obtained either from prevalence surveys or from hospital records.\nWhen derived from prevalence surveys, the data can be treated as binomial, since you observe the number of individuals surveyed and the number who tested positive. When obtained from hospital records, the data typically consist of counts of positive malaria cases at specific locations and can be modelled as Poisson data.\n\n\nCode\nlibrary(tidyverse)\nlibrary(INLA)\nlibrary(inlabru)\nlibrary(ggplot2)\nlibrary(sf)\nlibrary(stars)\n# library(rnaturalearth)\n# library(rnaturalearthdata)\nlibrary(geoR)\n\n# nga_admin1 &lt;- ne_states(\"Nigeria\", returnclass = \"sf\") %&gt;%\n# st_transform(32632)\n\nnga_admin1 &lt;- st_read(\"data/nga_shapefile.shp\")\n\n\nReading layer `nga_shapefile' from data source \n  `/home/olatunji-johnson/Documents/Manchester Job/Teaching/Courses/Nigeria_2026/rcode/FUTA/data/nga_shapefile.shp' \n  using driver `ESRI Shapefile'\nSimple feature collection with 37 features and 121 fields\nGeometry type: MULTIPOLYGON\nDimension:     XY\nBounding box:  xmin: -198992.3 ymin: 472813 xmax: 1117766 ymax: 1537228\nProjected CRS: WGS 84 / UTM zone 32N\n\n\nCode\nspatial_binom &lt;- read_csv(\"data/spatial_binomial_data.csv\")\nspatial_pois  &lt;- read_csv(\"data/spatial_poisson_data.csv\")\n\n\n\n\n\nWe need an sf layer to overlay boundaries, plot points, and feed coordinates into SPDE meshes.\n\n\nCode\nspatial_binom_sf &lt;- spatial_binom %&gt;%\n  st_as_sf(coords = c(\"utm_x\", \"utm_y\"), crs = 32632)\nspatial_pois_sf &lt;- spatial_pois %&gt;%\n  st_as_sf(coords = c(\"utm_x\", \"utm_y\"), crs = 32632)\n\n\n\n\n\nThis helps confirm:\n\nUTM conversion is correct\nPoints sit inside Nigeria\nPrevalence has spatial structure\n\n\n\nCode\nggplot() +\ngeom_sf(data = spatial_binom_sf, aes(colour = prevalence_true)) +\ngeom_sf(data = nga_admin1, fill = NA) +\nscale_colour_viridis_c(name=\"Prevalence\") +\ntheme_minimal()\n\n\n\n\n\n\n\n\n\n\n\n\nBefore proceeding to spatial modelling, there is a need to check for the evidence of spatial correlation in the residual. Variagram can be used to achieve this.\n\n\nCode\nnon_spatial_fit &lt;- glm(prevalence_true ~ elevation + ndvi + urban, data = spatial_binom, weights = n_tested)\nresid &lt;- residuals(non_spatial_fit)\nspatial_binom$resid &lt;-resid\ngeo_data &lt;- as.geodata(obj = spatial_binom, coords.col=2:3, data.col=ncol(spatial_binom))\nvari &lt;- variog(geo_data)\n\n\nvariog: computing omnidirectional variogram\n\n\nCode\nvari.mc &lt;- variog.mc.env(geo_data, obj.variog=vari, nsim=1000)\n\n\nvariog.env: generating 1000 simulations by permutating data values\nvariog.env: computing the empirical variogram for the 1000 simulations\nvariog.env: computing the envelops\n\n\nCode\nplot(vari, envelope.obj=vari.mc)\n\n\n\n\n\n\n\n\n\nWe can see that there is an evidence of spatial correlation because the empirical semi-variogram for the data does not completely lie inside the envelopes, especially at smaller distances.\n\n\n\nThe mesh defines the geometry on which the latent spatial field is approximated.\n\n\nCode\ncoords &lt;- st_coordinates(spatial_binom_sf)\n\nmesh &lt;- inla.mesh.2d(\nloc = coords,\nmax.edge = c(100000, 200000), # inner and outer triangle sizes\ncutoff = 20000,  # merge points closer than 20km\noffset = c(50000, 200000)  # extend mesh beyond convex hull\n)\n\nplot(mesh)\npoints(coords, col=\"red\", pch=16)\n\n\n\n\n\n\n\n\n\nA finer mesh → more accurate, more expensive.\nA coarser mesh → faster, less precise.\nWe balance cost vs smoothness.\n\n\n\nPenalised complexity (PC) priors make spatial models robust and interpretable.\n\n\nCode\nspde &lt;- inla.spde2.pcmatern(\nmesh = mesh,\nprior.range = c(300000, 0.5),\nprior.sigma = c(1.0, 0.01)\n)\n\n\n\n\n\nThe model is:\n\\[logit(pi​)=\\beta_0​+\\beta_1​ elevation_i​+ \\beta_2​ndvi_i​+ \\beta_3 ​urban_i​+ S(s_i​)\\]\nWhere \\(S(\\mathbf{s})\\) is a spatial Gaussian field.\n\n\nCode\ncomponents_binom &lt;- ~\nIntercept(1, model=\"linear\") +\nbeta_elev(elevation, model=\"linear\") +\nbeta_ndvi(ndvi, model=\"linear\") +\nbeta_urban(urban, model=\"linear\") +\nfield(geometry, model = spde)\n\nlik_binom &lt;- like(\nfamily=\"binomial\",\ndata=spatial_binom_sf,\nformula = n_pos ~ Intercept + beta_elev + beta_ndvi + beta_urban + field,\nNtrials = n_tested\n)\n\n#| cache: true\nfit_binom &lt;- bru(components_binom, lik_binom)\nsummary(fit_binom)\n\n\ninlabru version: 2.13.0.9024 \nINLA version: 25.12.02 \nLatent components:\nIntercept: main = linear(1)\nbeta_elev: main = linear(elevation)\nbeta_ndvi: main = linear(ndvi)\nbeta_urban: main = linear(urban)\nfield: main = spde(geometry)\nObservation models:\n  Model tag: &lt;No tag&gt;\n    Family: 'binomial'\n    Data class: 'sf', 'tbl_df', 'tbl', 'data.frame'\n    Response class: 'numeric'\n    Predictor: n_pos ~ Intercept + beta_elev + beta_ndvi + beta_urban + field\n    Additive/Linear/Rowwise: TRUE/TRUE/TRUE\n    Used components: effect[Intercept, beta_elev, beta_ndvi, beta_urban, field], latent[] \nTime used:\n    Pre = 1.41, Running = 1.78, Post = 0.338, Total = 3.53 \nFixed effects:\n             mean    sd 0.025quant 0.5quant 0.975quant   mode kld\nIntercept  -3.464 0.779     -5.034   -3.452     -1.965 -3.453   0\nbeta_elev  -0.003 0.001     -0.006   -0.003      0.000 -0.003   0\nbeta_ndvi   5.350 1.305      2.796    5.340      7.962  5.341   0\nbeta_urban  0.456 0.059      0.341    0.456      0.572  0.456   0\n\nRandom effects:\n  Name    Model\n    field SPDE2 model\n\nModel hyperparameters:\n                    mean       sd 0.025quant 0.5quant 0.975quant     mode\nRange for field 2.79e+05 4.70e+04   2.01e+05 2.74e+05   3.86e+05 2.62e+05\nStdev for field 1.12e+00 1.34e-01   8.90e-01 1.11e+00   1.42e+00 1.08e+00\n\nMarginal log-Likelihood:  -935.76 \n is computed \nPosterior summaries for the linear predictor and the fitted values are computed\n(Posterior marginals needs also 'control.compute=list(return.marginals.predictor=TRUE)')\n\n\n\n\n\nOften used for malaria case counts or incidence.\nModel: \\[\\log(\\lambda_i)= \\beta_0 + \\beta_1 X_i + S(s_i)\\]\n\n\nCode\ncomponents_pois &lt;- ~\nIntercept(1, model=\"linear\") +\nbeta_elev(elevation, model=\"linear\") +\nbeta_ndvi(ndvi, model=\"linear\") +\nbeta_urban(urban, model=\"linear\") +\nfield(geometry, model = spde)\n\nlik_pois &lt;- like(\nfamily=\"poisson\",\ndata=spatial_pois_sf,\nformula = cases ~ Intercept + beta_elev + beta_ndvi + beta_urban + field\n)\n\n#| cache: true\nfit_pois &lt;- bru(components_pois, lik_pois)\nsummary(fit_pois)\n\n\ninlabru version: 2.13.0.9024 \nINLA version: 25.12.02 \nLatent components:\nIntercept: main = linear(1)\nbeta_elev: main = linear(elevation)\nbeta_ndvi: main = linear(ndvi)\nbeta_urban: main = linear(urban)\nfield: main = spde(geometry)\nObservation models:\n  Model tag: &lt;No tag&gt;\n    Family: 'poisson'\n    Data class: 'sf', 'tbl_df', 'tbl', 'data.frame'\n    Response class: 'numeric'\n    Predictor: cases ~ Intercept + beta_elev + beta_ndvi + beta_urban + field\n    Additive/Linear/Rowwise: TRUE/TRUE/TRUE\n    Used components: effect[Intercept, beta_elev, beta_ndvi, beta_urban, field], latent[] \nTime used:\n    Pre = 1.01, Running = 2.22, Post = 0.335, Total = 3.56 \nFixed effects:\n             mean    sd 0.025quant 0.5quant 0.975quant   mode kld\nIntercept   0.530 0.617     -0.661    0.523      1.766  0.523   0\nbeta_elev  -0.001 0.002     -0.004   -0.001      0.002 -0.001   0\nbeta_ndvi   1.432 0.731     -0.063    1.449      2.829  1.448   0\nbeta_urban  0.747 0.082      0.587    0.747      0.909  0.747   0\n\nRandom effects:\n  Name    Model\n    field SPDE2 model\n\nModel hyperparameters:\n                    mean      sd 0.025quant 0.5quant 0.975quant     mode\nRange for field 1.34e+05 3.7e+04   7.56e+04 1.29e+05   2.20e+05 1.19e+05\nStdev for field 8.23e-01 9.4e-02   6.54e-01 8.18e-01   1.02e+00 8.07e-01\n\nMarginal log-Likelihood:  -631.40 \n is computed \nPosterior summaries for the linear predictor and the fitted values are computed\n(Posterior marginals needs also 'control.compute=list(return.marginals.predictor=TRUE)')\n\n\n\n\n\n\n\nCode\npred_grid &lt;- read_csv(\"data/prediction_grid_utm.csv\") %&gt;%\nst_as_sf(coords=c(\"utm_x\",\"utm_y\"), crs=32632)\n\npred_binom &lt;- predict(\nfit_binom,\nnewdata = pred_grid,\nformula = ~ plogis(Intercept + beta_elev + beta_ndvi + beta_urban + field),\nn.samples = 1000\n)\n\n\nRasterise:\n\n\nCode\npred_binom_r &lt;- st_rasterize(pred_binom[\"mean\"], dx=10000, dy=10000)\npred_binom_r &lt;- pred_binom_r[st_union(nga_admin1)]\n\n\nPlot:\n\n\nCode\nggplot() +\n  geom_stars(data=pred_binom_r, na.rm = TRUE) +\n  geom_sf(data=nga_admin1, fill=NA, color = \"black\") +\n  coord_sf() +\n  scale_fill_viridis_c(name = \"Predicted\\nprevalence\", na.value = NA) +\n  theme_minimal() +\n  theme(\n    panel.background = element_rect(fill = \"white\", colour = NA),\n    plot.background  = element_rect(fill = \"white\", colour = NA),\n    panel.grid       = element_blank()\n  )\n\n\n\n\n\n\n\n\n\n\n\n\nGoal:\n\\[P(prevalence&gt;0.5∣data)\\]\n\n\nCode\nexc_samples &lt;- generate(\nfit_binom,\nnewdata = pred_grid,\nformula = ~ plogis(Intercept + beta_elev + beta_ndvi + beta_urban + field),\nn.samples = 1000\n)\n\npred_binom$exc_prob &lt;- rowMeans(exc_samples &gt; 0.5)\n\n\nMap:\n\n\nCode\nexc_r &lt;- st_rasterize(pred_binom[\"exc_prob\"], dx=10000, dy=10000)\nexc_r &lt;- exc_r[st_union(nga_admin1)]\n\nggplot() +\n  geom_stars(data=exc_r, na.rm = TRUE) +\n  scale_fill_viridis_c(name=\"P(prev&gt;0.5)\", limits=c(0,1), na.value = NA) +\n  geom_sf(data=nga_admin1, fill=NA) +\n  theme_minimal() + \n  theme(\n    panel.background = element_rect(fill = \"white\", colour = NA),\n    plot.background  = element_rect(fill = \"white\", colour = NA),\n    panel.grid       = element_blank()\n  )\n\n\n\n\n\n\n\n\n\n============================================================\nPART B — Spatio-Temporal Modelling ============================================================\nWe now extend:\n\\[S(s)⟶S(s,t)\\]\nA common structure:\n\nSpatial effect: SPDE\nTemporal effect: random walk (RW1 or RW2)\nInteraction: separable \\(S(s,t)=S_s(s)+S_t(t)\\)\n\n\n\nCode\nst_binom &lt;- read_csv(\"data/spatiotemporal_binomial_data.csv\") %&gt;%\n  st_as_sf(coords=c(\"utm_x\",\"utm_y\"), crs=32632)\n\nhead(st_binom)\n\n\nSimple feature collection with 6 features and 10 fields\nGeometry type: POINT\nDimension:     XY\nBounding box:  xmin: 336995.7 ymin: 1047442 xmax: 336995.7 ymax: 1047442\nProjected CRS: WGS 84 / UTM zone 32N\n# A tibble: 6 × 11\n   site  time     S gamma_t elevation  ndvi urban n_tested n_pos prevalence_true\n  &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;   &lt;dbl&gt;     &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;    &lt;dbl&gt; &lt;dbl&gt;           &lt;dbl&gt;\n1     1     1 0.266   2.12       228. 0.305     0       63    51           0.774\n2     1     2 0.266   1.50       228. 0.305     0       65    43           0.649\n3     1     3 0.266   0.381      228. 0.305     0      119    52           0.376\n4     1     4 0.266   0.286      228. 0.305     0      191    72           0.354\n5     1     5 0.266   0.168      228. 0.305     0      180    50           0.327\n6     1     6 0.266   0.207      228. 0.305     0      155    52           0.336\n# ℹ 1 more variable: geometry &lt;POINT [m]&gt;\n\n\nShould contain:\n\ntime\nn_tested, n_pos\ncovariates\nUTM coordinates\n\n\n\n\n\n\nCode\nggplot() +\ngeom_sf(data = st_binom, aes(colour = prevalence_true)) +\n  facet_wrap(~time)  + \ngeom_sf(data = nga_admin1, fill = NA) +\nscale_colour_viridis_c(name=\"Prevalence\") +\ntheme_minimal()\n\n\n\n\n\n\n\n\n\n\n\n\nUse: - RW1 for time - SPDE for space - Additive interaction\n\n\nCode\ncomponents_st &lt;- ~\nIntercept(1, model=\"linear\") +\nbeta_elev(elevation, model=\"linear\") +\nbeta_ndvi(ndvi, model=\"linear\") +\nbeta_urban(urban, model=\"linear\") +\ntime(time, model=\"rw1\") +\nfield(geometry, model = spde)\n\n\nLikelihood:\n\n\nCode\nlik_st &lt;- like(\nfamily=\"binomial\",\ndata = st_binom,\nformula = n_pos ~ Intercept + beta_elev + beta_ndvi + beta_urban +\ntime + field,\nNtrials = n_tested\n)\n\n\nFit:\n\n\nCode\nfit_st_binom &lt;- bru(components_st, lik_st)\nsummary(fit_st_binom)\n\n\ninlabru version: 2.13.0.9024 \nINLA version: 25.12.02 \nLatent components:\nIntercept: main = linear(1)\nbeta_elev: main = linear(elevation)\nbeta_ndvi: main = linear(ndvi)\nbeta_urban: main = linear(urban)\ntime: main = rw1(time)\nfield: main = spde(geometry)\nObservation models:\n  Model tag: &lt;No tag&gt;\n    Family: 'binomial'\n    Data class: 'sf', 'tbl_df', 'tbl', 'data.frame'\n    Response class: 'numeric'\n    Predictor: n_pos ~ Intercept + beta_elev + beta_ndvi + beta_urban + time + field\n    Additive/Linear/Rowwise: TRUE/TRUE/TRUE\n    Used components: effect[Intercept, beta_elev, beta_ndvi, beta_urban, time, field], latent[] \nTime used:\n    Pre = 0.963, Running = 2.25, Post = 0.247, Total = 3.46 \nFixed effects:\n             mean    sd 0.025quant 0.5quant 0.975quant   mode kld\nIntercept  -0.261 0.332     -0.909   -0.263      0.399 -0.263   0\nbeta_elev  -0.002 0.001     -0.003   -0.002     -0.001 -0.002   0\nbeta_ndvi   1.775 0.591      0.590    1.781      2.926  1.781   0\nbeta_urban  0.525 0.028      0.470    0.525      0.580  0.525   0\n\nRandom effects:\n  Name    Model\n    time RW1 model\n   field SPDE2 model\n\nModel hyperparameters:\n                       mean       sd 0.025quant 0.5quant 0.975quant     mode\nPrecision for time 4.49e+00 2.65e+00   1.25e+00 3.88e+00   1.13e+01 2.85e+00\nRange for field    1.73e+05 2.65e+04   1.28e+05 1.71e+05   2.32e+05 1.65e+05\nStdev for field    6.52e-01 5.20e-02   5.57e-01 6.50e-01   7.61e-01 6.44e-01\n\nMarginal log-Likelihood:  -3963.37 \n is computed \nPosterior summaries for the linear predictor and the fitted values are computed\n(Posterior marginals needs also 'control.compute=list(return.marginals.predictor=TRUE)')\n\n\n\n\n\nUse: - Exchageable for time - SPDE for space - interaction\n\n\nCode\ncomponents_st2 &lt;- ~\nIntercept(1, model=\"linear\") +\nbeta_elev(elevation, model=\"linear\") +\nbeta_ndvi(ndvi, model=\"linear\") +\nbeta_urban(urban, model=\"linear\") +\nfield(geometry, model = spde, group = time, control.group=list(model=\"iid\")) #?control.group\n\n\nLikelihood:\n\n\nCode\nlik_st2 &lt;- like(\nfamily=\"binomial\",\ndata = st_binom,\nformula = n_pos ~ Intercept + beta_elev + beta_ndvi + beta_urban + field,\nNtrials = n_tested\n)\n\n\nFit:\n\n\nCode\nfit_st_binom2 &lt;- bru(components_st2, lik_st2)\nsummary(fit_st_binom2)\n\n\ninlabru version: 2.13.0.9024 \nINLA version: 25.12.02 \nLatent components:\nIntercept: main = linear(1)\nbeta_elev: main = linear(elevation)\nbeta_ndvi: main = linear(ndvi)\nbeta_urban: main = linear(urban)\nfield: main = spde(geometry), group = iid(time)\nObservation models:\n  Model tag: &lt;No tag&gt;\n    Family: 'binomial'\n    Data class: 'sf', 'tbl_df', 'tbl', 'data.frame'\n    Response class: 'numeric'\n    Predictor: n_pos ~ Intercept + beta_elev + beta_ndvi + beta_urban + field\n    Additive/Linear/Rowwise: TRUE/TRUE/TRUE\n    Used components: effect[Intercept, beta_elev, beta_ndvi, beta_urban, field], latent[] \nTime used:\n    Pre = 0.864, Running = 9.34, Post = 0.472, Total = 10.7 \nFixed effects:\n             mean    sd 0.025quant 0.5quant 0.975quant   mode kld\nIntercept  -0.308 0.250     -0.795   -0.309      0.188 -0.309   0\nbeta_elev  -0.001 0.000     -0.002   -0.001      0.000 -0.001   0\nbeta_ndvi   1.262 0.440      0.385    1.267      2.113  1.267   0\nbeta_urban  0.540 0.018      0.505    0.540      0.574  0.540   0\n\nRandom effects:\n  Name    Model\n    field SPDE2 model\n\nModel hyperparameters:\n                    mean       sd 0.025quant 0.5quant 0.975quant     mode\nRange for field 3.90e+05 2.97e+04   3.36e+05 3.89e+05   4.53e+05 3.85e+05\nStdev for field 8.07e-01 4.40e-02   7.26e-01 8.06e-01   8.98e-01 8.02e-01\n\nMarginal log-Likelihood:  -4477.72 \n is computed \nPosterior summaries for the linear predictor and the fitted values are computed\n(Posterior marginals needs also 'control.compute=list(return.marginals.predictor=TRUE)')\n\n\n\n\n\nHere we used the sum of purely spatial and purely temporal process for prediction at time 7.\n\n\nCode\npred_grid$time &lt;- 7\n\npred_st &lt;- predict(\nfit_st_binom,\nnewdata = pred_grid,\nformula = ~ plogis(Intercept + beta_elev + beta_ndvi + beta_urban +\ntime + field),\nn.samples = 500\n)\n\n\nMap for 2020:\n\n\nCode\npred_st_r &lt;- st_rasterize(pred_st[\"mean\"], dx=10000, dy=10000)\n\nggplot() +\n  geom_stars(data = pred_st_r, na.rm = TRUE) +\n  scale_fill_viridis_c(name=\"Prev time 7\", na.value = NA) +\n  geom_sf(data=nga_admin1, fill=NA) +\n  theme_minimal() +\n  theme(\n    panel.background = element_rect(fill = \"white\", colour = NA),\n    plot.background  = element_rect(fill = \"white\", colour = NA),\n    panel.grid       = element_blank()\n  )"
+  },
+  {
+    "objectID": "day1.html#load-data",
+    "href": "day1.html#load-data",
+    "title": "Day 1 – Spatial & Spatio-Temporal Modelling",
+    "section": "",
+    "text": "The data used for Day 1 are a simulated malaria prevalence dataset from Nigeria. If malaria is of particular interest in your research, you can download real datasets from the DHS website. Malaria data can be obtained either from prevalence surveys or from hospital records.\nWhen derived from prevalence surveys, the data can be treated as binomial, since you observe the number of individuals surveyed and the number who tested positive. When obtained from hospital records, the data typically consist of counts of positive malaria cases at specific locations and can be modelled as Poisson data.\n\n\nCode\nlibrary(tidyverse)\nlibrary(INLA)\nlibrary(inlabru)\nlibrary(ggplot2)\nlibrary(sf)\nlibrary(stars)\n# library(rnaturalearth)\n# library(rnaturalearthdata)\nlibrary(geoR)\n\n# nga_admin1 &lt;- ne_states(\"Nigeria\", returnclass = \"sf\") %&gt;%\n# st_transform(32632)\n\nnga_admin1 &lt;- st_read(\"data/nga_shapefile.shp\")\n\n\nReading layer `nga_shapefile' from data source \n  `/home/olatunji-johnson/Documents/Manchester Job/Teaching/Courses/Nigeria_2026/rcode/FUTA/data/nga_shapefile.shp' \n  using driver `ESRI Shapefile'\nSimple feature collection with 37 features and 121 fields\nGeometry type: MULTIPOLYGON\nDimension:     XY\nBounding box:  xmin: -198992.3 ymin: 472813 xmax: 1117766 ymax: 1537228\nProjected CRS: WGS 84 / UTM zone 32N\n\n\nCode\nspatial_binom &lt;- read_csv(\"data/spatial_binomial_data.csv\")\nspatial_pois  &lt;- read_csv(\"data/spatial_poisson_data.csv\")"
+  },
+  {
+    "objectID": "day1.html#convert-to-sf-for-mapping",
+    "href": "day1.html#convert-to-sf-for-mapping",
+    "title": "Day 1 – Spatial & Spatio-Temporal Modelling",
+    "section": "",
+    "text": "We need an sf layer to overlay boundaries, plot points, and feed coordinates into SPDE meshes.\n\n\nCode\nspatial_binom_sf &lt;- spatial_binom %&gt;%\n  st_as_sf(coords = c(\"utm_x\", \"utm_y\"), crs = 32632)\nspatial_pois_sf &lt;- spatial_pois %&gt;%\n  st_as_sf(coords = c(\"utm_x\", \"utm_y\"), crs = 32632)"
+  },
+  {
+    "objectID": "day1.html#visualise-sampling-locations",
+    "href": "day1.html#visualise-sampling-locations",
+    "title": "Day 1 – Spatial & Spatio-Temporal Modelling",
+    "section": "",
+    "text": "This helps confirm:\n\nUTM conversion is correct\nPoints sit inside Nigeria\nPrevalence has spatial structure\n\n\n\nCode\nggplot() +\ngeom_sf(data = spatial_binom_sf, aes(colour = prevalence_true)) +\ngeom_sf(data = nga_admin1, fill = NA) +\nscale_colour_viridis_c(name=\"Prevalence\") +\ntheme_minimal()"
+  },
+  {
+    "objectID": "day1.html#variogram",
+    "href": "day1.html#variogram",
+    "title": "Day 1 – Spatial & Spatio-Temporal Modelling",
+    "section": "",
+    "text": "Before proceeding to spatial modelling, there is a need to check for the evidence of spatial correlation in the residual. Variagram can be used to achieve this.\n\n\nCode\nnon_spatial_fit &lt;- glm(prevalence_true ~ elevation + ndvi + urban, data = spatial_binom, weights = n_tested)\nresid &lt;- residuals(non_spatial_fit)\nspatial_binom$resid &lt;-resid\ngeo_data &lt;- as.geodata(obj = spatial_binom, coords.col=2:3, data.col=ncol(spatial_binom))\nvari &lt;- variog(geo_data)\n\n\nvariog: computing omnidirectional variogram\n\n\nCode\nvari.mc &lt;- variog.mc.env(geo_data, obj.variog=vari, nsim=1000)\n\n\nvariog.env: generating 1000 simulations by permutating data values\nvariog.env: computing the empirical variogram for the 1000 simulations\nvariog.env: computing the envelops\n\n\nCode\nplot(vari, envelope.obj=vari.mc)\n\n\n\n\n\n\n\n\n\nWe can see that there is an evidence of spatial correlation because the empirical semi-variogram for the data does not completely lie inside the envelopes, especially at smaller distances."
+  },
+  {
+    "objectID": "day1.html#build-the-spde-mesh",
+    "href": "day1.html#build-the-spde-mesh",
+    "title": "Day 1 – Spatial & Spatio-Temporal Modelling",
+    "section": "",
+    "text": "The mesh defines the geometry on which the latent spatial field is approximated.\n\n\nCode\ncoords &lt;- st_coordinates(spatial_binom_sf)\n\nmesh &lt;- inla.mesh.2d(\nloc = coords,\nmax.edge = c(100000, 200000), # inner and outer triangle sizes\ncutoff = 20000,  # merge points closer than 20km\noffset = c(50000, 200000)  # extend mesh beyond convex hull\n)\n\nplot(mesh)\npoints(coords, col=\"red\", pch=16)\n\n\n\n\n\n\n\n\n\nA finer mesh → more accurate, more expensive.\nA coarser mesh → faster, less precise.\nWe balance cost vs smoothness."
+  },
+  {
+    "objectID": "day1.html#spde-model-pc-priors",
+    "href": "day1.html#spde-model-pc-priors",
+    "title": "Day 1 – Spatial & Spatio-Temporal Modelling",
+    "section": "",
+    "text": "Penalised complexity (PC) priors make spatial models robust and interpretable.\n\n\nCode\nspde &lt;- inla.spde2.pcmatern(\nmesh = mesh,\nprior.range = c(300000, 0.5),\nprior.sigma = c(1.0, 0.01)\n)"
+  },
+  {
+    "objectID": "day1.html#spatial-binomial-model",
+    "href": "day1.html#spatial-binomial-model",
+    "title": "Day 1 – Spatial & Spatio-Temporal Modelling",
+    "section": "",
+    "text": "The model is:\n\\[logit(pi​)=\\beta_0​+\\beta_1​ elevation_i​+ \\beta_2​ndvi_i​+ \\beta_3 ​urban_i​+ S(s_i​)\\]\nWhere \\(S(\\mathbf{s})\\) is a spatial Gaussian field.\n\n\nCode\ncomponents_binom &lt;- ~\nIntercept(1, model=\"linear\") +\nbeta_elev(elevation, model=\"linear\") +\nbeta_ndvi(ndvi, model=\"linear\") +\nbeta_urban(urban, model=\"linear\") +\nfield(geometry, model = spde)\n\nlik_binom &lt;- like(\nfamily=\"binomial\",\ndata=spatial_binom_sf,\nformula = n_pos ~ Intercept + beta_elev + beta_ndvi + beta_urban + field,\nNtrials = n_tested\n)\n\n#| cache: true\nfit_binom &lt;- bru(components_binom, lik_binom)\nsummary(fit_binom)\n\n\ninlabru version: 2.13.0.9024 \nINLA version: 25.12.02 \nLatent components:\nIntercept: main = linear(1)\nbeta_elev: main = linear(elevation)\nbeta_ndvi: main = linear(ndvi)\nbeta_urban: main = linear(urban)\nfield: main = spde(geometry)\nObservation models:\n  Model tag: &lt;No tag&gt;\n    Family: 'binomial'\n    Data class: 'sf', 'tbl_df', 'tbl', 'data.frame'\n    Response class: 'numeric'\n    Predictor: n_pos ~ Intercept + beta_elev + beta_ndvi + beta_urban + field\n    Additive/Linear/Rowwise: TRUE/TRUE/TRUE\n    Used components: effect[Intercept, beta_elev, beta_ndvi, beta_urban, field], latent[] \nTime used:\n    Pre = 1.41, Running = 1.78, Post = 0.338, Total = 3.53 \nFixed effects:\n             mean    sd 0.025quant 0.5quant 0.975quant   mode kld\nIntercept  -3.464 0.779     -5.034   -3.452     -1.965 -3.453   0\nbeta_elev  -0.003 0.001     -0.006   -0.003      0.000 -0.003   0\nbeta_ndvi   5.350 1.305      2.796    5.340      7.962  5.341   0\nbeta_urban  0.456 0.059      0.341    0.456      0.572  0.456   0\n\nRandom effects:\n  Name    Model\n    field SPDE2 model\n\nModel hyperparameters:\n                    mean       sd 0.025quant 0.5quant 0.975quant     mode\nRange for field 2.79e+05 4.70e+04   2.01e+05 2.74e+05   3.86e+05 2.62e+05\nStdev for field 1.12e+00 1.34e-01   8.90e-01 1.11e+00   1.42e+00 1.08e+00\n\nMarginal log-Likelihood:  -935.76 \n is computed \nPosterior summaries for the linear predictor and the fitted values are computed\n(Posterior marginals needs also 'control.compute=list(return.marginals.predictor=TRUE)')"
+  },
+  {
+    "objectID": "day1.html#spatial-poisson-model",
+    "href": "day1.html#spatial-poisson-model",
+    "title": "Day 1 – Spatial & Spatio-Temporal Modelling",
+    "section": "",
+    "text": "Often used for malaria case counts or incidence.\nModel: \\[\\log(\\lambda_i)= \\beta_0 + \\beta_1 X_i + S(s_i)\\]\n\n\nCode\ncomponents_pois &lt;- ~\nIntercept(1, model=\"linear\") +\nbeta_elev(elevation, model=\"linear\") +\nbeta_ndvi(ndvi, model=\"linear\") +\nbeta_urban(urban, model=\"linear\") +\nfield(geometry, model = spde)\n\nlik_pois &lt;- like(\nfamily=\"poisson\",\ndata=spatial_pois_sf,\nformula = cases ~ Intercept + beta_elev + beta_ndvi + beta_urban + field\n)\n\n#| cache: true\nfit_pois &lt;- bru(components_pois, lik_pois)\nsummary(fit_pois)\n\n\ninlabru version: 2.13.0.9024 \nINLA version: 25.12.02 \nLatent components:\nIntercept: main = linear(1)\nbeta_elev: main = linear(elevation)\nbeta_ndvi: main = linear(ndvi)\nbeta_urban: main = linear(urban)\nfield: main = spde(geometry)\nObservation models:\n  Model tag: &lt;No tag&gt;\n    Family: 'poisson'\n    Data class: 'sf', 'tbl_df', 'tbl', 'data.frame'\n    Response class: 'numeric'\n    Predictor: cases ~ Intercept + beta_elev + beta_ndvi + beta_urban + field\n    Additive/Linear/Rowwise: TRUE/TRUE/TRUE\n    Used components: effect[Intercept, beta_elev, beta_ndvi, beta_urban, field], latent[] \nTime used:\n    Pre = 1.01, Running = 2.22, Post = 0.335, Total = 3.56 \nFixed effects:\n             mean    sd 0.025quant 0.5quant 0.975quant   mode kld\nIntercept   0.530 0.617     -0.661    0.523      1.766  0.523   0\nbeta_elev  -0.001 0.002     -0.004   -0.001      0.002 -0.001   0\nbeta_ndvi   1.432 0.731     -0.063    1.449      2.829  1.448   0\nbeta_urban  0.747 0.082      0.587    0.747      0.909  0.747   0\n\nRandom effects:\n  Name    Model\n    field SPDE2 model\n\nModel hyperparameters:\n                    mean      sd 0.025quant 0.5quant 0.975quant     mode\nRange for field 1.34e+05 3.7e+04   7.56e+04 1.29e+05   2.20e+05 1.19e+05\nStdev for field 8.23e-01 9.4e-02   6.54e-01 8.18e-01   1.02e+00 8.07e-01\n\nMarginal log-Likelihood:  -631.40 \n is computed \nPosterior summaries for the linear predictor and the fitted values are computed\n(Posterior marginals needs also 'control.compute=list(return.marginals.predictor=TRUE)')"
+  },
+  {
+    "objectID": "day1.html#predictive-surfaces-binomial-example",
+    "href": "day1.html#predictive-surfaces-binomial-example",
+    "title": "Day 1 – Spatial & Spatio-Temporal Modelling",
+    "section": "",
+    "text": "Code\npred_grid &lt;- read_csv(\"data/prediction_grid_utm.csv\") %&gt;%\nst_as_sf(coords=c(\"utm_x\",\"utm_y\"), crs=32632)\n\npred_binom &lt;- predict(\nfit_binom,\nnewdata = pred_grid,\nformula = ~ plogis(Intercept + beta_elev + beta_ndvi + beta_urban + field),\nn.samples = 1000\n)\n\n\nRasterise:\n\n\nCode\npred_binom_r &lt;- st_rasterize(pred_binom[\"mean\"], dx=10000, dy=10000)\npred_binom_r &lt;- pred_binom_r[st_union(nga_admin1)]\n\n\nPlot:\n\n\nCode\nggplot() +\n  geom_stars(data=pred_binom_r, na.rm = TRUE) +\n  geom_sf(data=nga_admin1, fill=NA, color = \"black\") +\n  coord_sf() +\n  scale_fill_viridis_c(name = \"Predicted\\nprevalence\", na.value = NA) +\n  theme_minimal() +\n  theme(\n    panel.background = element_rect(fill = \"white\", colour = NA),\n    plot.background  = element_rect(fill = \"white\", colour = NA),\n    panel.grid       = element_blank()\n  )"
+  },
+  {
+    "objectID": "day1.html#exceedance-probability-binomial",
+    "href": "day1.html#exceedance-probability-binomial",
+    "title": "Day 1 – Spatial & Spatio-Temporal Modelling",
+    "section": "",
+    "text": "Goal:\n\\[P(prevalence&gt;0.5∣data)\\]\n\n\nCode\nexc_samples &lt;- generate(\nfit_binom,\nnewdata = pred_grid,\nformula = ~ plogis(Intercept + beta_elev + beta_ndvi + beta_urban + field),\nn.samples = 1000\n)\n\npred_binom$exc_prob &lt;- rowMeans(exc_samples &gt; 0.5)\n\n\nMap:\n\n\nCode\nexc_r &lt;- st_rasterize(pred_binom[\"exc_prob\"], dx=10000, dy=10000)\nexc_r &lt;- exc_r[st_union(nga_admin1)]\n\nggplot() +\n  geom_stars(data=exc_r, na.rm = TRUE) +\n  scale_fill_viridis_c(name=\"P(prev&gt;0.5)\", limits=c(0,1), na.value = NA) +\n  geom_sf(data=nga_admin1, fill=NA) +\n  theme_minimal() + \n  theme(\n    panel.background = element_rect(fill = \"white\", colour = NA),\n    plot.background  = element_rect(fill = \"white\", colour = NA),\n    panel.grid       = element_blank()\n  )\n\n\n\n\n\n\n\n\n\n============================================================\nPART B — Spatio-Temporal Modelling ============================================================\nWe now extend:\n\\[S(s)⟶S(s,t)\\]\nA common structure:\n\nSpatial effect: SPDE\nTemporal effect: random walk (RW1 or RW2)\nInteraction: separable \\(S(s,t)=S_s(s)+S_t(t)\\)\n\n\n\nCode\nst_binom &lt;- read_csv(\"data/spatiotemporal_binomial_data.csv\") %&gt;%\n  st_as_sf(coords=c(\"utm_x\",\"utm_y\"), crs=32632)\n\nhead(st_binom)\n\n\nSimple feature collection with 6 features and 10 fields\nGeometry type: POINT\nDimension:     XY\nBounding box:  xmin: 336995.7 ymin: 1047442 xmax: 336995.7 ymax: 1047442\nProjected CRS: WGS 84 / UTM zone 32N\n# A tibble: 6 × 11\n   site  time     S gamma_t elevation  ndvi urban n_tested n_pos prevalence_true\n  &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;   &lt;dbl&gt;     &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;    &lt;dbl&gt; &lt;dbl&gt;           &lt;dbl&gt;\n1     1     1 0.266   2.12       228. 0.305     0       63    51           0.774\n2     1     2 0.266   1.50       228. 0.305     0       65    43           0.649\n3     1     3 0.266   0.381      228. 0.305     0      119    52           0.376\n4     1     4 0.266   0.286      228. 0.305     0      191    72           0.354\n5     1     5 0.266   0.168      228. 0.305     0      180    50           0.327\n6     1     6 0.266   0.207      228. 0.305     0      155    52           0.336\n# ℹ 1 more variable: geometry &lt;POINT [m]&gt;\n\n\nShould contain:\n\ntime\nn_tested, n_pos\ncovariates\nUTM coordinates"
+  },
+  {
+    "objectID": "day1.html#mapping-the-spatio-temporal-empirical-prevalence",
+    "href": "day1.html#mapping-the-spatio-temporal-empirical-prevalence",
+    "title": "Day 1 – Spatial & Spatio-Temporal Modelling",
+    "section": "",
+    "text": "Code\nggplot() +\ngeom_sf(data = st_binom, aes(colour = prevalence_true)) +\n  facet_wrap(~time)  + \ngeom_sf(data = nga_admin1, fill = NA) +\nscale_colour_viridis_c(name=\"Prevalence\") +\ntheme_minimal()"
+  },
+  {
+    "objectID": "day1.html#spatio-temporal-components---sum-of-a-purely-spatial-and-a-purely-temporal-trend.",
+    "href": "day1.html#spatio-temporal-components---sum-of-a-purely-spatial-and-a-purely-temporal-trend.",
+    "title": "Day 1 – Spatial & Spatio-Temporal Modelling",
+    "section": "",
+    "text": "Use: - RW1 for time - SPDE for space - Additive interaction\n\n\nCode\ncomponents_st &lt;- ~\nIntercept(1, model=\"linear\") +\nbeta_elev(elevation, model=\"linear\") +\nbeta_ndvi(ndvi, model=\"linear\") +\nbeta_urban(urban, model=\"linear\") +\ntime(time, model=\"rw1\") +\nfield(geometry, model = spde)\n\n\nLikelihood:\n\n\nCode\nlik_st &lt;- like(\nfamily=\"binomial\",\ndata = st_binom,\nformula = n_pos ~ Intercept + beta_elev + beta_ndvi + beta_urban +\ntime + field,\nNtrials = n_tested\n)\n\n\nFit:\n\n\nCode\nfit_st_binom &lt;- bru(components_st, lik_st)\nsummary(fit_st_binom)\n\n\ninlabru version: 2.13.0.9024 \nINLA version: 25.12.02 \nLatent components:\nIntercept: main = linear(1)\nbeta_elev: main = linear(elevation)\nbeta_ndvi: main = linear(ndvi)\nbeta_urban: main = linear(urban)\ntime: main = rw1(time)\nfield: main = spde(geometry)\nObservation models:\n  Model tag: &lt;No tag&gt;\n    Family: 'binomial'\n    Data class: 'sf', 'tbl_df', 'tbl', 'data.frame'\n    Response class: 'numeric'\n    Predictor: n_pos ~ Intercept + beta_elev + beta_ndvi + beta_urban + time + field\n    Additive/Linear/Rowwise: TRUE/TRUE/TRUE\n    Used components: effect[Intercept, beta_elev, beta_ndvi, beta_urban, time, field], latent[] \nTime used:\n    Pre = 0.963, Running = 2.25, Post = 0.247, Total = 3.46 \nFixed effects:\n             mean    sd 0.025quant 0.5quant 0.975quant   mode kld\nIntercept  -0.261 0.332     -0.909   -0.263      0.399 -0.263   0\nbeta_elev  -0.002 0.001     -0.003   -0.002     -0.001 -0.002   0\nbeta_ndvi   1.775 0.591      0.590    1.781      2.926  1.781   0\nbeta_urban  0.525 0.028      0.470    0.525      0.580  0.525   0\n\nRandom effects:\n  Name    Model\n    time RW1 model\n   field SPDE2 model\n\nModel hyperparameters:\n                       mean       sd 0.025quant 0.5quant 0.975quant     mode\nPrecision for time 4.49e+00 2.65e+00   1.25e+00 3.88e+00   1.13e+01 2.85e+00\nRange for field    1.73e+05 2.65e+04   1.28e+05 1.71e+05   2.32e+05 1.65e+05\nStdev for field    6.52e-01 5.20e-02   5.57e-01 6.50e-01   7.61e-01 6.44e-01\n\nMarginal log-Likelihood:  -3963.37 \n is computed \nPosterior summaries for the linear predictor and the fitted values are computed\n(Posterior marginals needs also 'control.compute=list(return.marginals.predictor=TRUE)')"
+  },
+  {
+    "objectID": "day1.html#spatio-temporal-components---inseparable-covariance-function",
+    "href": "day1.html#spatio-temporal-components---inseparable-covariance-function",
+    "title": "Day 1 – Spatial & Spatio-Temporal Modelling",
+    "section": "",
+    "text": "Use: - Exchageable for time - SPDE for space - interaction\n\n\nCode\ncomponents_st2 &lt;- ~\nIntercept(1, model=\"linear\") +\nbeta_elev(elevation, model=\"linear\") +\nbeta_ndvi(ndvi, model=\"linear\") +\nbeta_urban(urban, model=\"linear\") +\nfield(geometry, model = spde, group = time, control.group=list(model=\"iid\")) #?control.group\n\n\nLikelihood:\n\n\nCode\nlik_st2 &lt;- like(\nfamily=\"binomial\",\ndata = st_binom,\nformula = n_pos ~ Intercept + beta_elev + beta_ndvi + beta_urban + field,\nNtrials = n_tested\n)\n\n\nFit:\n\n\nCode\nfit_st_binom2 &lt;- bru(components_st2, lik_st2)\nsummary(fit_st_binom2)\n\n\ninlabru version: 2.13.0.9024 \nINLA version: 25.12.02 \nLatent components:\nIntercept: main = linear(1)\nbeta_elev: main = linear(elevation)\nbeta_ndvi: main = linear(ndvi)\nbeta_urban: main = linear(urban)\nfield: main = spde(geometry), group = iid(time)\nObservation models:\n  Model tag: &lt;No tag&gt;\n    Family: 'binomial'\n    Data class: 'sf', 'tbl_df', 'tbl', 'data.frame'\n    Response class: 'numeric'\n    Predictor: n_pos ~ Intercept + beta_elev + beta_ndvi + beta_urban + field\n    Additive/Linear/Rowwise: TRUE/TRUE/TRUE\n    Used components: effect[Intercept, beta_elev, beta_ndvi, beta_urban, field], latent[] \nTime used:\n    Pre = 0.864, Running = 9.34, Post = 0.472, Total = 10.7 \nFixed effects:\n             mean    sd 0.025quant 0.5quant 0.975quant   mode kld\nIntercept  -0.308 0.250     -0.795   -0.309      0.188 -0.309   0\nbeta_elev  -0.001 0.000     -0.002   -0.001      0.000 -0.001   0\nbeta_ndvi   1.262 0.440      0.385    1.267      2.113  1.267   0\nbeta_urban  0.540 0.018      0.505    0.540      0.574  0.540   0\n\nRandom effects:\n  Name    Model\n    field SPDE2 model\n\nModel hyperparameters:\n                    mean       sd 0.025quant 0.5quant 0.975quant     mode\nRange for field 3.90e+05 2.97e+04   3.36e+05 3.89e+05   4.53e+05 3.85e+05\nStdev for field 8.07e-01 4.40e-02   7.26e-01 8.06e-01   8.98e-01 8.02e-01\n\nMarginal log-Likelihood:  -4477.72 \n is computed \nPosterior summaries for the linear predictor and the fitted values are computed\n(Posterior marginals needs also 'control.compute=list(return.marginals.predictor=TRUE)')"
+  },
+  {
+    "objectID": "day1.html#predict-spatio-temporal-prevalence-example-time-7",
+    "href": "day1.html#predict-spatio-temporal-prevalence-example-time-7",
+    "title": "Day 1 – Spatial & Spatio-Temporal Modelling",
+    "section": "",
+    "text": "Here we used the sum of purely spatial and purely temporal process for prediction at time 7.\n\n\nCode\npred_grid$time &lt;- 7\n\npred_st &lt;- predict(\nfit_st_binom,\nnewdata = pred_grid,\nformula = ~ plogis(Intercept + beta_elev + beta_ndvi + beta_urban +\ntime + field),\nn.samples = 500\n)\n\n\nMap for 2020:\n\n\nCode\npred_st_r &lt;- st_rasterize(pred_st[\"mean\"], dx=10000, dy=10000)\n\nggplot() +\n  geom_stars(data = pred_st_r, na.rm = TRUE) +\n  scale_fill_viridis_c(name=\"Prev time 7\", na.value = NA) +\n  geom_sf(data=nga_admin1, fill=NA) +\n  theme_minimal() +\n  theme(\n    panel.background = element_rect(fill = \"white\", colour = NA),\n    plot.background  = element_rect(fill = \"white\", colour = NA),\n    panel.grid       = element_blank()\n  )"
+  },
+  {
+    "objectID": "slides/day2_slides.html#day-2-goals",
+    "href": "slides/day2_slides.html#day-2-goals",
+    "title": "Day 2 – Joint modelling and Non-stationary processes",
+    "section": "Day 2 goals",
+    "text": "Day 2 goals\nToday we focus on two ideas that come up constantly in disease mapping:\n\nJoint modelling\n\nmultiple related malaria outcomes\nshared and outcome-specific spatial structure\nmultiple likelihoods (Binomial + Poisson)\n\nNon-stationary spatial processes\n\nwhen “one Matérn everywhere” is not realistic\ntwo practical constructions:\n\nmixture of SPDEs (smooth/rough)\nstructured range (range changes with a covariate)"
+  },
+  {
+    "objectID": "slides/day2_slides.html#why-do-we-need-joint-models",
+    "href": "slides/day2_slides.html#why-do-we-need-joint-models",
+    "title": "Day 2 – Joint modelling and Non-stationary processes",
+    "section": "Why do we need joint models?",
+    "text": "Why do we need joint models?\nYou often have multiple imperfect views of the same latent risk:\n\nprevalence surveys (direct infection measurements)\nfacility case counts (incidence proxy)\ndifferent risk groups (children vs pregnant women)\ndifferent diagnostics / instruments\n\nSeparate models can disagree and waste information.\nJoint models let us:\n\nborrow strength (share information)\nseparate common risk from process-specific effects\nimprove predictions where one dataset is sparse"
+  },
+  {
+    "objectID": "slides/day2_slides.html#key-idea-latent-spatial-process",
+    "href": "slides/day2_slides.html#key-idea-latent-spatial-process",
+    "title": "Day 2 – Joint modelling and Non-stationary processes",
+    "section": "Key idea: latent spatial process",
+    "text": "Key idea: latent spatial process\nWe posit a latent spatial surface (S(s)) that captures residual dependence:\n\nnearby locations share similar unobserved risk drivers\ninduces spatial correlation in the data\n\nIn MBG terms:\n\\[\\eta(s) = \\beta_0 + \\beta^\\top x(s) + S(s)\\]\nand data are conditionally independent given (S(s))."
+  },
+  {
+    "objectID": "slides/day2_slides.html#example-two-prevalence-processes",
+    "href": "slides/day2_slides.html#example-two-prevalence-processes",
+    "title": "Day 2 – Joint modelling and Non-stationary processes",
+    "section": "Example: two prevalence processes",
+    "text": "Example: two prevalence processes\nSuppose we have:\n\nchildren &lt;5 prevalence data\npregnant women prevalence data\n\nAt each location \\(s_i\\), group \\(g\\in\\{c,p\\}\\):\n\\[\nY_{ig} \\mid p_{ig} \\sim \\text{Binomial}(N_{ig}, p_{ig})\n\\]\n\\[\n\\text{logit}(p_{ig}) = \\eta_{ig}\n\\]"
+  },
+  {
+    "objectID": "slides/day2_slides.html#decomposition-shared-group-specific-spatial-fields",
+    "href": "slides/day2_slides.html#decomposition-shared-group-specific-spatial-fields",
+    "title": "Day 2 – Joint modelling and Non-stationary processes",
+    "section": "Decomposition: shared + group-specific spatial fields",
+    "text": "Decomposition: shared + group-specific spatial fields\nA common and interpretable joint structure:\n\\[\n\\eta_{ig} = \\beta_{0g} + \\beta^\\top x_i + S_0(s_i) + S_g(s_i)\n\\]\n\n\\(S_0(s)\\): shared spatial field (common malaria risk)\n\\(S_g(s)\\): group-specific field (deviations for group (g))\n\\(\\beta_{0g}\\): group-specific baseline\n\nInterpretation\n\nIf \\(S_g(s)\\approx 0\\), groups share the same spatial pattern\nWhere \\(S_g(s)\\neq 0\\), groups differ spatially"
+  },
+  {
+    "objectID": "slides/day2_slides.html#why-is-this-useful",
+    "href": "slides/day2_slides.html#why-is-this-useful",
+    "title": "Day 2 – Joint modelling and Non-stationary processes",
+    "section": "Why is this useful?",
+    "text": "Why is this useful?\nThis structure answers practical questions:\n\nWhat spatial variation is shared across groups?\nWhere do children and pregnant women show different risk?\nDo covariates explain both outcomes similarly?\n\nIt also improves predictions:\n\nlocations with sparse pregnant data can borrow information from children data (through \\(S_0(s)\\))"
+  },
+  {
+    "objectID": "slides/day2_slides.html#identifiability-and-scaling",
+    "href": "slides/day2_slides.html#identifiability-and-scaling",
+    "title": "Day 2 – Joint modelling and Non-stationary processes",
+    "section": "Identifiability and scaling",
+    "text": "Identifiability and scaling\nPotential issue: \\(S_0\\) and \\(S_g\\) can compete.\nTypical solutions:\n\nset priors so that group-specific fields are “smaller” than the shared field\nconsider constraints or priors on variance:\n\n\\(\\sigma^2_{S_g} &lt; \\sigma^2_{S_0}\\) (probabilistically)\n\n\nConceptually: shared structure should capture the dominant signal."
+  },
+  {
+    "objectID": "slides/day2_slides.html#what-do-we-assume-about-s_0s-and-s_gs",
+    "href": "slides/day2_slides.html#what-do-we-assume-about-s_0s-and-s_gs",
+    "title": "Day 2 – Joint modelling and Non-stationary processes",
+    "section": "What do we assume about \\(S_0(s)\\) and \\(S_g(s)\\)?",
+    "text": "What do we assume about \\(S_0(s)\\) and \\(S_g(s)\\)?\nA standard choice: Matérn Gaussian random fields\n\\[\nS(s) \\sim \\text{GRF}\\left(0, \\text{Matérn}(\\rho, \\sigma^2)\\right)\n\\]\n\n\\(\\rho\\): range (how quickly correlation decays)\n\\(\\sigma^2\\): marginal variance\n\nStationarity here means \\(\\rho,\\sigma^2\\) are constant over space."
+  },
+  {
+    "objectID": "slides/day2_slides.html#mesh-and-spde",
+    "href": "slides/day2_slides.html#mesh-and-spde",
+    "title": "Day 2 – Joint modelling and Non-stationary processes",
+    "section": "Mesh and SPDE",
+    "text": "Mesh and SPDE\n\nMesh nodes: basis functions\nField represented as:\n\n\\[\nS(s) \\approx \\sum_{k=1}^K w_k \\phi_k(s)\n\\]\nwhere \\(w_k\\) are GMRF weights.\nJoint model uses the same mesh for \\(S_0\\) and \\(S_g\\), but:\n\n\\(S_0\\): one field\n\\(S_g\\): replicated by group"
+  },
+  {
+    "objectID": "slides/day2_slides.html#motivation-prevalence-case-counts",
+    "href": "slides/day2_slides.html#motivation-prevalence-case-counts",
+    "title": "Day 2 – Joint modelling and Non-stationary processes",
+    "section": "Motivation: prevalence + case counts",
+    "text": "Motivation: prevalence + case counts\nOften you have:\n\nBinomial prevalence surveys:\n\n\\(Y_i\\) positives out of \\(N_i\\) tested\n\nPoisson facility case counts:\n\n\\(C_i\\) cases with exposure \\(E_i\\) (population, person-time, etc.)\n\n\nEach dataset is incomplete on its own.\nJoint modelling combines them while respecting their data-generating mechanisms."
+  },
+  {
+    "objectID": "slides/day2_slides.html#the-two-likelihoods",
+    "href": "slides/day2_slides.html#the-two-likelihoods",
+    "title": "Day 2 – Joint modelling and Non-stationary processes",
+    "section": "The two likelihoods",
+    "text": "The two likelihoods\nPrevalence\n\\[\nY_i \\mid p_i \\sim \\text{Binomial}(N_i, p_i),\\quad \\text{logit}(p_i)=\\eta_i^{(B)}\n\\]\nCounts\n\\[\nC_i \\mid \\lambda_i \\sim \\text{Poisson}(E_i\\lambda_i),\\quad \\log(\\lambda_i)=\\eta_i^{(P)}\n\\]\nDifferent link functions:\n\nlogit for probabilities\nlog for rates"
+  },
+  {
+    "objectID": "slides/day2_slides.html#linking-them-through-shared-latent-structure",
+    "href": "slides/day2_slides.html#linking-them-through-shared-latent-structure",
+    "title": "Day 2 – Joint modelling and Non-stationary processes",
+    "section": "Linking them through shared latent structure",
+    "text": "Linking them through shared latent structure\nA flexible shared-structure joint model:\n\\[\n\\eta_i^{(B)} = \\beta_0^{(B)} + \\beta^\\top x_i + S_0(s_i) + S_B(s_i)\n\\]\n\\[\n\\eta_i^{(P)} = \\beta_0^{(P)} + \\beta^\\top x_i + \\alpha S_0(s_i) + S_P(s_i)\n\\]\n\n\\(S_0(s)\\): shared field\n\\(S_B(s)\\): prevalence-specific residual spatial field\n\\(S_P(s)\\): incidence-specific residual spatial field\n\\(\\alpha\\): scaling (how strongly the shared risk appears in counts)"
+  },
+  {
+    "objectID": "slides/day2_slides.html#interpretation-of-alpha-in-0-1",
+    "href": "slides/day2_slides.html#interpretation-of-alpha-in-0-1",
+    "title": "Day 2 – Joint modelling and Non-stationary processes",
+    "section": "Interpretation of \\(\\alpha \\in [0, 1]\\)",
+    "text": "Interpretation of \\(\\alpha \\in [0, 1]\\)\n\n\\(\\alpha&gt;0\\): shared field increases counts where it increases prevalence\n\\(\\alpha\\approx 0\\): weak coupling between processes\nlarge \\(|\\alpha|\\): strong coupling\n\nThis parameter is often crucial:\n\nit encodes the relationship between the two measurements"
+  },
+  {
+    "objectID": "slides/day2_slides.html#why-include-outcome-specific-fields-s_b-s_p",
+    "href": "slides/day2_slides.html#why-include-outcome-specific-fields-s_b-s_p",
+    "title": "Day 2 – Joint modelling and Non-stationary processes",
+    "section": "Why include outcome-specific fields \\(S_B, S_P\\)?",
+    "text": "Why include outcome-specific fields \\(S_B, S_P\\)?\nBecause the two processes are not identical:\n\nprevalence and incidence are related but not the same\nfacility data can reflect access and reporting biases\nsurvey prevalence can reflect age structure and diagnostics\n\nOutcome-specific fields mop up these systematic differences."
+  },
+  {
+    "objectID": "slides/day2_slides.html#what-can-go-wrong",
+    "href": "slides/day2_slides.html#what-can-go-wrong",
+    "title": "Day 2 – Joint modelling and Non-stationary processes",
+    "section": "What can go wrong?",
+    "text": "What can go wrong?\nTwo common practical pitfalls:\n\nConfounding:\n\ncovariates and spatial fields compete\n\nMis-specified exposure \\(E_i\\):\n\nPoisson component can dominate if \\(E_i\\) is wrong scale\n\nDifferent spatial supports:\n\nfacility counts might be aggregated (administrative units)\nprevalence might be point-referenced\n\n\nSolutions:\n\ncareful covariate selection\ninformative priors (especially for \\(\\alpha\\))\nmatch spatial support where possible"
+  },
+  {
+    "objectID": "slides/day2_slides.html#why-stationarity-can-be-unrealistic",
+    "href": "slides/day2_slides.html#why-stationarity-can-be-unrealistic",
+    "title": "Day 2 – Joint modelling and Non-stationary processes",
+    "section": "Why stationarity can be unrealistic",
+    "text": "Why stationarity can be unrealistic\nStationary Matérn assumes:\n\nsame smoothness everywhere\nsame correlation length everywhere\n\nBut malaria transmission may be:\n\nsmooth in the north (broad ecological gradients)\nrough in the south (heterogeneous land use, urbanisation)\ndifferent across ecozones\n\nNon-stationarity: the covariance structure changes over space."
+  },
+  {
+    "objectID": "slides/day2_slides.html#two-practical-nonstationary-constructions",
+    "href": "slides/day2_slides.html#two-practical-nonstationary-constructions",
+    "title": "Day 2 – Joint modelling and Non-stationary processes",
+    "section": "Two practical nonstationary constructions",
+    "text": "Two practical nonstationary constructions\n\nMixture of SPDEs (smooth + rough)\n\nsimple, and robust\n\nStructured range in the SPDE\n\nrange varies continuously with a covariate\ncloser to “mechanistic” covariance modelling\n\n\nBoth are useful; choose based on:\n\ninterpretability\nstability\ncomputational cost\navailable covariates"
+  },
+  {
+    "objectID": "slides/day2_slides.html#idea-blend-a-smooth-and-a-rough-field",
+    "href": "slides/day2_slides.html#idea-blend-a-smooth-and-a-rough-field",
+    "title": "Day 2 – Joint modelling and Non-stationary processes",
+    "section": "Idea: blend a smooth and a rough field",
+    "text": "Idea: blend a smooth and a rough field\nLet:\n\n\\(S_{\\text{smooth}}(s)\\): long-range Matérn\n\\(S_{\\text{rough}}(s)\\): short-range Matérn\n\\(\\omega(s)\\in[0,1]\\): spatial weight (e.g., function of latitude)\n\nDefine:\n\\[\nS(s)=\\omega(s)S_{\\text{smooth}}(s) + (1-\\omega(s))S_{\\text{rough}}(s)\n\\]\nThen:\n\\[\n\\eta(s)=\\beta_0+\\beta^\\top x(s)+S(s)\n\\]"
+  },
+  {
+    "objectID": "slides/day2_slides.html#what-does-omegas-do",
+    "href": "slides/day2_slides.html#what-does-omegas-do",
+    "title": "Day 2 – Joint modelling and Non-stationary processes",
+    "section": "What does \\(\\omega(s)\\) do?",
+    "text": "What does \\(\\omega(s)\\) do?\n\nIf \\(\\omega(s)\\approx 1\\): field behaves like smooth long-range\nIf \\(\\omega(s)\\approx 0\\): field behaves like rough short-range\nIf \\(\\omega(s)\\) changes with location: correlation structure changes\n\nInterpretation - \\(\\omega(s)\\) is a nonstationarity driver."
+  },
+  {
+    "objectID": "slides/day2_slides.html#choosing-omegas",
+    "href": "slides/day2_slides.html#choosing-omegas",
+    "title": "Day 2 – Joint modelling and Non-stationary processes",
+    "section": "Choosing \\(\\omega(s)\\)",
+    "text": "Choosing \\(\\omega(s)\\)\nSimple choices:\n\nmonotone latitude function (north–south structure)\necozone indicator (piecewise structure)\nlogistic function of a covariate: \\[\n\\omega(s) = \\text{logit}^{-1}(a+bz(s))\n\\]\n\nIn the practical session:\n\nstart with latitude-based \\(\\omega(s)\\)\nit is easy to explain and visualise"
+  },
+  {
+    "objectID": "slides/day2_slides.html#advantages-and-limitations",
+    "href": "slides/day2_slides.html#advantages-and-limitations",
+    "title": "Day 2 – Joint modelling and Non-stationary processes",
+    "section": "Advantages and limitations",
+    "text": "Advantages and limitations\nAdvantages:\n\nstable in computation\nintuitive interpretation (smooth vs rough regions)\neasy to communicate to non-statisticians\n\nLimitations:\n\nmixture is a construction, not a single Matérn\ninterpretation of “local range” is indirect\nmay require choosing \\(\\omega(s)\\) externally"
+  },
+  {
+    "objectID": "slides/day2_slides.html#goal-let-the-matérn-range-vary-with-a-covariate",
+    "href": "slides/day2_slides.html#goal-let-the-matérn-range-vary-with-a-covariate",
+    "title": "Day 2 – Joint modelling and Non-stationary processes",
+    "section": "Goal: let the Matérn range vary with a covariate",
+    "text": "Goal: let the Matérn range vary with a covariate\nRecall: for Matérn SPDE models, range is approximately:\n\\[\n\\rho(s)\\approx \\frac{\\sqrt{8}}{\\kappa(s)}\n\\]\nSo if we model:\n\\[\n\\log \\kappa(s)=\\theta_0+\\theta_1 z(s)\n\\]\nthen\n\\[\n\\rho(s)\\text{ varies smoothly with }z(s).\n\\]"
+  },
+  {
+    "objectID": "slides/day2_slides.html#what-does-the-sign-of-theta_1-mean",
+    "href": "slides/day2_slides.html#what-does-the-sign-of-theta_1-mean",
+    "title": "Day 2 – Joint modelling and Non-stationary processes",
+    "section": "What does the sign of \\(\\theta_1\\) mean?",
+    "text": "What does the sign of \\(\\theta_1\\) mean?\nBecause \\(\\rho(s)\\propto 1/\\kappa(s)\\):\n\nIf \\(\\theta_1&gt;0\\): \\(\\kappa(s)\\) increases with \\(z\\) ⇒ range \\(\\rho(s)\\) decreases\nIf \\(\\theta_1&lt;0\\): \\(\\kappa(s)\\) decreases with \\(z\\) ⇒ range \\(\\rho(s)\\) increases\n\nSo you can encode statements like:\n\n“range is shorter in high-heterogeneity regions”\n“range is longer in smooth ecological gradient regions”"
+  },
+  {
+    "objectID": "slides/day2_slides.html#why-use-mesh-vertex-covariates",
+    "href": "slides/day2_slides.html#why-use-mesh-vertex-covariates",
+    "title": "Day 2 – Joint modelling and Non-stationary processes",
+    "section": "Why use mesh-vertex covariates?",
+    "text": "Why use mesh-vertex covariates?\nIn the SPDE approximation:\n\nthe field is defined through weights on mesh vertices\nso nonstationary parameters need to be specified at the same support (vertices)\n\nThus \\(z(s)\\) is evaluated at mesh nodes:\n\n\\(z_k = z(\\text{vertex}_k)\\)\n\nThis makes the range a spatially varying parameter."
+  },
+  {
+    "objectID": "slides/day2_slides.html#what-changes-compared-to-stationary-spde",
+    "href": "slides/day2_slides.html#what-changes-compared-to-stationary-spde",
+    "title": "Day 2 – Joint modelling and Non-stationary processes",
+    "section": "What changes compared to stationary SPDE?",
+    "text": "What changes compared to stationary SPDE?\nStationary SPDE:\n\none \\(\\kappa\\), one \\(\\tau\\) for all space\n\nStructured-range SPDE:\n\n\\(\\kappa(s)\\) and \\(\\tau(s)\\) can depend on covariates\nintroduces additional parameters \\(\\theta\\) controlling how they vary\n\nConceptual result:\n\ncorrelation length changes smoothly across the map"
+  },
+  {
+    "objectID": "slides/day2_slides.html#relation-between-taus-kappas-and-variance",
+    "href": "slides/day2_slides.html#relation-between-taus-kappas-and-variance",
+    "title": "Day 2 – Joint modelling and Non-stationary processes",
+    "section": "Relation between \\(\\tau(s)\\), \\(\\kappa(s)\\), and variance",
+    "text": "Relation between \\(\\tau(s)\\), \\(\\kappa(s)\\), and variance\nIn SPDE Matérn models:\n\n\\(\\kappa(s)\\): controls range\n\\(\\tau(s)\\): controls marginal variance (together with \\(\\kappa\\))\n\nSo structured modelling can target:\n\nrange only (via \\(\\kappa\\))\nvariance only (via \\(\\tau\\))\nor both\n\nToday we emphasise structured range."
+  },
+  {
+    "objectID": "slides/day2_slides.html#practical-guidance-for-modelling",
+    "href": "slides/day2_slides.html#practical-guidance-for-modelling",
+    "title": "Day 2 – Joint modelling and Non-stationary processes",
+    "section": "Practical guidance for modelling",
+    "text": "Practical guidance for modelling\n\nStart with a simple covariate \\(z(s)\\) (e.g. northing or ecozone index)\nScale it to have mean 0, sd 1\nUse weak-to-moderate priors on the slope parameter to avoid extreme range variation\n\nIn interpretation:\n\nshow the covariate map\nshow the predicted prevalence map\n(optionally) show a derived “implied range” surface"
+  },
+  {
+    "objectID": "slides/day2_slides.html#example-1-joint-model-outputs-to-discuss",
+    "href": "slides/day2_slides.html#example-1-joint-model-outputs-to-discuss",
+    "title": "Day 2 – Joint modelling and Non-stationary processes",
+    "section": "Example 1: Joint model outputs to discuss",
+    "text": "Example 1: Joint model outputs to discuss\nFor the joint prevalence model: - How similar are children vs pregnant spatial patterns? - Is the shared field dominant? - Where do groups diverge?\nDiscussion prompts: - Are differences biological, behavioural, or sampling-related? - Could this be explained by covariates?"
+  },
+  {
+    "objectID": "slides/day2_slides.html#example-2-multi-likelihood-model-outputs-to-discuss",
+    "href": "slides/day2_slides.html#example-2-multi-likelihood-model-outputs-to-discuss",
+    "title": "Day 2 – Joint modelling and Non-stationary processes",
+    "section": "Example 2: Multi-likelihood model outputs to discuss",
+    "text": "Example 2: Multi-likelihood model outputs to discuss\nFor binomial + poisson: - Does adding case counts sharpen predictions? - Do we see evidence of strong coupling (())? - Where do outcome-specific fields absorb discrepancies?\nDiscussion prompts: - What might cause facility counts to disagree with survey prevalence?"
+  },
+  {
+    "objectID": "slides/day2_slides.html#example-3-nonstationary-mixture-outputs-to-discuss",
+    "href": "slides/day2_slides.html#example-3-nonstationary-mixture-outputs-to-discuss",
+    "title": "Day 2 – Joint modelling and Non-stationary processes",
+    "section": "Example 3: Nonstationary mixture outputs to discuss",
+    "text": "Example 3: Nonstationary mixture outputs to discuss\n\nWhere does the model behave smoothly vs roughly?\nDoes ((s)) align with your ecological intuition?\nHow sensitive is the result to the choice of ((s))?"
+  },
+  {
+    "objectID": "slides/day2_slides.html#example-4-structured-range-outputs-to-discuss",
+    "href": "slides/day2_slides.html#example-4-structured-range-outputs-to-discuss",
+    "title": "Day 2 – Joint modelling and Non-stationary processes",
+    "section": "Example 4: Structured range outputs to discuss",
+    "text": "Example 4: Structured range outputs to discuss"
+  },
+  {
+    "objectID": "slides/day2_slides.html#summary",
+    "href": "slides/day2_slides.html#summary",
+    "title": "Day 2 – Joint modelling and Non-stationary processes",
+    "section": "Summary",
+    "text": "Summary\nJoint models - share spatial information across related outcomes - can handle: - multiple groups (same likelihood) - multiple likelihoods (binomial + poisson)\nNonstationarity - mixture SPDE: simple and robust - structured range SPDE: mechanistic, covariate-driven\nTake-away - choose the simplest model that answers your scientific question - use nonstationarity when stationary assumptions are visibly violated"
+  },
+  {
+    "objectID": "day3.html",
+    "href": "day3.html",
+    "title": "Day 3 – Hybrid Machine Learning + Geostatistics",
+    "section": "",
+    "text": "Today we combine:\n\nMachine learning models (e.g., Random Forest, XGBoost)\nSpatial residual modelling via SPDE + inlabru\nHybrid prediction pipelines for malaria prevalence\n\nThe goal:\nUse ML to model complex covariate effects, and INLA/SPDE to model spatial dependence in the residuals."
+  },
+  {
+    "objectID": "day3.html#overview",
+    "href": "day3.html#overview",
+    "title": "Day 3 – Hybrid Machine Learning + Geostatistics",
+    "section": "",
+    "text": "Today we combine:\n\nMachine learning models (e.g., Random Forest, XGBoost)\nSpatial residual modelling via SPDE + inlabru\nHybrid prediction pipelines for malaria prevalence\n\nThe goal:\nUse ML to model complex covariate effects, and INLA/SPDE to model spatial dependence in the residuals."
+  },
+  {
+    "objectID": "day3.html#load-day-3-dataset",
+    "href": "day3.html#load-day-3-dataset",
+    "title": "Day 3 – Hybrid Machine Learning + Geostatistics",
+    "section": "Load Day 3 dataset",
+    "text": "Load Day 3 dataset\n\n\nCode\nlibrary(tidyverse)\n\nhybrid_ml_geo &lt;- read_csv(\"data/hybrid_ml_geostatistical_data.csv\")\n\nhead(hybrid_ml_geo)\n\n\n# A tibble: 6 × 11\n     id   utm_x    utm_y n_tested n_pos prevalence_true ml_signal_true\n  &lt;dbl&gt;   &lt;dbl&gt;    &lt;dbl&gt;    &lt;dbl&gt; &lt;dbl&gt;           &lt;dbl&gt;          &lt;dbl&gt;\n1     1 279090.  838870.       63     0        0.00167           -5.04\n2     2  57751.  672968.      125     0        0.000452          -6.60\n3     3 160759. 1365476.      139     0        0.00694           -3.80\n4     4 949111. 1230481.      126     0        0.000334          -7.10\n5     5 434005.  682490.       97     0        0.00205           -5.51\n6     6 -91406.  925776.      122     3        0.00767           -3.16\n# ℹ 4 more variables: S_residual_true &lt;dbl&gt;, elevation &lt;dbl&gt;, ndvi &lt;dbl&gt;,\n#   urban &lt;dbl&gt;\n\n\nVisualise ML signal + spatial residuals\n\n\nCode\nlibrary(ggplot2)\n\nggplot(hybrid_ml_geo, aes(utm_x, utm_y, colour = ml_signal_true)) +\ngeom_point() +\ncoord_equal() +\ntheme_minimal()"
+  },
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "Geostatistical Modelling with inlabru",
+    "section": "",
+    "text": "This workshop is funded by the London Mathematical Society (LMS) Scheme 5 and Department of Mathematics, University of Manchester, UK.\n\nWelcome to the Geostatistical Modelling with inlabru workshop.\nThis 3-day workshop covers:\n\nSpatial and spatio-temporal analysis (different likelihoods)\nJoint modelling of multiple malaria processes\nNon-stationary spatial processes\nHybrid machine learning + geostatistical models"
+  },
+  {
+    "objectID": "day2.html",
+    "href": "day2.html",
+    "title": "Day 2 – Joint modelling and Non-stationary processes",
+    "section": "",
+    "text": "Today we will cover two key advanced topics in spatial modelling:\n\nJoint modelling of multiple malaria processes\n\nShared spatial fields\n\nProcess-specific fields\n\nMultiple outcomes (e.g., children vs pregnant women)\nMultiple likelihoods (Binomial + Poisson)\n\nNon-stationary spatial processes\n\nRegion-varying smoothness\n\nCovariate-driven nonstationarity\n\nCombining multiple spatial SPDEs"
+  },
+  {
+    "objectID": "day2.html#overview",
+    "href": "day2.html#overview",
+    "title": "Day 2 – Joint modelling and Non-stationary processes",
+    "section": "",
+    "text": "Today we will cover two key advanced topics in spatial modelling:\n\nJoint modelling of multiple malaria processes\n\nShared spatial fields\n\nProcess-specific fields\n\nMultiple outcomes (e.g., children vs pregnant women)\nMultiple likelihoods (Binomial + Poisson)\n\nNon-stationary spatial processes\n\nRegion-varying smoothness\n\nCovariate-driven nonstationarity\n\nCombining multiple spatial SPDEs"
+  },
+  {
+    "objectID": "day2.html#load-day-2-datasets",
+    "href": "day2.html#load-day-2-datasets",
+    "title": "Day 2 – Joint modelling and Non-stationary processes",
+    "section": "Load Day 2 datasets",
+    "text": "Load Day 2 datasets\n\n\nCode\nlibrary(tidyverse)\nlibrary(INLA)\nlibrary(inlabru)\nlibrary(ggplot2)\nlibrary(sf)\nlibrary(stars)\nlibrary(geoR)\n\njoint_malaria &lt;- read_csv(\"data/joint_malaria_processes.csv\")\nnonstat_malaria &lt;- read_csv(\"data/nonstationary_malaria_data.csv\")\n\nnga_admin1 &lt;- st_read(\"data/nga_shapefile.shp\")\n\n\nReading layer `nga_shapefile' from data source \n  `/home/olatunji-johnson/Documents/Manchester Job/Teaching/Courses/Nigeria_2026/rcode/FUTA/data/nga_shapefile.shp' \n  using driver `ESRI Shapefile'\nSimple feature collection with 37 features and 121 fields\nGeometry type: MULTIPOLYGON\nDimension:     XY\nBounding box:  xmin: -198992.3 ymin: 472813 xmax: 1117766 ymax: 1537228\nProjected CRS: WGS 84 / UTM zone 32N\n\n\nCode\nhead(joint_malaria)\n\n\n# A tibble: 6 × 12\n     id group    utm_x  utm_y n_tested n_pos prevalence_true S_shared S_specific\n  &lt;dbl&gt; &lt;chr&gt;    &lt;dbl&gt;  &lt;dbl&gt;    &lt;dbl&gt; &lt;dbl&gt;           &lt;dbl&gt;    &lt;dbl&gt;      &lt;dbl&gt;\n1     1 child… 249196. 7.37e5      148    48           0.281   0.297      -0.409\n2     2 child… 703934. 9.57e5      107    35           0.337  -0.0736      0.415\n3     3 child… -90558. 9.32e5      139    66           0.416   0.680      -0.145\n4     4 child… 252087. 1.11e6      138    55           0.369  -0.147       0.277\n5     5 child… 685078. 1.34e6      183    47           0.219  -0.192      -0.281\n6     6 child… 422901. 5.12e5      131    63           0.501   0.589       0.166\n# ℹ 3 more variables: elevation &lt;dbl&gt;, ndvi &lt;dbl&gt;, urban &lt;dbl&gt;"
+  },
+  {
+    "objectID": "day2.html#convert-to-sf-for-mapping",
+    "href": "day2.html#convert-to-sf-for-mapping",
+    "title": "Day 2 – Joint modelling and Non-stationary processes",
+    "section": "2. Convert to sf for mapping",
+    "text": "2. Convert to sf for mapping\nWe need an sf layer to overlay boundaries, plot points, and feed coordinates into SPDE meshes.\n\n\nCode\njoint_malaria_sf &lt;- joint_malaria %&gt;%\n  st_as_sf(coords = c(\"utm_x\", \"utm_y\"), crs = 32632)\nnonstat_malaria_sf &lt;- nonstat_malaria %&gt;%\n  st_as_sf(coords = c(\"utm_x\", \"utm_y\"), crs = 32632)\n\n\nQuick visualisation\n\n\nCode\nggplot() +\ngeom_sf(data = joint_malaria_sf, aes(colour = prevalence_true)) +\nfacet_wrap(~group) +\ngeom_sf(data = nga_admin1, fill = NA) +\ngeom_point() +\ntheme_minimal()\n\n\n\n\n\n\n\n\n\nQuick visualisation (non-stationary dataset)\n\n\nCode\nggplot() +\ngeom_sf(data = nonstat_malaria_sf, aes(colour = prevalence_true)) +\ngeom_sf(data = nga_admin1, fill = NA) +\ngeom_point() +\ntheme_minimal()\n\n\n\n\n\n\n\n\n\n============================================================\nPart 1A — Joint modelling (shared + group-specific fields)\n============================================================\n\nCreate a single stacked dataset\n\nWe will model both groups jointly with: - one shared spatial field - one group-specific spatial field (replicated by group)\n\n\nCode\njoint_dat &lt;- joint_malaria_sf |&gt;\nmutate(\ngroup = factor(group),\ny = n_pos,\nn = n_tested\n)\n\nlevels(joint_dat$group)\n\n\n[1] \"children_u5\"    \"pregnant_women\"\n\n\n\nBuild SPDE mesh\n\n\n\nCode\nlocs_joint &lt;- joint_malaria_sf\n\nmesh_joint &lt;- inla.mesh.2d(\nloc = st_coordinates(locs_joint),\nmax.edge = c(80000, 250000),   # tune for smoothness vs speed\ncutoff = 20000,                # remove very close points\noffset = c(100000, 200000)\n)\n\nplot(mesh_joint)\npoints(st_coordinates(locs_joint), pch = 16, cex = 0.4, col= \"red\")\n\n\n\n\n\n\n\n\n\n\nDefine SPDEs (shared + group-specific)\n\n\nspde_shared: one latent field for all data\nspde_group: replicated field with one replicate per group\n\n\n\nCode\nspde_shared &lt;- inla.spde2.pcmatern(\nmesh = mesh_joint,\nprior.range = c(300000, 0.5),   # P(range &lt; 300km) = 0.5\nprior.sigma = c(1, 0.5)         # P(sigma &gt; 1) = 0.5\n)\n\nspde_group &lt;- inla.spde2.pcmatern(\nmesh = mesh_joint,\nprior.range = c(200000, 0.5),\nprior.sigma = c(1, 0.5)\n)\n\n\n\nFit joint model in inlabru\n\nModel:\n\nBinomial likelihood for counts\nFixed effects (elevation, ndvi, urban)\nfield_shared() applies to all\nfield_group() replicated by group\n\n\n\nCode\ncmp_joint &lt;- y ~\n1 +\nelevation + ndvi + urban +\nfield_shared(geometry, model = spde_shared) +\nfield_group(geometry, model = spde_group, replicate = group)\n\nfit_joint &lt;- bru(\ncomponents = cmp_joint,\nfamily = \"binomial\",\ndata = joint_dat,\nNtrials = joint_dat$n,\noptions = list(control.compute = list(dic = TRUE, waic = TRUE))\n)\n\nsummary(fit_joint)\n\n\ninlabru version: 2.13.0.9024 \nINLA version: 25.12.02 \nLatent components:\nelevation: main = linear(elevation)\nndvi: main = linear(ndvi)\nurban: main = linear(urban)\nfield_shared: main = spde(geometry)\nfield_group: main = spde(geometry), replicate = iid(group)\nIntercept: main = linear(1)\nObservation models:\n  Model tag: &lt;No tag&gt;\n    Family: 'binomial'\n    Data class: 'sf', 'tbl_df', 'tbl', 'data.frame'\n    Response class: 'numeric'\n    Predictor: y ~ elevation + ndvi + urban + field_shared + field_group + Intercept\n    Additive/Linear/Rowwise: TRUE/TRUE/TRUE\n    Used components: effect[elevation, ndvi, urban, field_shared, field_group, Intercept], latent[] \nTime used:\n    Pre = 1.06, Running = 10.3, Post = 0.419, Total = 11.7 \nFixed effects:\n            mean    sd 0.025quant 0.5quant 0.975quant   mode kld\nelevation -0.002 0.001     -0.003   -0.002      0.000 -0.002   0\nndvi       1.650 0.530      0.617    1.645      2.713  1.646   0\nurban      0.350 0.041      0.269    0.350      0.430  0.350   0\nIntercept -0.396 0.360     -1.113   -0.393      0.304 -0.393   0\n\nRandom effects:\n  Name    Model\n    field_shared SPDE2 model\n   field_group SPDE2 model\n\nModel hyperparameters:\n                           mean       sd 0.025quant 0.5quant 0.975quant\nRange for field_shared 5.32e+04 1.62e+04   2.81e+04 5.09e+04   9.12e+04\nStdev for field_shared 3.47e-01 3.60e-02   2.81e-01 3.46e-01   4.23e-01\nRange for field_group  3.41e+05 6.04e+04   2.42e+05 3.34e+05   4.78e+05\nStdev for field_group  5.37e-01 6.50e-02   4.24e-01 5.32e-01   6.78e-01\n                           mode\nRange for field_shared 4.68e+04\nStdev for field_shared 3.43e-01\nRange for field_group  3.19e+05\nStdev for field_group  5.19e-01\n\nDeviance Information Criterion (DIC) ...............: 3183.49\nDeviance Information Criterion (DIC, saturated) ....: 835.78\nEffective number of parameters .....................: 292.18\n\nWatanabe-Akaike information criterion (WAIC) ...: 3175.37\nEffective number of parameters .................: 214.05\n\nMarginal log-Likelihood:  -1807.95 \n is computed \nPosterior summaries for the linear predictor and the fitted values are computed\n(Posterior marginals needs also 'control.compute=list(return.marginals.predictor=TRUE)')\n\n\n\nPrediction grid inside Nigeria (UTM)\n\n\n\nCode\n# make_grid_utm &lt;- function(polygon_utm, dx = 20000) {\n# bb &lt;- st_bbox(polygon_utm)\n# xs &lt;- seq(bb[\"xmin\"], bb[\"xmax\"], by = dx)\n# ys &lt;- seq(bb[\"ymin\"], bb[\"ymax\"], by = dx)\n# grid &lt;- expand.grid(utm_x = xs, utm_y = ys)\n# pts  &lt;- st_as_sf(grid, coords = c(\"utm_x\", \"utm_y\"), crs = st_crs(polygon_utm))\n# inside &lt;- st_within(pts, polygon_utm, sparse = FALSE)[, 1]\n# grid[inside, ]\n# }\n# \n# pred_grid_joint &lt;- make_grid_utm(nga_poly %&gt;% st_transform(32632), dx = 100000) |&gt;\n# mutate(\n# # For teaching: use simple smooth-ish covariates (replace with real rasters later)\n# elevation = 250 + 80 * scale(utm_y)[,1] + rnorm(n(), sd = 15),\n# ndvi      = plogis(-0.2 + 0.8 * scale(utm_y)[,1] + 0.3 * sin(scale(utm_x)[,1])),\n# urban     = rbinom(n(), 1, plogis(-0.2 + 0.3 * scale(utm_x)[,1]))\n# )\n\npred_grid_joint &lt;- read_csv(\"data/prediction_grid_utm.csv\") %&gt;% \ntidyr::expand_grid(group = levels(joint_dat$group)) %&gt;%\nst_as_sf(coords=c(\"utm_x\",\"utm_y\"), crs=32632)\nhead(pred_grid_joint)\n\n\nSimple feature collection with 6 features and 6 fields\nGeometry type: POINT\nDimension:     XY\nBounding box:  xmin: 172259.6 ymin: 478133.5 xmax: 185657.6 ymax: 478184.5\nProjected CRS: WGS 84 / UTM zone 32N\n# A tibble: 6 × 7\n    lon   lat elevation   ndvi urban group                     geometry\n  &lt;dbl&gt; &lt;dbl&gt;     &lt;dbl&gt;  &lt;dbl&gt; &lt;dbl&gt; &lt;chr&gt;                  &lt;POINT [m]&gt;\n1  6.05  4.32      253. 0.0664     1 children_u5    (172259.6 478184.5)\n2  6.05  4.32      253. 0.0664     1 pregnant_women (172259.6 478184.5)\n3  6.11  4.32      244. 0.0654     1 children_u5    (178958.8 478158.8)\n4  6.11  4.32      244. 0.0654     1 pregnant_women (178958.8 478158.8)\n5  6.17  4.32      242. 0.0645     1 children_u5    (185657.6 478133.5)\n6  6.17  4.32      242. 0.0645     1 pregnant_women (185657.6 478133.5)\n\n\n\nPredict for each group and map\n\n\n\nCode\npred_joint &lt;- predict(\nfit_joint,\nnewdata = pred_grid_joint,\nformula = ~ plogis(Intercept + elevation + ndvi + urban +\nfield_shared + field_group),\nn.samples = 200\n)\n\npred_joint_sf &lt;- pred_joint |&gt;\nrename(prev_mean = mean)\n\nhead(pred_joint_sf)\n\n\nSimple feature collection with 6 features and 14 fields\nGeometry type: POINT\nDimension:     XY\nBounding box:  xmin: 172259.6 ymin: 478133.5 xmax: 185657.6 ymax: 478184.5\nProjected CRS: WGS 84 / UTM zone 32N\n       lon      lat elevation       ndvi urban          group prev_mean\n1 6.047644 4.320444  252.9367 0.06636150     1    children_u5 0.2454142\n2 6.047644 4.320444  252.9367 0.06636150     1 pregnant_women 0.5502509\n3 6.107940 4.320444  244.1864 0.06535912     1    children_u5 0.2431139\n4 6.107940 4.320444  244.1864 0.06535912     1 pregnant_women 0.5562642\n5 6.168235 4.320444  242.2228 0.06445763     1    children_u5 0.2392009\n6 6.168235 4.320444  242.2228 0.06445763     1 pregnant_women 0.5595819\n          sd    q0.025      q0.5    q0.975    median mean.mc_std_err\n1 0.08483441 0.1175872 0.2320009 0.4295042 0.2320009     0.006635328\n2 0.10346490 0.3383491 0.5534975 0.7451256 0.5534975     0.008062772\n3 0.07796974 0.1296129 0.2322176 0.4115017 0.2322176     0.006096718\n4 0.09640754 0.3675169 0.5628076 0.7359455 0.5628076     0.007501434\n5 0.07206476 0.1319077 0.2296956 0.3944603 0.2296956     0.005632434\n6 0.09133494 0.3860712 0.5576584 0.7322711 0.5576584     0.007085350\n  sd.mc_std_err                  geometry\n1   0.004501648 POINT (172259.6 478184.5)\n2   0.005279958 POINT (172259.6 478184.5)\n3   0.004125433 POINT (178958.8 478158.8)\n4   0.004839379 POINT (178958.8 478158.8)\n5   0.003794938 POINT (185657.6 478133.5)\n6   0.004433520 POINT (185657.6 478133.5)\n\n\n\nRaster map per group (clipped to Nigeria)\n\n\n\nCode\npred_joint_map &lt;- function(group_name, dx = 20000) {\ndat_g &lt;- pred_joint_sf |&gt; filter(group == group_name)\n\nrast &lt;- st_rasterize(dat_g[\"prev_mean\"], dx = dx, dy = dx)\nrast_ng &lt;- rast[st_union(nga_admin1)]\n\nggplot() +\ngeom_stars(data = rast_ng, na.rm = TRUE) +\ngeom_sf(data = nga_admin1, fill = NA, colour = \"black\", linewidth = 0.25) +\ncoord_sf(expand = FALSE) +\nscale_fill_viridis_c(name = \"Predicted\\nprevalence\", na.value = NA) +\ntheme_minimal() +\ntheme(panel.grid = element_blank(),\npanel.background = element_rect(fill = \"white\", colour = NA),\nplot.background  = element_rect(fill = \"white\", colour = NA)) +\nlabs(title = paste(\"Joint model: posterior mean prevalence –\", group_name))\n}\n\npred_joint_map(\"children_u5\")\n\n\n\n\n\n\n\n\n\nCode\npred_joint_map(\"pregnant_women\")\n\n\n\n\n\n\n\n\n\n============================================================\nPart 2A — Joint modelling with multiple likelihoods (Binomial + Poisson)\n============================================================\n\nPrepare the two datasets and create the mesh\n\nHere we used the binomial and poisson malaria data: - spatial_binom with n_pos, n_tested - spatial_pois with cases, population\n\n\nCode\n# Example: take children as binomial and pretend pregnant are poisson (toy)\nbinom_dat &lt;- read_csv(\"data/spatial_binomial_data.csv\") \npois_dat &lt;- read_csv(\"data/spatial_poisson_data.csv\")\n\nbinom_sf &lt;- st_as_sf(binom_dat, coords = c(\"utm_x\",\"utm_y\"), crs = 32632)\npois_sf  &lt;- st_as_sf(pois_dat,  coords = c(\"utm_x\",\"utm_y\"), crs = 32632)\n\n\nmesh_binom &lt;- inla.mesh.2d(\nloc = st_coordinates(binom_sf),\nmax.edge = c(100000, 200000), # inner and outer triangle sizes\ncutoff = 20000,  # merge points closer than 20km\noffset = c(50000, 200000)  # extend mesh beyond convex hull\n)\n\nplot(mesh_binom)\npoints(st_coordinates(binom_sf), col=\"red\", pch=16, cex = 0.4)\n\n\n\n\n\n\n\n\n\nCode\n####\nmesh_pois &lt;- inla.mesh.2d(\nloc = st_coordinates(binom_sf),\nmax.edge = c(100000, 200000), # inner and outer triangle sizes\ncutoff = 20000,  # merge points closer than 20km\noffset = c(50000, 200000)  # extend mesh beyond convex hull\n)\n\nplot(mesh_pois)\npoints(st_coordinates(binom_sf), col=\"red\", pch=16, cex = 0.4)\n\n\n\n\n\n\n\n\n\nCode\n# Mesh on all locations\nall_coords &lt;- rbind(st_coordinates(binom_sf), st_coordinates(pois_sf))\n\nmesh_joint &lt;- inla.mesh.2d(\n  loc = all_coords,\n  max.edge = c(80000, 250000),\n  cutoff   = 20000,\n  offset   = c(100000, 200000)\n)\n\nplot(mesh_joint); points(all_coords, pch = 16, cex = 0.4, col=\"red\")\n\n\n\n\n\n\n\n\n\n\nShared + likelihood-specific spatial fields\n\n\n\nCode\nspde_shared &lt;- inla.spde2.pcmatern(\n  mesh = mesh_joint,\n  prior.range = c(300000, 0.5),\n  prior.sigma = c(1, 0.5)\n)\n\nspde_binom &lt;- inla.spde2.pcmatern(\n  mesh = mesh_binom,\n  prior.range = c(200000, 0.5),\n  prior.sigma = c(1, 0.5)\n)\n\nspde_pois &lt;- inla.spde2.pcmatern(\n  mesh = mesh_pois,\n  prior.range = c(200000, 0.5),\n  prior.sigma = c(1, 0.5)\n)\n\n\n\nFit a multi-likelihood model in inlabru\n\nKey idea: use like() twice, and call bru() once.\n\n\nCode\n# Components: shared + outcome-specific fields\ncmp &lt;- ~\n  Intercept_binom(1) + Intercept_pois(1) + \n  elevation + ndvi + urban +\n  shared(geometry, copy = \"binom_field\", fixed = FALSE) +\n  binom_field(geometry, model = spde_binom) +\n  pois_field(geometry,  model = spde_pois)\n\n# Likelihood 1: binomial prevalence\nlike_binom &lt;- like(\n  formula = n_pos ~ Intercept_binom + elevation + ndvi + urban +\n  binom_field,\n  family  = \"binomial\",\n  data    = binom_sf,\n  Ntrials = binom_sf$n_tested\n)\n\n# Likelihood 2: poisson cases with offset(log(population))\nlike_pois &lt;- like(\n  formula = cases ~ Intercept_pois + elevation + ndvi + urban +\n  shared +\n  pois_field, # + offset(log(population)),\n  family  = \"poisson\",\n  data    = pois_sf,\n  E = pois_sf$population\n)\n\nfit_multi &lt;- bru(\n  components = cmp,\n  like_binom,\n  like_pois,\n  options = list(control.compute = list(dic = TRUE, waic = TRUE))\n)\n\nsummary(fit_multi)\n\n\ninlabru version: 2.13.0.9024 \nINLA version: 25.12.02 \nLatent components:\nIntercept_binom: main = linear(1)\nelevation: main = linear(elevation)\nndvi: main = linear(ndvi)\nurban: main = linear(urban)\nbinom_field: main = spde(geometry)\nIntercept_pois: main = linear(1)\nshared(=binom_field): main = unknown(geometry)\npois_field: main = spde(geometry)\nObservation models:\n  Model tag: &lt;No tag&gt;\n    Family: 'binomial'\n    Data class: 'sf', 'tbl_df', 'tbl', 'data.frame'\n    Response class: 'numeric'\n    Predictor: n_pos ~ Intercept_binom + elevation + ndvi + urban + binom_field\n    Additive/Linear/Rowwise: TRUE/TRUE/TRUE\n    Used components: effect[Intercept_binom, elevation, ndvi, urban, binom_field], latent[] \n  Model tag: &lt;No tag&gt;\n    Family: 'poisson'\n    Data class: 'sf', 'tbl_df', 'tbl', 'data.frame'\n    Response class: 'numeric'\n    Predictor: cases ~ Intercept_pois + elevation + ndvi + urban + shared + pois_field\n    Additive/Linear/Rowwise: TRUE/TRUE/TRUE\n    Used components: effect[Intercept_pois, elevation, ndvi, urban, shared, pois_field], latent[] \nTime used:\n    Pre = 1.13, Running = 10.2, Post = 0.285, Total = 11.6 \nFixed effects:\n                  mean    sd 0.025quant 0.5quant 0.975quant   mode kld\nIntercept_binom -2.422 0.714     -3.790   -2.437     -0.957 -2.434   0\nelevation       -0.002 0.001     -0.004   -0.002      0.000 -0.002   0\nndvi             1.935 1.044     -0.101    1.917      4.053  1.915   0\nurban            0.556 0.045      0.468    0.556      0.646  0.556   0\nIntercept_pois  -6.836 0.753     -8.463   -6.805     -5.428 -6.813   0\n\nRandom effects:\n  Name    Model\n    binom_field SPDE2 model\n   pois_field SPDE2 model\n   shared Copy\n\nModel hyperparameters:\n                           mean       sd 0.025quant  0.5quant 0.975quant\nRange for binom_field  3.57e+05 8.09e+04   2.29e+05  3.46e+05   5.45e+05\nStdev for binom_field  1.40e+00 2.48e-01   9.90e-01  1.37e+00   1.96e+00\nRange for pois_field   6.70e+05 2.72e+05   3.23e+05  6.13e+05   1.37e+06\nStdev for pois_field   7.08e-01 1.74e-01   4.45e-01  6.82e-01   1.12e+00\nBeta for shared       -3.20e-02 7.90e-02  -1.90e-01 -3.20e-02   1.22e-01\n                           mode\nRange for binom_field  3.24e+05\nStdev for binom_field  1.31e+00\nRange for pois_field   5.07e+05\nStdev for pois_field   6.25e-01\nBeta for shared       -3.00e-02\n\nDeviance Information Criterion (DIC) ...............: 2536.98\nDeviance Information Criterion (DIC, saturated) ....: 819.91\nEffective number of parameters .....................: 200.02\n\nWatanabe-Akaike information criterion (WAIC) ...: 2562.60\nEffective number of parameters .................: 173.60\n\nMarginal log-Likelihood:  -1463.36 \n is computed \nPosterior summaries for the linear predictor and the fitted values are computed\n(Posterior marginals needs also 'control.compute=list(return.marginals.predictor=TRUE)')\n\n\n\nPredict (example: prevalence surface from the binomial part)\n\n\n\nCode\npred_grid &lt;- read_csv(\"data/prediction_grid_utm.csv\") %&gt;%\nst_as_sf(coords=c(\"utm_x\",\"utm_y\"), crs=32632)\n\npred_binom_multi &lt;- predict(\nfit_multi,\nnewdata = pred_grid,\nformula = ~ plogis(Intercept_binom + elevation + ndvi + urban + binom_field),\nn.samples = 1000\n)\n\n\n\n\nCode\npred_binom_r &lt;- st_rasterize(pred_binom_multi[\"mean\"], dx=10000, dy=10000)\npred_binom_r &lt;- pred_binom_r[st_union(nga_admin1)]\nggplot() +\n  geom_stars(data=pred_binom_r, na.rm = TRUE) +\n  geom_sf(data=nga_admin1, fill=NA, color = \"black\") +\n  coord_sf() +\n  scale_fill_viridis_c(name = \"Predicted\\nprevalence\", na.value = NA) +\n  theme_minimal() +\n  theme(\n    panel.background = element_rect(fill = \"white\", colour = NA),\n    plot.background  = element_rect(fill = \"white\", colour = NA),\n    panel.grid       = element_blank()\n  )\n\n\n\n\n\n\n\n\n\n============================================================\nPart 1B — Non-stationary spatial process (mixture of two SPDEs)\n============================================================ We’ll fit a non-stationary field using a mixture of two spatial fields:\n\none smooth / long-range SPDE\none rough / short-range SPDE\na spatially varying weight w(s) controlling mixture\n\nThis is a simple, teachable non-stationary construction.\n\nPrepare data and a mesh\n\n\n\nCode\nns_dat &lt;- nonstat_malaria |&gt;\nmutate(\ny = n_pos,\nn = n_tested\n)\n\nlocs_ns &lt;- nonstat_malaria_sf\n\nmesh_ns &lt;- inla.mesh.2d(\nloc = st_coordinates(locs_ns),\nmax.edge = c(80000, 250000),\ncutoff = 20000,\noffset = c(100000, 200000)\n)\n\nplot(mesh_ns)\npoints(st_coordinates(locs_ns), pch = 16, cex = 0.4, col= \"red\")\n\n\n\n\n\n\n\n\n\n\nTwo SPDEs: smooth and rough\n\n\n\nCode\nspde_smooth &lt;- inla.spde2.pcmatern(\nmesh = mesh_ns,\nprior.range = c(600000, 0.5),   # long range\nprior.sigma = c(1, 0.5)\n)\n\nspde_rough &lt;- inla.spde2.pcmatern(\nmesh = mesh_ns,\nprior.range = c(200000, 0.5),   # short range\nprior.sigma = c(1, 0.5)\n)\n\n\n\nBuild a spatially varying weight w(s)\n\nDefine w(s) as a simple function of northing (utm_y). (You can later replace this with a covariate surface.)\n\n\nCode\n# Normalised northing in [0,1]\n\nns_dat &lt;- ns_dat |&gt;\nmutate(\nw = (utm_y - min(utm_y)) / (max(utm_y) - min(utm_y)),\nw = pmin(pmax(w, 0), 1)\n) %&gt;% st_as_sf(coords=c(\"utm_x\",\"utm_y\"), crs=32632)\nhead(ns_dat)\n\n\nSimple feature collection with 6 features and 14 fields\nGeometry type: POINT\nDimension:     XY\nBounding box:  xmin: -182831.5 ymin: 573963.7 xmax: 1048433 ymax: 1300816\nProjected CRS: WGS 84 / UTM zone 32N\n# A tibble: 6 × 15\n     id n_tested n_pos prevalence_true S_nonstationary weight_north S_smooth\n  &lt;dbl&gt;    &lt;dbl&gt; &lt;dbl&gt;           &lt;dbl&gt;           &lt;dbl&gt;        &lt;dbl&gt;    &lt;dbl&gt;\n1     1      164    30           0.152         -0.793        0.168    -0.273\n2     2      198    69           0.342         -0.0743       0.813     0.405\n3     3      143    40           0.278         -0.0372       0.231     0.169\n4     4       62    14           0.210         -0.0809       0.0903   -0.294\n5     5      160    30           0.170         -0.857        0.481    -0.173\n6     6      197    44           0.260         -0.0663       0.425     0.159\n# ℹ 8 more variables: S_rough &lt;dbl&gt;, elevation &lt;dbl&gt;, ndvi &lt;dbl&gt;, urban &lt;dbl&gt;,\n#   y &lt;dbl&gt;, n &lt;dbl&gt;, w &lt;dbl&gt;, geometry &lt;POINT [m]&gt;\n\n\n\nFit non-stationary mixture model\n\nWe model:\n\\[\\eta = \\beta_0 + \\beta^\\top x(s) + \\omega(s) S_{smooth} + (1- \\omega(s)) S_{rough}(s)\\]\nIn inlabru we do this by multiplying the fields by covariates w and 1-w.\n\n\nCode\ncmp_ns &lt;- y ~\n1 + elevation + ndvi + urban +\nsmooth(geometry, model = spde_smooth, weights = w) +\nrough(geometry, model = spde_rough,  weights = I(1 - w))\n\nfit_ns &lt;- bru(\ncomponents = cmp_ns,\nfamily = \"binomial\",\ndata = ns_dat,\nNtrials = ns_dat$n,\noptions = list(control.compute = list(dic = TRUE, waic = TRUE))\n)\n\nsummary(fit_ns)\n\n\ninlabru version: 2.13.0.9024 \nINLA version: 25.12.02 \nLatent components:\nelevation: main = linear(elevation)\nndvi: main = linear(ndvi)\nurban: main = linear(urban)\nsmooth: main = spde(geometry), scale(w)\nrough: main = spde(geometry), scale(I(1 - w))\nIntercept: main = linear(1)\nObservation models:\n  Model tag: &lt;No tag&gt;\n    Family: 'binomial'\n    Data class: 'sf', 'tbl_df', 'tbl', 'data.frame'\n    Response class: 'numeric'\n    Predictor: y ~ elevation + ndvi + urban + smooth + rough + Intercept\n    Additive/Linear/Rowwise: TRUE/TRUE/TRUE\n    Used components: effect[elevation, ndvi, urban, smooth, rough, Intercept], latent[] \nTime used:\n    Pre = 1.34, Running = 7.78, Post = 0.47, Total = 9.59 \nFixed effects:\n            mean    sd 0.025quant 0.5quant 0.975quant   mode kld\nelevation -0.002 0.001     -0.004   -0.002      0.000 -0.002   0\nndvi       1.440 0.965     -0.688    1.527      3.117  1.677   0\nurban      0.320 0.035      0.251    0.320      0.389  0.320   0\nIntercept -1.253 0.363     -1.957   -1.257     -0.529 -1.257   0\n\nRandom effects:\n  Name    Model\n    smooth SPDE2 model\n   rough SPDE2 model\n\nModel hyperparameters:\n                     mean       sd 0.025quant 0.5quant 0.975quant     mode\nRange for smooth 6.92e+05 2.65e+05   3.28e+05 6.42e+05   1.35e+06 5.52e+05\nStdev for smooth 8.39e-01 2.48e-01   4.70e-01 8.00e-01   1.44e+00 7.23e-01\nRange for rough  1.40e+05 4.98e+04   6.81e+04 1.32e+05   2.62e+05 1.16e+05\nStdev for rough  5.80e-01 8.60e-02   4.31e-01 5.73e-01   7.68e-01 5.58e-01\n\nDeviance Information Criterion (DIC) ...............: 1928.91\nDeviance Information Criterion (DIC, saturated) ....: 452.02\nEffective number of parameters .....................: 143.07\n\nWatanabe-Akaike information criterion (WAIC) ...: 1925.73\nEffective number of parameters .................: 107.72\n\nMarginal log-Likelihood:  -1069.76 \n is computed \nPosterior summaries for the linear predictor and the fitted values are computed\n(Posterior marginals needs also 'control.compute=list(return.marginals.predictor=TRUE)')\n\n\n\nPredict and map (clipped to Nigeria)\n\n\n\nCode\npred_grid_ns &lt;- read_csv(\"data/prediction_grid_utm.csv\") %&gt;% \nmutate(w = (utm_y - min(utm_y)) / (max(utm_y) - min(utm_y)),\nw = pmin(pmax(w, 0), 1)) %&gt;%\nst_as_sf(coords=c(\"utm_x\",\"utm_y\"), crs=32632)\n\n\npred_ns_sf &lt;- predict(fit_ns, newdata = pred_grid_ns, n.samples = 200,\n                      formula = ~ plogis(Intercept + elevation + ndvi + urban +\nw*smooth + (1-w)*rough)) |&gt;\nrename(prev_mean = mean)\npred_ns_rast &lt;- st_rasterize(pred_ns_sf[\"prev_mean\"], dx = 20000, dy = 20000)\npred_ns_rast_ng &lt;- pred_ns_rast[st_union(nga_admin1)]\n\nggplot() +\ngeom_stars(data = pred_ns_rast_ng, na.rm = TRUE) +\ngeom_sf(data = nga_admin1, fill = NA, colour = \"black\", linewidth = 0.25) +\ncoord_sf(expand = FALSE) +\nscale_fill_viridis_c(name = \"Predicted\\nprevalence\", na.value = NA) +\ntheme_minimal() +\ntheme(panel.grid = element_blank(),\npanel.background = element_rect(fill = \"white\", colour = NA),\nplot.background  = element_rect(fill = \"white\", colour = NA)) +\nlabs(title = \"Non-stationary mixture model: posterior mean prevalence\")\n\n\n\n\n\n\n\n\n\n\n(Optional) Visualise the weight surface \\(\\omega(s)\\)\n\n\n\nCode\nw_rast &lt;- st_rasterize(pred_ns_sf[\"w\"], dx = 20000, dy = 20000)[st_union(nga_admin1)]\n\nggplot() +\ngeom_stars(data = w_rast, na.rm = TRUE) +\ngeom_sf(data = nga_admin1, fill = NA, colour = \"black\", linewidth = 0.25) +\ncoord_sf(expand = FALSE) +\nscale_fill_viridis_c(name = \"w(s)\", limits = c(0, 1), na.value = NA) +\ntheme_minimal() +\ntheme(panel.grid = element_blank(),\npanel.background = element_rect(fill = \"white\", colour = NA),\nplot.background  = element_rect(fill = \"white\", colour = NA)) +\nlabs(title = \"Spatially varying weight w(s): smooth (north) → rough (south)\")\n\n\n\n\n\n\n\n\n\n============================================================\nPart 1B — Non-stationary SPDE with structured range\n============================================================\nHere we make the SPDE range depend on a covariate at the mesh vertices by modelling log(kappa(s)) as: \\[\\log(\\kappa(s)) = \\theta_0 + \\theta_1 z(s)\\] and since range(s) = \\(\\sqrt(8)/\\kappa(s)\\), this gives a spatially varying range.\n\nMesh + vertex covariate\n\nUse something interpretable like northing (y) or a “ecological gradient”.\n\n\nCode\n# Mesh for nonstationary dataset\ncoords_ns &lt;- st_coordinates(nonstat_malaria_sf)\n\nmesh_ns &lt;- inla.mesh.2d(\n  loc = coords_ns,\n  max.edge = c(80000, 250000),\n  cutoff   = 20000,\n  offset   = c(100000, 200000)\n)\n\n# Vertex covariate: scaled northing at mesh vertices\nz_vert &lt;- scale(mesh_ns$loc[,2])[,1]   # mesh vertex y coordinate (UTM northing)\n\n# Basis matrices for spatially varying kappa and/or tau\n# Here: 2 hyperparameters for kappa: intercept + slope*z\nB_kappa &lt;- cbind(1, z_vert)\n\n# Keep tau constant (1 parameter) OR also vary it; here constant:\nB_tau &lt;- matrix(1, nrow = nrow(B_kappa), ncol = 1)\n\n\n\nBuild B.tau / B.kappa with 4 columns\n\nHere we use the Lindgren/Rue parameterisation.\n\n\nCode\nnu &lt;- 1\nalpha &lt;- nu + 2/2\n\n# constants for the SPDE parameterisation (same approach as the book)\nlogkappa0 &lt;- log(8 * nu) / 2\n\nlogtau0 &lt;- (lgamma(nu) - lgamma(alpha) - log(4*pi)) / 2\nlogtau0 &lt;- logtau0 - logkappa0\n\nB_tau   &lt;- cbind(logtau0,  -1,  nu,  nu * z_vert)\nB_kappa &lt;- cbind(logkappa0, 0,  -1, -1 * z_vert)\n\n\n\nBuild a non-stationary SPDE using inla.spde2.matern\n\nWe specify priors for the theta parameters. (These are on log-scales internally.)\n\n\nCode\nspde_ns &lt;- inla.spde2.matern(\n  mesh = mesh_ns,\n  B.kappa = B_kappa,\n  B.tau   = B_tau,\n  theta.prior.mean = c(log(1/300000), 0, 0),   # (kappa intercept), (kappa slope), (tau intercept)\n  theta.prior.prec = c(1, 1, 1)                # weak-ish priors, Increasing theta.prior.prec tightens the prior (less variation).\n  # The seco4)  Predict and mapnd entry in theta.prior.mean / prec controls how strongly the range can vary with z.\n)\n\n\n\nFit binomial model with this structured-range SPDE\n\n\n\nCode\ncmp_ns_struct &lt;- y ~\n  1 + elevation + ndvi + urban +\n  field_ns(geometry, model = spde_ns)\n\nfit_ns_struct &lt;- bru(\n  components = cmp_ns_struct,\n  family = \"binomial\",\n  data = ns_dat,\n  Ntrials = ns_dat$n_tested,\n  options = list(control.compute = list(dic = TRUE, waic = TRUE))\n)\n\nsummary(fit_ns_struct)\n\n\ninlabru version: 2.13.0.9024 \nINLA version: 25.12.02 \nLatent components:\nelevation: main = linear(elevation)\nndvi: main = linear(ndvi)\nurban: main = linear(urban)\nfield_ns: main = spde(geometry)\nIntercept: main = linear(1)\nObservation models:\n  Model tag: &lt;No tag&gt;\n    Family: 'binomial'\n    Data class: 'sf', 'tbl_df', 'tbl', 'data.frame'\n    Response class: 'numeric'\n    Predictor: y ~ elevation + ndvi + urban + field_ns + Intercept\n    Additive/Linear/Rowwise: TRUE/TRUE/TRUE\n    Used components: effect[elevation, ndvi, urban, field_ns, Intercept], latent[] \nTime used:\n    Pre = 0.768, Running = 1.69, Post = 0.553, Total = 3.01 \nFixed effects:\n            mean    sd 0.025quant 0.5quant 0.975quant   mode kld\nelevation -0.001 0.000     -0.002   -0.001     -0.001 -0.001   0\nndvi       2.963 0.067      2.831    2.963      3.094  2.963   0\nurban      0.265 0.024      0.219    0.265      0.311  0.265   0\nIntercept -1.700 0.086     -1.867   -1.700     -1.532 -1.700   0\n\nRandom effects:\n  Name    Model\n    field_ns SPDE2 model\n\nModel hyperparameters:\n                      mean   sd 0.025quant 0.5quant 0.975quant   mode\nTheta1 for field_ns -12.61 1.00     -14.58   -12.61     -10.64 -12.61\nTheta2 for field_ns   0.00 1.00      -1.97     0.00       1.97   0.00\nTheta3 for field_ns   0.00 1.00      -1.97     0.00       1.97   0.00\n\nDeviance Information Criterion (DIC) ...............: 3488.63\nDeviance Information Criterion (DIC, saturated) ....: 2011.74\nEffective number of parameters .....................: 4.00\n\nWatanabe-Akaike information criterion (WAIC) ...: 3514.04\nEffective number of parameters .................: 28.89\n\nMarginal log-Likelihood:  -1773.36 \n is computed \nPosterior summaries for the linear predictor and the fitted values are computed\n(Posterior marginals needs also 'control.compute=list(return.marginals.predictor=TRUE)')\n\n\n\nPredict and map\n\n\n\nCode\npred_ns_sf &lt;- predict(fit_ns_struct, newdata = pred_grid_ns, n.samples = 200, \n                      ~ plogis(Intercept + elevation + ndvi + urban + field_ns)) |&gt;\n  rename(prev_mean = mean)\n\npred_rast &lt;- st_rasterize(pred_ns_sf[\"prev_mean\"], dx = 20000, dy = 20000)\npred_rast_ng &lt;- pred_rast[st_union(nga_admin1)]   # mask outside Nigeria\n\n# --- (D) Plot ---\nggplot() +\n  geom_stars(data = pred_rast_ng, na.rm = TRUE) +\n  geom_sf(data = nga_admin1, fill = NA, colour = \"black\", linewidth = 0.25) +\n  coord_sf(expand = FALSE) +\n  scale_fill_viridis_c(name = \"Predicted\\nprevalence\", na.value = NA) +\n  theme_minimal() +\n  theme(\n    panel.grid = element_blank(),\n    panel.background = element_rect(fill = \"white\", colour = NA),\n    plot.background  = element_rect(fill = \"white\", colour = NA)\n  ) +\n  labs(\n    title = \"Posterior mean malaria prevalence\",\n    subtitle = \"Non-stationary SPDE with structured range\"\n  )"
+  },
+  {
+    "objectID": "day2.html#summary-day-2",
+    "href": "day2.html#summary-day-2",
+    "title": "Day 2 – Joint modelling and Non-stationary processes",
+    "section": "Summary (Day 2)",
+    "text": "Summary (Day 2)\nJoint model: shared + group-specific spatial structure, two outcomes in one model\nNon-stationary model: mixture of SPDEs with a spatially varying weight and structured range.\nMapping: predictions rasterised and clipped to Nigeria boundary"
+  },
+  {
+    "objectID": "slides/day1_slides.html#about-me",
+    "href": "slides/day1_slides.html#about-me",
+    "title": "Day 1 – Spatial & Spatio-temporal Modelling",
+    "section": "About me",
+    "text": "About me\n\nCompleted a Bachelor’s degree in Statistics at FUTA\nMaster’s in Mathamatical Sciences at AIMS-Tanzania\nPhD in Statistics and Epidemiology at University of Lancaster\nPostdoc at University of Manchester\nLecturer in Statistics at the University of Manchester"
+  },
+  {
+    "objectID": "slides/day1_slides.html#overview-of-the-3-days",
+    "href": "slides/day1_slides.html#overview-of-the-3-days",
+    "title": "Day 1 – Spatial & Spatio-temporal Modelling",
+    "section": "Overview of the 3 days",
+    "text": "Overview of the 3 days\n\nSpatial and spatio-temporal analysis (different likelihoods)\nJoint modelling of multiple malaria processes\nNon-stationary spatial processes\nHybrid machine learning + geostatistical models"
+  },
+  {
+    "objectID": "slides/day1_slides.html#linear-regression",
+    "href": "slides/day1_slides.html#linear-regression",
+    "title": "Day 1 – Spatial & Spatio-temporal Modelling",
+    "section": "Linear Regression",
+    "text": "Linear Regression\n\nGoal: Model a continuous response variable as a linear function of predictors.\nModel \\(Y = X \\beta + \\epsilon\\), where \\(\\epsilon \\sim N(0, \\sigma^2)\\)\nKey Assumption\n\nLinearity\nIndependence\nHomoscedasticity (constant variance)\nNormality of errors"
+  },
+  {
+    "objectID": "slides/day1_slides.html#generalized-linear-models-glms",
+    "href": "slides/day1_slides.html#generalized-linear-models-glms",
+    "title": "Day 1 – Spatial & Spatio-temporal Modelling",
+    "section": "Generalized Linear Models (GLMs)",
+    "text": "Generalized Linear Models (GLMs)\n\nExtension of linear models to handle non-normal response distributions.\nThree components:\n\nRandom component: Distribution from the exponential family (e.g., Binomial, Poisson).\nSystematic component: Linear predictor \\(\\eta = X\\beta\\).\nLink function: Relates \\(E(Y)\\) to \\(\\eta\\).\n\nExamples:\n\nLogistic regression for binary outcomes – logit link function\nPoisson regression for count data – log link function"
+  },
+  {
+    "objectID": "slides/day1_slides.html#why-spatial-statistics",
+    "href": "slides/day1_slides.html#why-spatial-statistics",
+    "title": "Day 1 – Spatial & Spatio-temporal Modelling",
+    "section": "Why Spatial Statistics?",
+    "text": "Why Spatial Statistics?\n\nSpatial Dependence:\nObservations collected at nearby locations are often more similar than those farther apart.\nIgnoring Spatial Structure:\n\nLeads to biased parameter estimates.\nUnderestimates uncertainty.\nMisses important spatial patterns.\n\nApplications:\n\nDisease mapping\n\nEnvironmental monitoring\n\nAgricultural field trials\n\nGoal:\nAccount for spatial correlation to improve prediction and inference."
+  },
+  {
+    "objectID": "slides/day1_slides.html#spatial-statistics",
+    "href": "slides/day1_slides.html#spatial-statistics",
+    "title": "Day 1 – Spatial & Spatio-temporal Modelling",
+    "section": "Spatial Statistics",
+    "text": "Spatial Statistics\n\n\n\n\n\nCressie 1991\n\n\n\n\n\n\nGelfand 2010"
+  },
+  {
+    "objectID": "slides/day1_slides.html#classification-of-spatial-statistics",
+    "href": "slides/day1_slides.html#classification-of-spatial-statistics",
+    "title": "Day 1 – Spatial & Spatio-temporal Modelling",
+    "section": "Classification of spatial statistics",
+    "text": "Classification of spatial statistics\nCressie’s book classifies spatial statistics according to data format:\n\nGeostatistical data\n\nLattice data\n\nPoint patterns\n\nGelfand’s book classifies spatial statistics according to spatial variation:\n\nDiscrete spatial variation: Gaussian Markov Random Field (GMRF)\n\nContinuous spatial variation: Gaussian Random Field (GMRF)"
+  },
+  {
+    "objectID": "slides/day1_slides.html#geostatistical-data-river-blindness-in-cameroon",
+    "href": "slides/day1_slides.html#geostatistical-data-river-blindness-in-cameroon",
+    "title": "Day 1 – Spatial & Spatio-temporal Modelling",
+    "section": "Geostatistical data: River blindness in Cameroon",
+    "text": "Geostatistical data: River blindness in Cameroon\n\nGeostatistical data: River blindness in Cameroon"
+  },
+  {
+    "objectID": "slides/day1_slides.html#lattice-data-copd-emergency-admission",
+    "href": "slides/day1_slides.html#lattice-data-copd-emergency-admission",
+    "title": "Day 1 – Spatial & Spatio-temporal Modelling",
+    "section": "Lattice Data: COPD emergency admission",
+    "text": "Lattice Data: COPD emergency admission\n\nLattice data: COPD emergency admission"
+  },
+  {
+    "objectID": "slides/day1_slides.html#point-pattern-primary-biliary-cirrhosis-data",
+    "href": "slides/day1_slides.html#point-pattern-primary-biliary-cirrhosis-data",
+    "title": "Day 1 – Spatial & Spatio-temporal Modelling",
+    "section": "Point pattern: Primary biliary cirrhosis data",
+    "text": "Point pattern: Primary biliary cirrhosis data\n\nPoint pattern: Primary biliary cirrhosis data"
+  },
+  {
+    "objectID": "slides/day1_slides.html#modelling-geostatistical-data-model-based-geostatistics",
+    "href": "slides/day1_slides.html#modelling-geostatistical-data-model-based-geostatistics",
+    "title": "Day 1 – Spatial & Spatio-temporal Modelling",
+    "section": "Modelling Geostatistical Data – Model-based Geostatistics",
+    "text": "Modelling Geostatistical Data – Model-based Geostatistics\n\nThe term Model-based Geostatistics (MBG) was coined by Peter Diggle in 1998 (Diggle, Tawn, and Moyeed 1998; Diggle and Giorgi 2019).\nMBG applies general principles of statistical modelling and inference to the analysis of geostatistical data.\nIt emphasises the use of likelihood-based inference.\nand the use of latent spatial process (Gaussian or stochastic process)"
+  },
+  {
+    "objectID": "slides/day1_slides.html#standard-mbg-model",
+    "href": "slides/day1_slides.html#standard-mbg-model",
+    "title": "Day 1 – Spatial & Spatio-temporal Modelling",
+    "section": "Standard MBG model",
+    "text": "Standard MBG model\n\\[\nY_i = \\beta_0\n+ \\underbrace{\\beta_1 d_1(x_i) + \\beta_2 d_2(x_i)}_{\\text{explained}}\n+ \\underbrace{S(x_i) + Z_j}_{\\text{unexplained}},\n\\]\nwhere\n\n\\(\\beta_0\\), \\(\\beta_1\\), and \\(\\beta_2\\) are regression coefficients;\n\\(d_1(x)\\) and \\(d_2(x)\\) denote covariates/predictors at location \\(x\\);\n\\(S(x)\\) is the stochastic spatial process;\n\\(Z_j\\) represents measurement error."
+  },
+  {
+    "objectID": "slides/day1_slides.html#modelling-sx-and-z_j",
+    "href": "slides/day1_slides.html#modelling-sx-and-z_j",
+    "title": "Day 1 – Spatial & Spatio-temporal Modelling",
+    "section": "Modelling \\(S(x)\\) and \\(Z_j\\)",
+    "text": "Modelling \\(S(x)\\) and \\(Z_j\\)\n\n\\(Z_i \\sim N(0, \\tau^2)\\)\nWe assume that \\(S(x)\\) is a zero-mean stationary and isotropic Gaussian process. i.e \\(S \\sim \\text{MVN}(0, \\Sigma)\\)\nThe \\((i,j)\\)th entry of \\(\\Sigma\\) is \\[\n\\Sigma_{ij} = \\operatorname{Cov}\\big(S(x_i), S(x_j)\\big) = \\sigma^2 \\rho(u)\n\\]\n\\(u = \\|x_i - x_j\\|\\) is the Euclidean distance between locations \\(x_i\\) and \\(x_j\\)\nHow do we choose parametric correlation function \\(\\rho(\\cdot)\\)?"
+  },
+  {
+    "objectID": "slides/day1_slides.html#the-matérn-correlation-function",
+    "href": "slides/day1_slides.html#the-matérn-correlation-function",
+    "title": "Day 1 – Spatial & Spatio-temporal Modelling",
+    "section": "The Matérn correlation function",
+    "text": "The Matérn correlation function\n\\[\n\\rho(u; \\phi, \\kappa)\n= \\frac{1}{2^{\\kappa-1}\\Gamma(\\kappa)}\n\\left(\\frac{u}{\\phi}\\right)^\\kappa\nK_\\kappa\\!\\left(\\frac{u}{\\phi}\\right),\n\\]\n\n\\(K_\\kappa(\\cdot)\\): modified Bessel function of order \\(\\kappa\\)\nInterpretation\n\n\\(\\kappa\\) determines the smoothness: \\(\\kappa &gt; r \\Rightarrow S(x)\\) is \\(r\\) times differentiable\n\\(\\phi\\) determines the scale of spatial correlation\n\nSpecial cases\n\n\\(\\kappa = 0.5 \\Rightarrow \\rho(u) = \\exp\\{-u/\\phi\\}\\)\n\\(\\kappa \\to \\infty \\Rightarrow \\rho(u) = \\exp\\{-(u/\\phi)^2\\}\\)\n\nOften sufficient to choose \\(\\kappa \\in \\{0.5, 1.5, 2.5\\}\\)"
+  },
+  {
+    "objectID": "slides/day1_slides.html#matérn-correlation-function-kappa",
+    "href": "slides/day1_slides.html#matérn-correlation-function-kappa",
+    "title": "Day 1 – Spatial & Spatio-temporal Modelling",
+    "section": "Matérn correlation function – \\(\\kappa\\)",
+    "text": "Matérn correlation function – \\(\\kappa\\)\n\\[\n\\rho(u; \\phi, \\kappa)\n= \\frac{1}{2^{\\kappa-1}\\Gamma(\\kappa)}\n\\left(\\frac{u}{\\phi}\\right)^\\kappa\nK_\\kappa\\!\\left(\\frac{u}{\\phi}\\right),\n\\]\n\nExponential correlation function: \\(\\rho(u; \\phi, 0.5) = \\exp\\{-u/\\phi\\}\\)"
+  },
+  {
+    "objectID": "slides/day1_slides.html#the-scale-of-the-spatial-correlation-phi",
+    "href": "slides/day1_slides.html#the-scale-of-the-spatial-correlation-phi",
+    "title": "Day 1 – Spatial & Spatio-temporal Modelling",
+    "section": "The scale of the spatial correlation – \\(\\phi\\)",
+    "text": "The scale of the spatial correlation – \\(\\phi\\)"
+  },
+  {
+    "objectID": "slides/day1_slides.html#do-we-need-the-process-sx",
+    "href": "slides/day1_slides.html#do-we-need-the-process-sx",
+    "title": "Day 1 – Spatial & Spatio-temporal Modelling",
+    "section": "Do we need the process \\(S(x)\\)?",
+    "text": "Do we need the process \\(S(x)\\)?\n\nRegression residuals\n\\[\n\\hat{r}_i = Y_i - \\hat{Y}_i\n\\] from a GLM\nEach \\(\\hat{r}_i\\) estimates\n\\[\nS(x_i) + Z_i\n\\]"
+  },
+  {
+    "objectID": "slides/day1_slides.html#the-variogram",
+    "href": "slides/day1_slides.html#the-variogram",
+    "title": "Day 1 – Spatial & Spatio-temporal Modelling",
+    "section": "The variogram",
+    "text": "The variogram\n\n\n\nEmpirical variogram \\[\n\\hat{V}(u) = \\frac{1}{2|N(u)|}\\sum_{(i,j)\\in N(u)}(\\hat{r}_i-\\hat{r}_j)^2\n\\]\nwhere\n\\[\nN(u)=\\{(i,j): \\lVert x_i-x_j\\rVert=u\\}\n\\]"
+  },
+  {
+    "objectID": "slides/day1_slides.html#confirming-existence-of-spatial-correlation",
+    "href": "slides/day1_slides.html#confirming-existence-of-spatial-correlation",
+    "title": "Day 1 – Spatial & Spatio-temporal Modelling",
+    "section": "Confirming existence of spatial correlation",
+    "text": "Confirming existence of spatial correlation\n\n\n\nRandomly permute the \\(\\hat{r}_i\\) while holding the locations \\(x\\) fixed\n\nCompute the empirical variogram using the permuted \\(\\hat{r}_i\\)\n\nRepeat steps 1–2 \\(B\\) times\n\nUse the resulting \\(B\\) variograms to compute pointwise 95% tolerance bands at each distance bin\n\nIf the observed variogram lies outside the 95% band, this indicates residual spatial correlation"
+  },
+  {
+    "objectID": "slides/day1_slides.html#inference-maximum-likelihood-estimation",
+    "href": "slides/day1_slides.html#inference-maximum-likelihood-estimation",
+    "title": "Day 1 – Spatial & Spatio-temporal Modelling",
+    "section": "Inference: Maximum likelihood estimation",
+    "text": "Inference: Maximum likelihood estimation\n\nMultivariate Gaussian distribution\n\\[\nY \\sim \\text{MVN}(D\\beta, \\sigma^2 R + \\tau^2 I)\n\\]\n\n\\(D\\): matrix of covariates, \\([D]_{ik} = d_k(x_i)\\)\n\n\\(R\\): spatial correlation matrix,\n\\([R]_{ij} = \\rho(u_{ij})\\), with \\(u_{ij} = \\|x_i - x_j\\|\\)\n\nFitting process\n\nInitialise \\(\\beta\\) (e.g. using ordinary least squares)\nInitialise \\(\\theta\\) (e.g. using the empirical variogram)\nMaximise \\[\n\\ell(\\theta) = \\log\\{f(y; \\beta, \\theta)\\},\n\\] where \\(f(\\cdot; \\beta, \\theta)\\) is the multivariate Gaussian density"
+  },
+  {
+    "objectID": "slides/day1_slides.html#beyond-gaussian-responses",
+    "href": "slides/day1_slides.html#beyond-gaussian-responses",
+    "title": "Day 1 – Spatial & Spatio-temporal Modelling",
+    "section": "Beyond Gaussian responses",
+    "text": "Beyond Gaussian responses\nSo far, we assumed: \\[\nY \\sim \\text{MVN}(D\\beta, \\sigma^2 R + \\tau^2 I)\n\\]\nHowever, many geostatistical datasets are:\n\nBinary (presence / absence)\nCounts (number of cases)\nRates or proportions\n\nA Gaussian likelihood is no longer appropriate"
+  },
+  {
+    "objectID": "slides/day1_slides.html#separating-data-and-process-models",
+    "href": "slides/day1_slides.html#separating-data-and-process-models",
+    "title": "Day 1 – Spatial & Spatio-temporal Modelling",
+    "section": "Separating data and process models",
+    "text": "Separating data and process models\nModel-based geostatistics distinguishes between:\n\nObservation model (likelihood): \\[\nY_i \\mid \\eta_i \\sim \\pi(y_i \\mid \\eta_i)\n\\]\nLatent process model: \\[\n\\eta_i = X_i \\beta + S(x_i) + Z_i\n\\]\n\nKey idea:\n\nNon-Gaussian data\nGaussian latent structure"
+  },
+  {
+    "objectID": "slides/day1_slides.html#common-likelihoods-in-practice",
+    "href": "slides/day1_slides.html#common-likelihoods-in-practice",
+    "title": "Day 1 – Spatial & Spatio-temporal Modelling",
+    "section": "Common likelihoods in practice",
+    "text": "Common likelihoods in practice\n\nGaussian \\[\nY_i \\mid \\eta_i \\sim N(\\eta_i, \\sigma^2)\n\\] Continuous measurements (e.g. pollution levels)\nBinomial \\[\nY_i \\mid \\eta_i \\sim \\text{Binomial}(n_i, p_i),\n\\qquad \\text{logit}(p_i) = \\eta_i\n\\] Prevalence survey data\nPoisson \\[\nY_i \\mid \\eta_i \\sim \\text{Poisson}(\\lambda_i),\n\\qquad \\log(\\lambda_i) = \\eta_i\n\\] Disease counts, event data"
+  },
+  {
+    "objectID": "slides/day1_slides.html#link-functions",
+    "href": "slides/day1_slides.html#link-functions",
+    "title": "Day 1 – Spatial & Spatio-temporal Modelling",
+    "section": "Link functions",
+    "text": "Link functions\nThe linear predictor enters the likelihood via a link:\n\\[\ng(\\mu_i) = \\eta_i = X_i\\beta + S(x_i) + Z_i\n\\]\nExamples:\n\nIdentity link → Gaussian data\nLogit link → Binomial data\nLog link → Poisson data\n\nThis gives a generalized linear mixed model (GLMM) structure"
+  },
+  {
+    "objectID": "slides/day1_slides.html#computational-challenges",
+    "href": "slides/day1_slides.html#computational-challenges",
+    "title": "Day 1 – Spatial & Spatio-temporal Modelling",
+    "section": "Computational challenges",
+    "text": "Computational challenges\nFor non-Gaussian likelihoods:\n\nThe marginal likelihood requires: \\[\nL(\\theta) = \\int \\pi(y \\mid S, \\theta)\\pi(S \\mid \\theta)\\,dS\n\\]\nHigh-dimensional integral over latent field \\(x\\)\nNo closed-form solution\n\nConsequences:\n\nMaximum likelihood is expensive\nBayesian inference via MCMC is slow"
+  },
+  {
+    "objectID": "slides/day1_slides.html#classical-solutions-and-limitations",
+    "href": "slides/day1_slides.html#classical-solutions-and-limitations",
+    "title": "Day 1 – Spatial & Spatio-temporal Modelling",
+    "section": "Classical solutions and limitations",
+    "text": "Classical solutions and limitations\n\nLaplace approximation\nPenalised quasi-likelihood (PQL)\nMCMC-based Bayesian inference\n\nLimitations:\n\nPoor scalability for large spatial fields\nLong runtimes\nDifficult model exploration"
+  },
+  {
+    "objectID": "slides/day1_slides.html#key-takeaway",
+    "href": "slides/day1_slides.html#key-takeaway",
+    "title": "Day 1 – Spatial & Spatio-temporal Modelling",
+    "section": "Key takeaway",
+    "text": "Key takeaway\nWe want:\n\nFlexible likelihoods (Binomial, Poisson, etc.)\nSpatial and spatio-temporal random effects\nBayesian inference\nComputational efficiency\n\nThis motivates Integrated Nested Laplace Approximation (INLA)"
+  },
+  {
+    "objectID": "slides/day1_slides.html#from-likelihoods-to-inla",
+    "href": "slides/day1_slides.html#from-likelihoods-to-inla",
+    "title": "Day 1 – Spatial & Spatio-temporal Modelling",
+    "section": "From likelihoods to INLA",
+    "text": "From likelihoods to INLA\nHierarchical models setup:\n\nData likelihood: possibly non-Gaussian\nLatent field: Gaussian with spatial dependence\nHyperparameters: low-dimensional\n\nThis class of models is known as Latent Gaussian Models\nINLA is designed specifically for this class"
+  },
+  {
+    "objectID": "slides/day1_slides.html#why-inla",
+    "href": "slides/day1_slides.html#why-inla",
+    "title": "Day 1 – Spatial & Spatio-temporal Modelling",
+    "section": "Why INLA?",
+    "text": "Why INLA?\n\nFully Bayesian inference for latent Gaussian models is often computationally expensive\nMarkov chain Monte Carlo (MCMC):\n\nAccurate but slow for large spatial datasets\nPoor scaling with dimension of latent field\n\nINLA provides:\n\nDeterministic (non-sampling) approximation\nOrders-of-magnitude speed-ups\nAccurate marginal posterior distributions"
+  },
+  {
+    "objectID": "slides/day1_slides.html#latent-gaussian-models",
+    "href": "slides/day1_slides.html#latent-gaussian-models",
+    "title": "Day 1 – Spatial & Spatio-temporal Modelling",
+    "section": "Latent Gaussian models",
+    "text": "Latent Gaussian models\nINLA is designed for latent Gaussian models (LGMs):\n\\[\ny_i \\mid \\eta_i, \\theta \\sim \\pi(y_i \\mid \\eta_i, \\theta),\n\\qquad\n\\eta = A S\n\\]\nwhere\n\n\\(S \\sim \\mathcal{N}(0, Q(\\theta)^{-1})\\) is a latent Gaussian field\n\\(A\\) is a known design / projection matrix\n\\(\\theta\\) are low-dimensional hyperparameters\n\nExamples of \\(S\\):\n\nSpatial Gaussian random fields\nTemporal effects\nRandom effects and smoothers"
+  },
+  {
+    "objectID": "slides/day1_slides.html#key-idea-sparsity",
+    "href": "slides/day1_slides.html#key-idea-sparsity",
+    "title": "Day 1 – Spatial & Spatio-temporal Modelling",
+    "section": "Key idea: sparsity",
+    "text": "Key idea: sparsity\n\nLatent field \\(S\\) is modelled as a Gaussian Markov Random Field (GMRF)\nGMRFs have sparse precision matrices \\(Q(\\theta)\\)\n\nWhy this matters:\n\nSparse matrix algebra is fast\nEnables scalable inference for large spatial problems\nCrucial for INLA’s computational efficiency"
+  },
+  {
+    "objectID": "slides/day1_slides.html#stage-1-hyperparameter-inference",
+    "href": "slides/day1_slides.html#stage-1-hyperparameter-inference",
+    "title": "Day 1 – Spatial & Spatio-temporal Modelling",
+    "section": "Stage 1: Hyperparameter inference",
+    "text": "Stage 1: Hyperparameter inference\nGoal: \\[\n\\pi(\\theta \\mid y) \\propto \\frac{\\pi(y \\mid S, \\theta)\\pi(S \\mid \\theta)\\pi(\\theta)}\n{\\pi(S \\mid y, \\theta)}\n\\]\n\nINLA uses a Laplace approximation to integrate out \\(S\\)\nProduces an accurate approximation to: \\[\n\\pi(\\theta \\mid y)\n\\]\n\nKey point:\n\n\\(\\theta\\) is low-dimensional → numerical optimisation is feasible"
+  },
+  {
+    "objectID": "slides/day1_slides.html#stage-2-latent-field-given-theta",
+    "href": "slides/day1_slides.html#stage-2-latent-field-given-theta",
+    "title": "Day 1 – Spatial & Spatio-temporal Modelling",
+    "section": "Stage 2: Latent field given \\(\\theta\\)",
+    "text": "Stage 2: Latent field given \\(\\theta\\)\n\nConditional on \\(\\theta\\), INLA approximates: \\[\n\\pi(S \\mid \\theta, y)\n\\]\nApproximation:\n\nGaussian\nCentered at the mode of the conditional posterior\nUses local curvature (Hessian)\n\n\nThis step exploits:\n\nGaussian structure of \\(S\\)\nSparse precision matrix"
+  },
+  {
+    "objectID": "slides/day1_slides.html#stage-3-marginal-posteriors",
+    "href": "slides/day1_slides.html#stage-3-marginal-posteriors",
+    "title": "Day 1 – Spatial & Spatio-temporal Modelling",
+    "section": "Stage 3: Marginal posteriors",
+    "text": "Stage 3: Marginal posteriors\nFinal goal: \\[\n\\pi(S_i \\mid y), \\qquad \\pi(\\theta_j \\mid y)\n\\]\nINLA computes: \\[\n\\pi(S_i \\mid y)\n=\n\\int \\pi(S_i \\mid \\theta, y)\\,\\pi(\\theta \\mid y)\\,d\\theta\n\\]\n\nIntegration performed numerically\nOutput:\n\nMarginal posterior means\nCredible intervals\nFull marginal densities"
+  },
+  {
+    "objectID": "slides/day1_slides.html#grf-vs-gmrf-concept-vs-computation",
+    "href": "slides/day1_slides.html#grf-vs-gmrf-concept-vs-computation",
+    "title": "Day 1 – Spatial & Spatio-temporal Modelling",
+    "section": "GRF vs GMRF: concept vs computation",
+    "text": "GRF vs GMRF: concept vs computation\nLindgren, Rue, and Lindström (2011) provides the link between the two.\n\nGaussian Random Field (GRF):\n\nDefined on a continuous spatial domain\nUsed for geostatistical modelling\nDense covariance structure\n\nGaussian Markov Random Field (GMRF):\n\nDefined on a finite set of locations\nSparse precision matrix\nComputationally efficient\n\n\nKey point:\n👉 In INLA, a GMRF is used as a computational approximation to a continuous GRF"
+  },
+  {
+    "objectID": "slides/day1_slides.html#spatial-modelling-in-inla-spde-approach",
+    "href": "slides/day1_slides.html#spatial-modelling-in-inla-spde-approach",
+    "title": "Day 1 – Spatial & Spatio-temporal Modelling",
+    "section": "Spatial modelling in INLA: SPDE approach",
+    "text": "Spatial modelling in INLA: SPDE approach\n\nContinuous Gaussian random fields are represented via: Stochastic Partial Differential Equations (SPDEs)\n\nKey ideas:\n\nStart with a Matérn GRF (continuous)\nApproximate it on a triangulated mesh\nObtain a computational GMRF\nRetain Matérn covariance structure\n\nBenefits:\n\nSparse precision matrix\nFast Bayesian inference with INLA"
+  },
+  {
+    "objectID": "slides/day1_slides.html#why-the-spde-approach",
+    "href": "slides/day1_slides.html#why-the-spde-approach",
+    "title": "Day 1 – Spatial & Spatio-temporal Modelling",
+    "section": "Why the SPDE approach?",
+    "text": "Why the SPDE approach?\n\nIn geostatistics, we often model spatial dependence using Gaussian random fields (GRFs) with Matérn covariance\nFor observations at locations \\(x_1, \\dots, x_n\\):\n\nCovariance matrix is dense\nComputational cost is \\(\\mathcal{O}(n^3)\\)\n\n\nThis becomes infeasible for large spatial datasets"
+  },
+  {
+    "objectID": "slides/day1_slides.html#gaussian-random-fields",
+    "href": "slides/day1_slides.html#gaussian-random-fields",
+    "title": "Day 1 – Spatial & Spatio-temporal Modelling",
+    "section": "Gaussian random fields",
+    "text": "Gaussian random fields\nA spatial Gaussian random field is defined as:\n\\[\nS(x) \\sim \\text{GRF}(0, C(\\cdot))\n\\]\nwith covariance function: \\[\n\\text{Cov}\\{S(x), S(x')\\} = C(\\|x - x'\\|)\n\\]\n\nThe Matérn family is widely used\nDefined on a continuous spatial domain"
+  },
+  {
+    "objectID": "slides/day1_slides.html#from-covariance-to-spde",
+    "href": "slides/day1_slides.html#from-covariance-to-spde",
+    "title": "Day 1 – Spatial & Spatio-temporal Modelling",
+    "section": "From covariance to SPDE",
+    "text": "From covariance to SPDE\nA key result (Whittle, 1954):\nA Matérn GRF is the solution to the SPDE: \\[\n(\\kappa^2 - \\Delta)^{\\alpha/2} S(x)\n= \\mathcal{W}(x),\n\\]\nwhere: - \\(\\Delta\\) is the Laplacian operator - \\(\\mathcal{W}(x)\\) is Gaussian white noise - Parameters \\((\\kappa, \\alpha)\\) control range and smoothness"
+  },
+  {
+    "objectID": "slides/day1_slides.html#discretising-the-spde",
+    "href": "slides/day1_slides.html#discretising-the-spde",
+    "title": "Day 1 – Spatial & Spatio-temporal Modelling",
+    "section": "Discretising the SPDE",
+    "text": "Discretising the SPDE\n\nThe spatial domain is discretised using a triangular mesh\nThe continuous field is approximated as: \\[\nS(x) \\approx \\sum_{k=1}^K w_k \\psi_k(x)\n\\]\n\nwhere:\n\n\\(\\psi_k(x)\\) are basis functions\n\\(w_k\\) are random weights\n\nLocal support of basis functions ⇒ sparsity"
+  },
+  {
+    "objectID": "slides/day1_slides.html#from-grf-to-gmrf",
+    "href": "slides/day1_slides.html#from-grf-to-gmrf",
+    "title": "Day 1 – Spatial & Spatio-temporal Modelling",
+    "section": "From GRF to GMRF",
+    "text": "From GRF to GMRF\n\nThe SPDE discretisation yields \\[\n\\mathbf{w} \\sim \\mathcal{N}(0, Q^{-1})\n\\]\nPrecision matrix \\(Q\\) is sparse\nThis defines a Gaussian Markov Random Field (GMRF)\n\nKey consequence: - Fast computation - Scales to large spatial problems"
+  },
+  {
+    "objectID": "slides/day1_slides.html#spde-approach-summary",
+    "href": "slides/day1_slides.html#spde-approach-summary",
+    "title": "Day 1 – Spatial & Spatio-temporal Modelling",
+    "section": "SPDE approach: summary",
+    "text": "SPDE approach: summary\n\nSpecify a Matérn Gaussian random field\nUse its equivalent SPDE representation\nApproximate the SPDE on a triangulated mesh\nObtain a sparse GMRF representation\nPerform fast Bayesian inference using INLA"
+  },
+  {
+    "objectID": "slides/day1_slides.html#when-should-you-use-inla",
+    "href": "slides/day1_slides.html#when-should-you-use-inla",
+    "title": "Day 1 – Spatial & Spatio-temporal Modelling",
+    "section": "When should you use INLA?",
+    "text": "When should you use INLA?\nINLA is well suited for:\n\nSpatial and spatio-temporal models\nLatent Gaussian models\nLarge datasets with structured dependence\n\nINLA is less suitable for:\n\nHighly non-Gaussian latent structures\nVery high-dimensional hyperparameter spaces\nModels requiring full joint posterior samples"
+  },
+  {
+    "objectID": "slides/day1_slides.html#inla-and-inlabru-r-packages",
+    "href": "slides/day1_slides.html#inla-and-inlabru-r-packages",
+    "title": "Day 1 – Spatial & Spatio-temporal Modelling",
+    "section": "INLA and inlabru R packages",
+    "text": "INLA and inlabru R packages\nWhat is inlabru?\n\nAn R package built on top of INLA\nDesigned for spatial and spatio-temporal modelling using\nIntegrated Nested Laplace Approximation (INLA)\nProvides an intuitive interface for:\n\nSpatial point process models\nGeostatistical models\n\nInstall INLA: https://www.r-inla.org/download-install\nExamples and documentation: https://inlabru-org.github.io/inlabru/\n\nKey features\n\nFormula-based model specification\nFlexible integration with sf, sp, and raster"
+  },
+  {
+    "objectID": "slides/day1_slides.html#references",
+    "href": "slides/day1_slides.html#references",
+    "title": "Day 1 – Spatial & Spatio-temporal Modelling",
+    "section": "References",
+    "text": "References\n\n\n\n\nDiggle, Peter, and Emanuele Giorgi. 2019. Model-Based Geostatistics. CRC Press.\n\n\nDiggle, Peter, Jonathan Tawn, and Rana Moyeed. 1998. “Model-Based Geostatistics.” Journal of the Royal Statistical Society: Series C 47: 299–350.\n\n\nLindgren, Finn, Håvard Rue, and Johan Lindström. 2011. “An Explicit Link Between Gaussian Fields and Gaussian Markov Random Fields: The Stochastic Partial Differential Equation Approach.” Journal of the Royal Statistical Society Series B: Statistical Methodology 73 (4): 423–98."
+  },
+  {
+    "objectID": "slides/day3_slides.html#todays-goal",
+    "href": "slides/day3_slides.html#todays-goal",
+    "title": "Day 3 – Hybrid Machine Learning + Geostatistics",
+    "section": "Today’s Goal",
+    "text": "Today’s Goal\nIntegrate:\n\nMachine learning\n\nSpatial geostatistics\n\nHybrid prediction modelling"
+  },
+  {
+    "objectID": "slides/day3_slides.html#load-data",
+    "href": "slides/day3_slides.html#load-data",
+    "title": "Day 3 – Hybrid Machine Learning + Geostatistics",
+    "section": "Load Data",
+    "text": "Load Data\n\nlibrary(readr)\nhybrid_ml_geo &lt;- read_csv(\"../data/hybrid_ml_geostatistical_data.csv\")\nhead(hybrid_ml_geo)\n\n# A tibble: 6 × 11\n     id   utm_x    utm_y n_tested n_pos prevalence_true ml_signal_true\n  &lt;dbl&gt;   &lt;dbl&gt;    &lt;dbl&gt;    &lt;dbl&gt; &lt;dbl&gt;           &lt;dbl&gt;          &lt;dbl&gt;\n1     1 279090.  838870.       63     0        0.00167           -5.04\n2     2  57751.  672968.      125     0        0.000452          -6.60\n3     3 160759. 1365476.      139     0        0.00694           -3.80\n4     4 949111. 1230481.      126     0        0.000334          -7.10\n5     5 434005.  682490.       97     0        0.00205           -5.51\n6     6 -91406.  925776.      122     3        0.00767           -3.16\n# ℹ 4 more variables: S_residual_true &lt;dbl&gt;, elevation &lt;dbl&gt;, ndvi &lt;dbl&gt;,\n#   urban &lt;dbl&gt;"
+  }
+]

@@ -223,7 +223,7 @@ K_\kappa\!\left(\frac{u}{\phi}\right),
 $$
 
 
-![](images2/correlationfuncplot1){width=50%}
+![](images2/correlationfuncplot1.png){width=50%}
 
 
 **[Exponential correlation function:]{style="color:blue;"}**
@@ -285,10 +285,10 @@ $\rho(u; \phi, 0.5) = \exp\{-u/\phi\}$
 
 ::: columns
 ::: column
-1. Randomly permute the \(\hat{r}_i\) while holding the locations \(x\) fixed  
-2. Compute the empirical variogram using the permuted \(\hat{r}_i\)  
-3. Repeat steps 1–2 \(B\) times  
-4. Use the resulting \(B\) variograms to compute **pointwise 95% tolerance bands** at each distance bin  
+1. Randomly permute the $\hat{r}_i$ while holding the locations $x$ fixed  
+2. Compute the empirical variogram using the permuted $\hat{r}_i$  
+3. Repeat steps 1–2 $B$ times  
+4. Use the resulting $B$ variograms to compute **pointwise 95% tolerance bands** at each distance bin  
 5. If the observed variogram lies outside the 95% band, this indicates **residual spatial correlation**
 :::
 
