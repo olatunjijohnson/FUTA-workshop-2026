@@ -1,57 +1,543 @@
 ---
-title: "Day 2 – Joint Modelling + Non-stationarity"
+title: "Day 2 – Joint modelling and Non-stationary processes"
+author: "Olatunji Johnson"
+bibliography: references.bib
+
 format:
   revealjs:
     theme: simple
     slide-number: true
-    toc: true
+    toc: false
+
   beamer:
-    theme: default        # Madrid works nicely; you can change later
+    theme: default
     aspectratio: 169
-    header-includes: |
-      \usepackage{graphicx}
-      \usepackage{xcolor}
-
-      % UoM-style purple (change hex if you have exact brand colour)
-      \definecolor{uomPurple}{HTML}{6A1B9A}
-      \setbeamercolor{structure}{fg=uomPurple}
-      \setbeamercolor{title}{fg=uomPurple}
-      \setbeamercolor{frametitle}{fg=uomPurple}
-
-      % Define the logo (file must be in the same folder as the .qmd/.tex)
-      \newcommand{\uomlogo}{\includegraphics[height=1cm]{uom_logo.pdf}}
-
-      % Force logo into the top-right of every slide
-      \setbeamertemplate{headline}{%
-        \leavevmode%
-        \hbox{%
-          \begin{beamercolorbox}[wd=\paperwidth,ht=1.2cm]{}
-            \hfill\uomlogo\hspace{0.5cm}
-          \end{beamercolorbox}%
-        }%
-      }
-
-      % Optional: add a bit of vertical space so the frametitle
-      % doesn't clash with the custom header
-      % \addtobeamertemplate{frametitle}{}{%
-      %  \vspace*{0.3cm}%
-      % }
+    include-in-header: beamer-header.tex
 ---
 
-## Today’s Focus
+::: {.smaller}
+## Day 2 goals
 
-- Joint models
-- Shared vs group-specific fields
-- Non-stationary spatial processes
+Today we focus on two ideas that come up constantly in disease mapping:
+
+1. **Joint modelling**
+   - multiple related malaria outcomes
+   - shared and outcome-specific spatial structure
+   - *multiple likelihoods* (Binomial + Poisson)
+
+2. **Non-stationary spatial processes**
+   - when “one Matérn everywhere” is not realistic
+   - two practical constructions:
+     - mixture of SPDEs (smooth/rough)
+     - **structured range** (range changes with a covariate)
+
+:::
+
+::: {.smaller}
+## Why do we need joint models?
+
+You often have **multiple imperfect views** of the same latent risk:
+
+- prevalence surveys (direct infection measurements)
+- facility case counts (incidence proxy)
+- different risk groups (children vs pregnant women)
+- different diagnostics / instruments
+
+**Separate models** can disagree and waste information.
+
+**Joint models** let us:
+
+- borrow strength (share information)
+- separate *common risk* from *process-specific effects*
+- improve predictions where one dataset is sparse
+
+:::
+
+## Key idea: latent spatial process
+
+We posit a latent spatial surface \(S(s)\) that captures residual dependence:
+
+- nearby locations share similar unobserved risk drivers
+- induces spatial correlation in the data
+
+In MBG terms:
+
+
+$$\eta(s) = \beta_0 + \beta^\top x(s) + S(s)$$
+
+
+and data are conditionally independent **given** \(S(s)\).
+
+
+
+# Part A — Joint modelling (same likelihood, two groups)
+
+## Example: two prevalence processes
+
+Suppose we have:
+
+- children <5 prevalence data
+- pregnant women prevalence data
+
+At each location $s_i$, group $g\in\{c,p\}$:
+
+$$
+Y_{ig} \mid p_{ig} \sim \text{Binomial}(N_{ig}, p_{ig})
+$$
+
+$$
+\text{logit}(p_{ig}) = \eta_{ig}
+$$
+
+::: {.smaller}
+
+## Decomposition: shared + group-specific spatial fields
+
+A common and interpretable joint structure:
+
+$$
+\eta_{ig} = \beta_{0g} + \beta^\top x_i + S_0(s_i) + S_g(s_i)
+$$
+
+- $S_0(s)$: **shared** spatial field (common malaria risk)
+- $S_g(s)$: **group-specific** field (deviations for group \(g\))
+- $\beta_{0g}$: group-specific baseline
+
+**Interpretation**
+
+- If $S_g(s)\approx 0$, groups share the same spatial pattern
+- Where $S_g(s)\neq 0$, groups differ spatially
+
+:::
+
+## Why is this useful?
+
+This structure answers practical questions:
+
+- What spatial variation is shared across groups?
+- Where do children and pregnant women show *different* risk?
+- Do covariates explain both outcomes similarly?
+
+It also improves predictions:
+
+- locations with sparse pregnant data can borrow information from children data (through $S_0(s)$)
 
 ---
 
-## Load Datasets
+## Identifiability and scaling
 
-```{r}
-library(readr)
+Potential issue: $S_0$ and $S_g$ can compete.
 
-joint_malaria <- read_csv("../data/joint_malaria_processes.csv")
-nonstat_malaria <- read_csv("../data/nonstationary_malaria_data.csv")
-head(joint_malaria)
-```
+Typical solutions:
+
+- set priors so that group-specific fields are “smaller” than the shared field
+- consider constraints or priors on variance:
+  - $\sigma^2_{S_g} < \sigma^2_{S_0}$ (probabilistically)
+
+Conceptually: shared structure should capture the dominant signal.
+
+---
+
+## What do we assume about $S_0(s)$ and $S_g(s)$?
+
+A standard choice: **Matérn Gaussian random fields**
+
+$$
+S(s) \sim \text{GRF}\left(0, \text{Matérn}(\rho, \sigma^2)\right)
+$$
+
+- $\rho$: range (how quickly correlation decays)
+- $\sigma^2$: marginal variance
+
+**Stationarity** here means $\rho,\sigma^2$ are constant over space.
+
+---
+
+## Mesh and SPDE
+
+- Mesh nodes: basis functions
+- Field represented as:
+
+$$
+S(s) \approx \sum_{k=1}^K w_k \phi_k(s)
+$$
+
+where $w_k$ are GMRF weights.
+
+Joint model uses the same mesh for $S_0$ and $S_g$, but:
+
+- $S_0$: one field
+- $S_g$: replicated by group
+
+
+
+# Part B — Joint modelling with multiple likelihoods
+
+## Motivation: prevalence + case counts
+
+Often you have:
+
+- **Binomial** prevalence surveys:
+  - $Y_i$ positives out of $N_i$ tested
+- **Poisson** facility case counts:
+  - $C_i$ cases with exposure $E_i$ (population, person-time, etc.)
+
+Each dataset is incomplete on its own.
+
+Joint modelling combines them while respecting their data-generating mechanisms.
+
+---
+
+## The two likelihoods
+
+**Prevalence**
+
+$$
+Y_i \mid p_i \sim \text{Binomial}(N_i, p_i),\quad \text{logit}(p_i)=\eta_i^{(B)}
+$$
+
+**Counts**
+
+$$
+C_i \mid \lambda_i \sim \text{Poisson}(E_i\lambda_i),\quad \log(\lambda_i)=\eta_i^{(P)}
+$$
+
+Different link functions:
+
+- logit for probabilities
+- log for rates
+
+::: {.smaller}
+
+## Linking them through shared latent structure
+
+A flexible shared-structure joint model:
+
+$$
+\eta_i^{(B)} = \beta_0^{(B)} + \beta^\top x_i + S_0(s_i) + S_B(s_i)
+$$
+
+$$
+\eta_i^{(P)} = \beta_0^{(P)} + \beta^\top x_i + \alpha S_0(s_i) + S_P(s_i)
+$$
+
+- $S_0(s)$: shared field
+- $S_B(s)$: prevalence-specific residual spatial field
+- $S_P(s)$: incidence-specific residual spatial field
+- $\alpha$: scaling (how strongly the shared risk appears in counts)
+
+:::
+
+## Interpretation of $\alpha \in [0, 1]$
+
+- $\alpha>0$: shared field increases counts where it increases prevalence
+- $\alpha\approx 0$: weak coupling between processes
+- large $|\alpha|$: strong coupling
+
+This parameter is often crucial:
+
+- it encodes the relationship between the two measurements
+
+---
+
+## Why include outcome-specific fields $S_B, S_P$?
+
+Because the two processes are not identical:
+
+- prevalence and incidence are related but not the same
+- facility data can reflect access and reporting biases
+- survey prevalence can reflect age structure and diagnostics
+
+Outcome-specific fields mop up these systematic differences.
+
+::: {.smaller}
+
+## What can go wrong?
+
+Two common practical pitfalls:
+
+1. **Confounding**:
+
+   - covariates and spatial fields compete
+2. **Mis-specified exposure** $E_i$:
+
+   - Poisson component can dominate if $E_i$ is wrong scale
+3. **Different spatial supports**:
+
+   - facility counts might be aggregated (administrative units)
+   - prevalence might be point-referenced
+
+Solutions:
+
+- careful covariate selection
+- informative priors (especially for $\alpha$)
+- match spatial support where possible
+
+:::
+
+# Part C — Non-stationarity
+
+## Why stationarity can be unrealistic
+
+Stationary Matérn assumes:
+
+- same smoothness everywhere
+- same correlation length everywhere
+
+But malaria transmission may be:
+
+- smooth in the north (broad ecological gradients)
+- rough in the south (heterogeneous land use, urbanisation)
+- different across ecozones
+
+Non-stationarity: the covariance structure changes over space.
+
+::: {.smaller}
+
+## Two practical nonstationary constructions 
+
+1. **Mixture of SPDEs (smooth + rough)**
+   - simple, and robust
+
+2. **Structured range in the SPDE**
+   - range varies continuously with a covariate
+   - closer to “mechanistic” covariance modelling
+
+Both are useful; choose based on:
+
+- interpretability
+- stability
+- computational cost
+- available covariates
+
+:::
+
+# Part C1 — Mixture of two SPDEs
+
+## Idea: blend a smooth and a rough field
+
+Let:
+
+- $S_{\text{smooth}}(s)$: long-range Matérn
+- $S_{\text{rough}}(s)$: short-range Matérn
+- $\omega(s)\in[0,1]$: spatial weight (e.g., function of latitude)
+
+Define:
+
+$$
+S(s)=\omega(s)S_{\text{smooth}}(s) + (1-\omega(s))S_{\text{rough}}(s)
+$$
+
+Then:
+
+$$
+\eta(s)=\beta_0+\beta^\top x(s)+S(s)
+$$
+
+---
+
+## What does $\omega(s)$ do?
+
+- If $\omega(s)\approx 1$: field behaves like smooth long-range
+- If $\omega(s)\approx 0$: field behaves like rough short-range
+- If $\omega(s)$ changes with location: correlation structure changes
+
+**Interpretation**
+- $\omega(s)$ is a *nonstationarity driver*.
+
+::: {.smaller}
+
+## Choosing $\omega(s)$
+
+Simple choices:
+
+- monotone latitude function (north–south structure)
+- ecozone indicator (piecewise structure)
+- logistic function of a covariate:
+  $$
+  \omega(s) = \text{logit}^{-1}(a+bz(s))
+  $$
+
+In the practical session:
+
+- start with latitude-based $\omega(s)$
+- it is easy to explain and visualise
+
+:::
+
+## Advantages and limitations
+
+Advantages:
+
+- stable in computation
+- intuitive interpretation (smooth vs rough regions)
+- easy to communicate to non-statisticians
+
+Limitations:
+
+- mixture is a *construction*, not a single Matérn
+- interpretation of “local range” is indirect
+- may require choosing $\omega(s)$ externally
+
+
+
+# Part C2 — Structured range in the SPDE
+
+::: {.smaller}
+
+## Goal: let the Matérn range vary with a covariate
+
+Recall: for Matérn SPDE models, range is approximately:
+
+$$
+\rho(s)\approx \frac{\sqrt{8}}{\kappa(s)}
+$$
+
+So if we model:
+
+$$
+\log \kappa(s)=\theta_0+\theta_1 z(s)
+$$
+
+then
+
+$$
+\rho(s)\text{ varies smoothly with }z(s).
+$$
+
+:::
+
+## What does the sign of $\theta_1$ mean?
+
+Because $\rho(s)\propto 1/\kappa(s)$:
+
+- If $\theta_1>0$: $\kappa(s)$ increases with $z$ ⇒ range $\rho(s)$ **decreases**
+- If $\theta_1<0$: $\kappa(s)$ decreases with $z$ ⇒ range $\rho(s)$ **increases**
+
+So you can encode statements like:
+
+- “range is shorter in high-heterogeneity regions”
+- “range is longer in smooth ecological gradient regions”
+
+---
+
+## Why use mesh-vertex covariates?
+
+In the SPDE approximation:
+
+- the field is defined through weights on mesh vertices
+- so nonstationary parameters need to be specified at the same support (vertices)
+
+Thus $z(s)$ is evaluated at mesh nodes:
+
+- $z_k = z(\text{vertex}_k)$
+
+This makes the range a spatially varying parameter.
+
+::: {.smaller}
+
+## What changes compared to stationary SPDE?
+
+Stationary SPDE:
+
+- one $\kappa$, one $\tau$ for all space
+
+Structured-range SPDE:
+
+- $\kappa(s)$ and $\tau(s)$ can depend on covariates
+- introduces additional parameters $\theta$ controlling how they vary
+
+Conceptual result:
+
+- correlation length changes smoothly across the map
+
+:::
+
+## Relation between $\tau(s)$, $\kappa(s)$, and variance
+
+In SPDE Matérn models:
+
+- $\kappa(s)$: controls range
+- $\tau(s)$: controls marginal variance (together with $\kappa$)
+
+So structured modelling can target:
+
+- range only (via $\kappa$)
+- variance only (via $\tau$)
+- or both
+
+Today we emphasise structured range.
+
+---
+
+## Practical guidance for modelling
+
+- Start with a simple covariate $z(s)$ (e.g. northing or ecozone index)
+- Scale it to have mean 0, sd 1
+- Use weak-to-moderate priors on the slope parameter to avoid extreme range variation
+
+In interpretation:
+
+- show the covariate map
+- show the predicted prevalence map
+- (optionally) show a derived “implied range” surface
+
+---
+
+# Part D — Examples and discussion
+
+## Example 1: Joint model outputs to discuss
+
+For the joint prevalence model:
+- How similar are children vs pregnant spatial patterns?
+- Is the shared field dominant?
+- Where do groups diverge?
+
+Discussion prompts:
+- Are differences biological, behavioural, or sampling-related?
+- Could this be explained by covariates?
+
+---
+
+## Example 2: Multi-likelihood model outputs to discuss
+
+For binomial + poisson:
+- Does adding case counts sharpen predictions?
+- Do we see evidence of strong coupling (\(\alpha\))?
+- Where do outcome-specific fields absorb discrepancies?
+
+Discussion prompts:
+- What might cause facility counts to disagree with survey prevalence?
+
+---
+
+## Example 3: Nonstationary mixture outputs to discuss
+
+- Where does the model behave smoothly vs roughly?
+- Does \(\omega(s)\) align with your ecological intuition?
+- How sensitive is the result to the choice of \(\omega(s)\)?
+
+---
+
+## Example 4: Structured range outputs to discuss
+
+
+## Summary
+
+**Joint models**
+- share spatial information across related outcomes
+- can handle:
+  - multiple groups (same likelihood)
+  - multiple likelihoods (binomial + poisson)
+
+**Nonstationarity**
+- mixture SPDE: simple and robust
+- structured range SPDE: mechanistic, covariate-driven
+
+**Take-away**
+- choose the simplest model that answers your scientific question
+- use nonstationarity when stationary assumptions are visibly violated
+
+---
+
+

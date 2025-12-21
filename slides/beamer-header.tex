@@ -1,0 +1,21 @@
+\usepackage{graphicx}
+\usepackage{xcolor}
+
+% UoM-style purple
+\definecolor{uomPurple}{HTML}{6A1B9A}
+\setbeamercolor{structure}{fg=uomPurple}
+\setbeamercolor{title}{fg=uomPurple}
+\setbeamercolor{frametitle}{fg=uomPurple}
+
+% Define the logo (file must exist)
+\newcommand{\uomlogo}{\includegraphics[height=1cm]{images2/uom_logo.pdf}}
+
+% Force logo into the top-right of every slide
+\setbeamertemplate{headline}{%
+  \leavevmode%
+  \hbox{%
+    \begin{beamercolorbox}[wd=\paperwidth,ht=1.2cm]{}%
+      \hfill\uomlogo\hspace{0.5cm}%
+    \end{beamercolorbox}%
+  }%
+}

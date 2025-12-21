@@ -102,6 +102,35 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   }
 }</script>
 
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN") {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
 
 </head>
 
@@ -175,6 +204,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <ul>
   <li><a href="#overview" id="toc-overview" class="nav-link active" data-scroll-target="#overview">Overview</a></li>
   <li><a href="#load-day-2-datasets" id="toc-load-day-2-datasets" class="nav-link" data-scroll-target="#load-day-2-datasets">Load Day 2 datasets</a></li>
+  <li><a href="#convert-to-sf-for-mapping" id="toc-convert-to-sf-for-mapping" class="nav-link" data-scroll-target="#convert-to-sf-for-mapping">2. Convert to sf for mapping</a></li>
+  <li><a href="#summary-day-2" id="toc-summary-day-2" class="nav-link" data-scroll-target="#summary-day-2">Summary (Day 2)</a></li>
   </ul>
 </nav>
     </div>
@@ -217,6 +248,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <li>Process-specific fields<br>
 </li>
 <li>Multiple outcomes (e.g., children vs pregnant women)</li>
+<li>Multiple likelihoods (Binomial + Poisson)</li>
 </ul></li>
 <li><strong>Non-stationary spatial processes</strong>
 <ul>
@@ -235,11 +267,22 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>joint_malaria <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="st">"data/joint_malaria_processes.csv"</span>)</span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>nonstat_malaria <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="st">"data/nonstationary_malaria_data.csv"</span>)</span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(joint_malaria)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(INLA)</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(inlabru)</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ggplot2)</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(sf)</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(stars)</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(rnaturalearth)</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(rnaturalearthdata)</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(geoR)</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>joint_malaria <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="st">"data/joint_malaria_processes.csv"</span>)</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>nonstat_malaria <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="st">"data/nonstationary_malaria_data.csv"</span>)</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>nga_admin1 <span class="ot">&lt;-</span> <span class="fu">ne_states</span>(<span class="st">"Nigeria"</span>, <span class="at">returnclass =</span> <span class="st">"sf"</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="fu">st_transform</span>(<span class="dv">32632</span>)</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(joint_malaria)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 6 × 12
@@ -254,34 +297,29 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 # ℹ 3 more variables: elevation &lt;dbl&gt;, ndvi &lt;dbl&gt;, urban &lt;dbl&gt;</code></pre>
 </div>
 </div>
+</section>
+<section id="convert-to-sf-for-mapping" class="level2">
+<h2 class="anchored" data-anchor-id="convert-to-sf-for-mapping">2. Convert to sf for mapping</h2>
+<p>We need an <code>sf</code> layer to overlay boundaries, plot points, and feed coordinates into SPDE meshes.</p>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>joint_malaria_sf <span class="ot">&lt;-</span> joint_malaria <span class="sc">%&gt;%</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">st_as_sf</span>(<span class="at">coords =</span> <span class="fu">c</span>(<span class="st">"utm_x"</span>, <span class="st">"utm_y"</span>), <span class="at">crs =</span> <span class="dv">32632</span>)</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>nonstat_malaria_sf <span class="ot">&lt;-</span> nonstat_malaria <span class="sc">%&gt;%</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">st_as_sf</span>(<span class="at">coords =</span> <span class="fu">c</span>(<span class="st">"utm_x"</span>, <span class="st">"utm_y"</span>), <span class="at">crs =</span> <span class="dv">32632</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
 <p>Quick visualisation</p>
 <div class="cell">
 <details class="code-fold">
 <summary>Code</summary>
-<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ggplot2)</span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(joint_malaria, <span class="fu">aes</span>(utm_x, utm_y, <span class="at">colour =</span> group)) <span class="sc">+</span></span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="fu">geom_point</span>() <span class="sc">+</span></span>
-<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="fu">coord_equal</span>() <span class="sc">+</span></span>
-<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="fu">theme_minimal</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</details>
-<div class="cell-output-display">
-<div>
-<figure class="figure">
-<p><img src="day2_files/figure-html/unnamed-chunk-2-1.png" class="img-fluid figure-img" width="672"></p>
-</figure>
-</div>
-</div>
-</div>
-<p>Quick visualisation (non-stationary dataset)</p>
-<div class="cell">
-<details class="code-fold">
-<summary>Code</summary>
-<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(nonstat_malaria, <span class="fu">aes</span>(utm_x, utm_y, <span class="at">colour =</span> prevalence_true)) <span class="sc">+</span></span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="fu">geom_point</span>() <span class="sc">+</span></span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="fu">coord_equal</span>() <span class="sc">+</span></span>
-<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="fu">scale_colour_viridis_c</span>() <span class="sc">+</span></span>
-<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="fu">theme_minimal</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>() <span class="sc">+</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="fu">geom_sf</span>(<span class="at">data =</span> joint_malaria_sf, <span class="fu">aes</span>(<span class="at">colour =</span> prevalence_true)) <span class="sc">+</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="fu">facet_wrap</span>(<span class="sc">~</span>group) <span class="sc">+</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="fu">geom_sf</span>(<span class="at">data =</span> nga_admin1, <span class="at">fill =</span> <span class="cn">NA</span>) <span class="sc">+</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="fu">geom_point</span>() <span class="sc">+</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="fu">theme_minimal</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output-display">
 <div>
@@ -291,6 +329,996 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 </div>
 </div>
+<p>Quick visualisation (non-stationary dataset)</p>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>() <span class="sc">+</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="fu">geom_sf</span>(<span class="at">data =</span> nonstat_malaria_sf, <span class="fu">aes</span>(<span class="at">colour =</span> prevalence_true)) <span class="sc">+</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="fu">geom_sf</span>(<span class="at">data =</span> nga_admin1, <span class="at">fill =</span> <span class="cn">NA</span>) <span class="sc">+</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="fu">geom_point</span>() <span class="sc">+</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="fu">theme_minimal</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="day2_files/figure-html/unnamed-chunk-4-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>============================================================</p>
+<p><strong>Part 1A — Joint modelling (shared + group-specific fields)</strong></p>
+<p>============================================================</p>
+<ol type="1">
+<li>Create a single stacked dataset</li>
+</ol>
+<p>We will model both groups jointly with: - one shared spatial field - one group-specific spatial field (replicated by group)</p>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>joint_dat <span class="ot">&lt;-</span> joint_malaria_sf <span class="sc">|&gt;</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="fu">mutate</span>(</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="at">group =</span> <span class="fu">factor</span>(group),</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="at">y =</span> n_pos,</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="at">n =</span> n_tested</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a><span class="fu">levels</span>(joint_dat<span class="sc">$</span>group)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] "children_u5"    "pregnant_women"</code></pre>
+</div>
+</div>
+<ol start="2" type="1">
+<li>Build SPDE mesh</li>
+</ol>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>locs_joint <span class="ot">&lt;-</span> joint_malaria_sf</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>mesh_joint <span class="ot">&lt;-</span> <span class="fu">inla.mesh.2d</span>(</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a><span class="at">loc =</span> <span class="fu">st_coordinates</span>(locs_joint),</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a><span class="at">max.edge =</span> <span class="fu">c</span>(<span class="dv">80000</span>, <span class="dv">250000</span>),   <span class="co"># tune for smoothness vs speed</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a><span class="at">cutoff =</span> <span class="dv">20000</span>,                <span class="co"># remove very close points</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a><span class="at">offset =</span> <span class="fu">c</span>(<span class="dv">100000</span>, <span class="dv">200000</span>)</span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(mesh_joint)</span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a><span class="fu">points</span>(<span class="fu">st_coordinates</span>(locs_joint), <span class="at">pch =</span> <span class="dv">16</span>, <span class="at">cex =</span> <span class="fl">0.4</span>, <span class="at">col=</span> <span class="st">"red"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="day2_files/figure-html/unnamed-chunk-6-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<ol start="3" type="1">
+<li>Define SPDEs (shared + group-specific)</li>
+</ol>
+<ul>
+<li>spde_shared: one latent field for all data</li>
+<li>spde_group: replicated field with one replicate per group</li>
+</ul>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>spde_shared <span class="ot">&lt;-</span> <span class="fu">inla.spde2.pcmatern</span>(</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="at">mesh =</span> mesh_joint,</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="at">prior.range =</span> <span class="fu">c</span>(<span class="dv">300000</span>, <span class="fl">0.5</span>),   <span class="co"># P(range &lt; 300km) = 0.5</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a><span class="at">prior.sigma =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="fl">0.5</span>)         <span class="co"># P(sigma &gt; 1) = 0.5</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>spde_group <span class="ot">&lt;-</span> <span class="fu">inla.spde2.pcmatern</span>(</span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a><span class="at">mesh =</span> mesh_joint,</span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a><span class="at">prior.range =</span> <span class="fu">c</span>(<span class="dv">200000</span>, <span class="fl">0.5</span>),</span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a><span class="at">prior.sigma =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="fl">0.5</span>)</span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<ol start="4" type="1">
+<li>Fit joint model in inlabru</li>
+</ol>
+<p>Model:</p>
+<ul>
+<li>Binomial likelihood for counts</li>
+<li>Fixed effects (elevation, ndvi, urban)</li>
+<li>field_shared() applies to all</li>
+<li>field_group() replicated by group</li>
+</ul>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>cmp_joint <span class="ot">&lt;-</span> y <span class="sc">~</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="dv">1</span> <span class="sc">+</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>elevation <span class="sc">+</span> ndvi <span class="sc">+</span> urban <span class="sc">+</span></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a><span class="fu">field_shared</span>(geometry, <span class="at">model =</span> spde_shared) <span class="sc">+</span></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a><span class="fu">field_group</span>(geometry, <span class="at">model =</span> spde_group, <span class="at">replicate =</span> group)</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>fit_joint <span class="ot">&lt;-</span> <span class="fu">bru</span>(</span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a><span class="at">components =</span> cmp_joint,</span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a><span class="at">family =</span> <span class="st">"binomial"</span>,</span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a><span class="at">data =</span> joint_dat,</span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a><span class="at">Ntrials =</span> joint_dat<span class="sc">$</span>n,</span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a><span class="at">options =</span> <span class="fu">list</span>(<span class="at">control.compute =</span> <span class="fu">list</span>(<span class="at">dic =</span> <span class="cn">TRUE</span>, <span class="at">waic =</span> <span class="cn">TRUE</span>))</span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(fit_joint)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>inlabru version: 2.13.0.9024 
+INLA version: 25.12.02 
+Latent components:
+elevation: main = linear(elevation)
+ndvi: main = linear(ndvi)
+urban: main = linear(urban)
+field_shared: main = spde(geometry)
+field_group: main = spde(geometry), replicate = iid(group)
+Intercept: main = linear(1)
+Observation models:
+  Model tag: &lt;No tag&gt;
+    Family: 'binomial'
+    Data class: 'sf', 'tbl_df', 'tbl', 'data.frame'
+    Response class: 'numeric'
+    Predictor: y ~ elevation + ndvi + urban + field_shared + field_group + Intercept
+    Additive/Linear/Rowwise: TRUE/TRUE/TRUE
+    Used components: effect[elevation, ndvi, urban, field_shared, field_group, Intercept], latent[] 
+Time used:
+    Pre = 1.13, Running = 10.1, Post = 1.03, Total = 12.3 
+Fixed effects:
+            mean    sd 0.025quant 0.5quant 0.975quant   mode kld
+elevation -0.002 0.001     -0.003   -0.002      0.000 -0.002   0
+ndvi       1.650 0.530      0.617    1.645      2.713  1.646   0
+urban      0.350 0.041      0.269    0.350      0.430  0.350   0
+Intercept -0.396 0.360     -1.113   -0.393      0.304 -0.393   0
+
+Random effects:
+  Name    Model
+    field_shared SPDE2 model
+   field_group SPDE2 model
+
+Model hyperparameters:
+                           mean       sd 0.025quant 0.5quant 0.975quant
+Range for field_shared 5.32e+04 1.62e+04   2.81e+04 5.09e+04   9.12e+04
+Stdev for field_shared 3.47e-01 3.60e-02   2.81e-01 3.46e-01   4.23e-01
+Range for field_group  3.41e+05 6.04e+04   2.41e+05 3.34e+05   4.78e+05
+Stdev for field_group  5.37e-01 6.50e-02   4.24e-01 5.32e-01   6.78e-01
+                           mode
+Range for field_shared 4.68e+04
+Stdev for field_shared 3.43e-01
+Range for field_group  3.19e+05
+Stdev for field_group  5.19e-01
+
+Deviance Information Criterion (DIC) ...............: 3183.49
+Deviance Information Criterion (DIC, saturated) ....: 835.78
+Effective number of parameters .....................: 292.18
+
+Watanabe-Akaike information criterion (WAIC) ...: 3175.37
+Effective number of parameters .................: 214.05
+
+Marginal log-Likelihood:  -1807.95 
+ is computed 
+Posterior summaries for the linear predictor and the fitted values are computed
+(Posterior marginals needs also 'control.compute=list(return.marginals.predictor=TRUE)')</code></pre>
+</div>
+</div>
+<ol start="5" type="1">
+<li>Prediction grid inside Nigeria (UTM)</li>
+</ol>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="co"># make_grid_utm &lt;- function(polygon_utm, dx = 20000) {</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="co"># bb &lt;- st_bbox(polygon_utm)</span></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a><span class="co"># xs &lt;- seq(bb["xmin"], bb["xmax"], by = dx)</span></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a><span class="co"># ys &lt;- seq(bb["ymin"], bb["ymax"], by = dx)</span></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a><span class="co"># grid &lt;- expand.grid(utm_x = xs, utm_y = ys)</span></span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a><span class="co"># pts  &lt;- st_as_sf(grid, coords = c("utm_x", "utm_y"), crs = st_crs(polygon_utm))</span></span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a><span class="co"># inside &lt;- st_within(pts, polygon_utm, sparse = FALSE)[, 1]</span></span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a><span class="co"># grid[inside, ]</span></span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a><span class="co"># }</span></span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a><span class="co"># </span></span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a><span class="co"># pred_grid_joint &lt;- make_grid_utm(nga_poly %&gt;% st_transform(32632), dx = 100000) |&gt;</span></span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a><span class="co"># mutate(</span></span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a><span class="co"># # For teaching: use simple smooth-ish covariates (replace with real rasters later)</span></span>
+<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a><span class="co"># elevation = 250 + 80 * scale(utm_y)[,1] + rnorm(n(), sd = 15),</span></span>
+<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a><span class="co"># ndvi      = plogis(-0.2 + 0.8 * scale(utm_y)[,1] + 0.3 * sin(scale(utm_x)[,1])),</span></span>
+<span id="cb12-16"><a href="#cb12-16" aria-hidden="true" tabindex="-1"></a><span class="co"># urban     = rbinom(n(), 1, plogis(-0.2 + 0.3 * scale(utm_x)[,1]))</span></span>
+<span id="cb12-17"><a href="#cb12-17" aria-hidden="true" tabindex="-1"></a><span class="co"># )</span></span>
+<span id="cb12-18"><a href="#cb12-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-19"><a href="#cb12-19" aria-hidden="true" tabindex="-1"></a>pred_grid_joint <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="st">"data/prediction_grid_utm.csv"</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb12-20"><a href="#cb12-20" aria-hidden="true" tabindex="-1"></a>tidyr<span class="sc">::</span><span class="fu">expand_grid</span>(<span class="at">group =</span> <span class="fu">levels</span>(joint_dat<span class="sc">$</span>group)) <span class="sc">%&gt;%</span></span>
+<span id="cb12-21"><a href="#cb12-21" aria-hidden="true" tabindex="-1"></a><span class="fu">st_as_sf</span>(<span class="at">coords=</span><span class="fu">c</span>(<span class="st">"utm_x"</span>,<span class="st">"utm_y"</span>), <span class="at">crs=</span><span class="dv">32632</span>)</span>
+<span id="cb12-22"><a href="#cb12-22" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(pred_grid_joint)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>Simple feature collection with 6 features and 6 fields
+Geometry type: POINT
+Dimension:     XY
+Bounding box:  xmin: 172259.6 ymin: 478133.5 xmax: 185657.6 ymax: 478184.5
+Projected CRS: WGS 84 / UTM zone 32N
+# A tibble: 6 × 7
+    lon   lat elevation   ndvi urban group                     geometry
+  &lt;dbl&gt; &lt;dbl&gt;     &lt;dbl&gt;  &lt;dbl&gt; &lt;dbl&gt; &lt;chr&gt;                  &lt;POINT [m]&gt;
+1  6.05  4.32      253. 0.0664     1 children_u5    (172259.6 478184.5)
+2  6.05  4.32      253. 0.0664     1 pregnant_women (172259.6 478184.5)
+3  6.11  4.32      244. 0.0654     1 children_u5    (178958.8 478158.8)
+4  6.11  4.32      244. 0.0654     1 pregnant_women (178958.8 478158.8)
+5  6.17  4.32      242. 0.0645     1 children_u5    (185657.6 478133.5)
+6  6.17  4.32      242. 0.0645     1 pregnant_women (185657.6 478133.5)</code></pre>
+</div>
+</div>
+<ol start="6" type="1">
+<li>Predict for each group and map</li>
+</ol>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>pred_joint <span class="ot">&lt;-</span> <span class="fu">predict</span>(</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>fit_joint,</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a><span class="at">newdata =</span> pred_grid_joint,</span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a><span class="at">formula =</span> <span class="sc">~</span> <span class="fu">plogis</span>(Intercept <span class="sc">+</span> elevation <span class="sc">+</span> ndvi <span class="sc">+</span> urban <span class="sc">+</span></span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>field_shared <span class="sc">+</span> field_group),</span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a><span class="at">n.samples =</span> <span class="dv">200</span></span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>pred_joint_sf <span class="ot">&lt;-</span> pred_joint <span class="sc">|&gt;</span></span>
+<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a><span class="fu">rename</span>(<span class="at">prev_mean =</span> mean)</span>
+<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(pred_joint_sf)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>Simple feature collection with 6 features and 14 fields
+Geometry type: POINT
+Dimension:     XY
+Bounding box:  xmin: 172259.6 ymin: 478133.5 xmax: 185657.6 ymax: 478184.5
+Projected CRS: WGS 84 / UTM zone 32N
+       lon      lat elevation       ndvi urban          group prev_mean
+1 6.047644 4.320444  252.9367 0.06636150     1    children_u5 0.2338780
+2 6.047644 4.320444  252.9367 0.06636150     1 pregnant_women 0.5627448
+3 6.107940 4.320444  244.1864 0.06535912     1    children_u5 0.2328773
+4 6.107940 4.320444  244.1864 0.06535912     1 pregnant_women 0.5682788
+5 6.168235 4.320444  242.2228 0.06445763     1    children_u5 0.2303922
+6 6.168235 4.320444  242.2228 0.06445763     1 pregnant_women 0.5712643
+          sd    q0.025      q0.5    q0.975    median mean.mc_std_err
+1 0.08018828 0.1062836 0.2206561 0.4103466 0.2206561     0.006181664
+2 0.11884947 0.3279051 0.5617590 0.7558596 0.5617590     0.009182413
+3 0.07479888 0.1144694 0.2224635 0.3906830 0.2224635     0.005767740
+4 0.10890539 0.3589318 0.5672890 0.7474681 0.5672890     0.008421212
+5 0.07044551 0.1087168 0.2228395 0.3774840 0.2228395     0.005444705
+6 0.10042411 0.3740545 0.5710984 0.7319084 0.5710984     0.007763726
+  sd.mc_std_err                  geometry
+1   0.003616827 POINT (172259.6 478184.5)
+2   0.005504725 POINT (172259.6 478184.5)
+3   0.003384636 POINT (178958.8 478158.8)
+4   0.005094263 POINT (178958.8 478158.8)
+5   0.003277126 POINT (185657.6 478133.5)
+6   0.004685776 POINT (185657.6 478133.5)</code></pre>
+</div>
+</div>
+<ol start="7" type="1">
+<li>Raster map per group (clipped to Nigeria)</li>
+</ol>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>pred_joint_map <span class="ot">&lt;-</span> <span class="cf">function</span>(group_name, <span class="at">dx =</span> <span class="dv">20000</span>) {</span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>dat_g <span class="ot">&lt;-</span> pred_joint_sf <span class="sc">|&gt;</span> <span class="fu">filter</span>(group <span class="sc">==</span> group_name)</span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>rast <span class="ot">&lt;-</span> <span class="fu">st_rasterize</span>(dat_g[<span class="st">"prev_mean"</span>], <span class="at">dx =</span> dx, <span class="at">dy =</span> dx)</span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>rast_ng <span class="ot">&lt;-</span> rast[<span class="fu">st_union</span>(nga_admin1)]</span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>() <span class="sc">+</span></span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a><span class="fu">geom_stars</span>(<span class="at">data =</span> rast_ng, <span class="at">na.rm =</span> <span class="cn">TRUE</span>) <span class="sc">+</span></span>
+<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a><span class="fu">geom_sf</span>(<span class="at">data =</span> nga_admin1, <span class="at">fill =</span> <span class="cn">NA</span>, <span class="at">colour =</span> <span class="st">"black"</span>, <span class="at">linewidth =</span> <span class="fl">0.25</span>) <span class="sc">+</span></span>
+<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a><span class="fu">coord_sf</span>(<span class="at">expand =</span> <span class="cn">FALSE</span>) <span class="sc">+</span></span>
+<span id="cb16-11"><a href="#cb16-11" aria-hidden="true" tabindex="-1"></a><span class="fu">scale_fill_viridis_c</span>(<span class="at">name =</span> <span class="st">"Predicted</span><span class="sc">\n</span><span class="st">prevalence"</span>, <span class="at">na.value =</span> <span class="cn">NA</span>) <span class="sc">+</span></span>
+<span id="cb16-12"><a href="#cb16-12" aria-hidden="true" tabindex="-1"></a><span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
+<span id="cb16-13"><a href="#cb16-13" aria-hidden="true" tabindex="-1"></a><span class="fu">theme</span>(<span class="at">panel.grid =</span> <span class="fu">element_blank</span>(),</span>
+<span id="cb16-14"><a href="#cb16-14" aria-hidden="true" tabindex="-1"></a><span class="at">panel.background =</span> <span class="fu">element_rect</span>(<span class="at">fill =</span> <span class="st">"white"</span>, <span class="at">colour =</span> <span class="cn">NA</span>),</span>
+<span id="cb16-15"><a href="#cb16-15" aria-hidden="true" tabindex="-1"></a><span class="at">plot.background  =</span> <span class="fu">element_rect</span>(<span class="at">fill =</span> <span class="st">"white"</span>, <span class="at">colour =</span> <span class="cn">NA</span>)) <span class="sc">+</span></span>
+<span id="cb16-16"><a href="#cb16-16" aria-hidden="true" tabindex="-1"></a><span class="fu">labs</span>(<span class="at">title =</span> <span class="fu">paste</span>(<span class="st">"Joint model: posterior mean prevalence –"</span>, group_name))</span>
+<span id="cb16-17"><a href="#cb16-17" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb16-18"><a href="#cb16-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-19"><a href="#cb16-19" aria-hidden="true" tabindex="-1"></a><span class="fu">pred_joint_map</span>(<span class="st">"children_u5"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="day2_files/figure-html/unnamed-chunk-11-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="fu">pred_joint_map</span>(<span class="st">"pregnant_women"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="day2_files/figure-html/unnamed-chunk-11-2.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>============================================================</p>
+<p><strong>Part 2A — Joint modelling with multiple likelihoods (Binomial + Poisson)</strong></p>
+<p>============================================================</p>
+<ol type="1">
+<li>Prepare the two datasets and create the mesh</li>
+</ol>
+<p>Here we used the binomial and poisson malaria data: - spatial_binom with n_pos, n_tested - spatial_pois with cases, population</p>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Example: take children as binomial and pretend pregnant are poisson (toy)</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>binom_dat <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="st">"data/spatial_binomial_data.csv"</span>) </span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>pois_dat <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="st">"data/spatial_poisson_data.csv"</span>)</span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>binom_sf <span class="ot">&lt;-</span> <span class="fu">st_as_sf</span>(binom_dat, <span class="at">coords =</span> <span class="fu">c</span>(<span class="st">"utm_x"</span>,<span class="st">"utm_y"</span>), <span class="at">crs =</span> <span class="dv">32632</span>)</span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>pois_sf  <span class="ot">&lt;-</span> <span class="fu">st_as_sf</span>(pois_dat,  <span class="at">coords =</span> <span class="fu">c</span>(<span class="st">"utm_x"</span>,<span class="st">"utm_y"</span>), <span class="at">crs =</span> <span class="dv">32632</span>)</span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a>mesh_binom <span class="ot">&lt;-</span> <span class="fu">inla.mesh.2d</span>(</span>
+<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a><span class="at">loc =</span> <span class="fu">st_coordinates</span>(binom_sf),</span>
+<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a><span class="at">max.edge =</span> <span class="fu">c</span>(<span class="dv">100000</span>, <span class="dv">200000</span>), <span class="co"># inner and outer triangle sizes</span></span>
+<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a><span class="at">cutoff =</span> <span class="dv">20000</span>,  <span class="co"># merge points closer than 20km</span></span>
+<span id="cb18-13"><a href="#cb18-13" aria-hidden="true" tabindex="-1"></a><span class="at">offset =</span> <span class="fu">c</span>(<span class="dv">50000</span>, <span class="dv">200000</span>)  <span class="co"># extend mesh beyond convex hull</span></span>
+<span id="cb18-14"><a href="#cb18-14" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb18-15"><a href="#cb18-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-16"><a href="#cb18-16" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(mesh_binom)</span>
+<span id="cb18-17"><a href="#cb18-17" aria-hidden="true" tabindex="-1"></a><span class="fu">points</span>(<span class="fu">st_coordinates</span>(binom_sf), <span class="at">col=</span><span class="st">"red"</span>, <span class="at">pch=</span><span class="dv">16</span>, <span class="at">cex =</span> <span class="fl">0.4</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="day2_files/figure-html/unnamed-chunk-12-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="do">####</span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>mesh_pois <span class="ot">&lt;-</span> <span class="fu">inla.mesh.2d</span>(</span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a><span class="at">loc =</span> <span class="fu">st_coordinates</span>(binom_sf),</span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a><span class="at">max.edge =</span> <span class="fu">c</span>(<span class="dv">100000</span>, <span class="dv">200000</span>), <span class="co"># inner and outer triangle sizes</span></span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a><span class="at">cutoff =</span> <span class="dv">20000</span>,  <span class="co"># merge points closer than 20km</span></span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a><span class="at">offset =</span> <span class="fu">c</span>(<span class="dv">50000</span>, <span class="dv">200000</span>)  <span class="co"># extend mesh beyond convex hull</span></span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(mesh_pois)</span>
+<span id="cb19-10"><a href="#cb19-10" aria-hidden="true" tabindex="-1"></a><span class="fu">points</span>(<span class="fu">st_coordinates</span>(binom_sf), <span class="at">col=</span><span class="st">"red"</span>, <span class="at">pch=</span><span class="dv">16</span>, <span class="at">cex =</span> <span class="fl">0.4</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="day2_files/figure-html/unnamed-chunk-12-2.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Mesh on all locations</span></span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>all_coords <span class="ot">&lt;-</span> <span class="fu">rbind</span>(<span class="fu">st_coordinates</span>(binom_sf), <span class="fu">st_coordinates</span>(pois_sf))</span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>mesh_joint <span class="ot">&lt;-</span> <span class="fu">inla.mesh.2d</span>(</span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">loc =</span> all_coords,</span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">max.edge =</span> <span class="fu">c</span>(<span class="dv">80000</span>, <span class="dv">250000</span>),</span>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">cutoff   =</span> <span class="dv">20000</span>,</span>
+<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">offset   =</span> <span class="fu">c</span>(<span class="dv">100000</span>, <span class="dv">200000</span>)</span>
+<span id="cb20-9"><a href="#cb20-9" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb20-10"><a href="#cb20-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-11"><a href="#cb20-11" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(mesh_joint); <span class="fu">points</span>(all_coords, <span class="at">pch =</span> <span class="dv">16</span>, <span class="at">cex =</span> <span class="fl">0.4</span>, <span class="at">col=</span><span class="st">"red"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="day2_files/figure-html/unnamed-chunk-12-3.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<ol start="2" type="1">
+<li>Shared + likelihood-specific spatial fields</li>
+</ol>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>spde_shared <span class="ot">&lt;-</span> <span class="fu">inla.spde2.pcmatern</span>(</span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">mesh =</span> mesh_joint,</span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">prior.range =</span> <span class="fu">c</span>(<span class="dv">300000</span>, <span class="fl">0.5</span>),</span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">prior.sigma =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="fl">0.5</span>)</span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a>spde_binom <span class="ot">&lt;-</span> <span class="fu">inla.spde2.pcmatern</span>(</span>
+<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">mesh =</span> mesh_binom,</span>
+<span id="cb21-9"><a href="#cb21-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">prior.range =</span> <span class="fu">c</span>(<span class="dv">200000</span>, <span class="fl">0.5</span>),</span>
+<span id="cb21-10"><a href="#cb21-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">prior.sigma =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="fl">0.5</span>)</span>
+<span id="cb21-11"><a href="#cb21-11" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb21-12"><a href="#cb21-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-13"><a href="#cb21-13" aria-hidden="true" tabindex="-1"></a>spde_pois <span class="ot">&lt;-</span> <span class="fu">inla.spde2.pcmatern</span>(</span>
+<span id="cb21-14"><a href="#cb21-14" aria-hidden="true" tabindex="-1"></a>  <span class="at">mesh =</span> mesh_pois,</span>
+<span id="cb21-15"><a href="#cb21-15" aria-hidden="true" tabindex="-1"></a>  <span class="at">prior.range =</span> <span class="fu">c</span>(<span class="dv">200000</span>, <span class="fl">0.5</span>),</span>
+<span id="cb21-16"><a href="#cb21-16" aria-hidden="true" tabindex="-1"></a>  <span class="at">prior.sigma =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="fl">0.5</span>)</span>
+<span id="cb21-17"><a href="#cb21-17" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<ol start="3" type="1">
+<li>Fit a multi-likelihood model in inlabru</li>
+</ol>
+<p>Key idea: use like() twice, and call bru() once.</p>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Components: shared + outcome-specific fields</span></span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>cmp <span class="ot">&lt;-</span> <span class="er">~</span></span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">Intercept_binom</span>(<span class="dv">1</span>) <span class="sc">+</span> <span class="fu">Intercept_pois</span>(<span class="dv">1</span>) <span class="sc">+</span> </span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a>  elevation <span class="sc">+</span> ndvi <span class="sc">+</span> urban <span class="sc">+</span></span>
+<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">shared</span>(geometry, <span class="at">copy =</span> <span class="st">"binom_field"</span>, <span class="at">fixed =</span> <span class="cn">FALSE</span>) <span class="sc">+</span></span>
+<span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">binom_field</span>(geometry, <span class="at">model =</span> spde_binom) <span class="sc">+</span></span>
+<span id="cb22-7"><a href="#cb22-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pois_field</span>(geometry,  <span class="at">model =</span> spde_pois)</span>
+<span id="cb22-8"><a href="#cb22-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-9"><a href="#cb22-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Likelihood 1: binomial prevalence</span></span>
+<span id="cb22-10"><a href="#cb22-10" aria-hidden="true" tabindex="-1"></a>like_binom <span class="ot">&lt;-</span> <span class="fu">like</span>(</span>
+<span id="cb22-11"><a href="#cb22-11" aria-hidden="true" tabindex="-1"></a>  <span class="at">formula =</span> n_pos <span class="sc">~</span> Intercept_binom <span class="sc">+</span> elevation <span class="sc">+</span> ndvi <span class="sc">+</span> urban <span class="sc">+</span></span>
+<span id="cb22-12"><a href="#cb22-12" aria-hidden="true" tabindex="-1"></a>  binom_field,</span>
+<span id="cb22-13"><a href="#cb22-13" aria-hidden="true" tabindex="-1"></a>  <span class="at">family  =</span> <span class="st">"binomial"</span>,</span>
+<span id="cb22-14"><a href="#cb22-14" aria-hidden="true" tabindex="-1"></a>  <span class="at">data    =</span> binom_sf,</span>
+<span id="cb22-15"><a href="#cb22-15" aria-hidden="true" tabindex="-1"></a>  <span class="at">Ntrials =</span> binom_sf<span class="sc">$</span>n_tested</span>
+<span id="cb22-16"><a href="#cb22-16" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb22-17"><a href="#cb22-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-18"><a href="#cb22-18" aria-hidden="true" tabindex="-1"></a><span class="co"># Likelihood 2: poisson cases with offset(log(population))</span></span>
+<span id="cb22-19"><a href="#cb22-19" aria-hidden="true" tabindex="-1"></a>like_pois <span class="ot">&lt;-</span> <span class="fu">like</span>(</span>
+<span id="cb22-20"><a href="#cb22-20" aria-hidden="true" tabindex="-1"></a>  <span class="at">formula =</span> cases <span class="sc">~</span> Intercept_pois <span class="sc">+</span> elevation <span class="sc">+</span> ndvi <span class="sc">+</span> urban <span class="sc">+</span></span>
+<span id="cb22-21"><a href="#cb22-21" aria-hidden="true" tabindex="-1"></a>  shared <span class="sc">+</span></span>
+<span id="cb22-22"><a href="#cb22-22" aria-hidden="true" tabindex="-1"></a>  pois_field, <span class="co"># + offset(log(population)),</span></span>
+<span id="cb22-23"><a href="#cb22-23" aria-hidden="true" tabindex="-1"></a>  <span class="at">family  =</span> <span class="st">"poisson"</span>,</span>
+<span id="cb22-24"><a href="#cb22-24" aria-hidden="true" tabindex="-1"></a>  <span class="at">data    =</span> pois_sf,</span>
+<span id="cb22-25"><a href="#cb22-25" aria-hidden="true" tabindex="-1"></a>  <span class="at">E =</span> pois_sf<span class="sc">$</span>population</span>
+<span id="cb22-26"><a href="#cb22-26" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb22-27"><a href="#cb22-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-28"><a href="#cb22-28" aria-hidden="true" tabindex="-1"></a>fit_multi <span class="ot">&lt;-</span> <span class="fu">bru</span>(</span>
+<span id="cb22-29"><a href="#cb22-29" aria-hidden="true" tabindex="-1"></a>  <span class="at">components =</span> cmp,</span>
+<span id="cb22-30"><a href="#cb22-30" aria-hidden="true" tabindex="-1"></a>  like_binom,</span>
+<span id="cb22-31"><a href="#cb22-31" aria-hidden="true" tabindex="-1"></a>  like_pois,</span>
+<span id="cb22-32"><a href="#cb22-32" aria-hidden="true" tabindex="-1"></a>  <span class="at">options =</span> <span class="fu">list</span>(<span class="at">control.compute =</span> <span class="fu">list</span>(<span class="at">dic =</span> <span class="cn">TRUE</span>, <span class="at">waic =</span> <span class="cn">TRUE</span>))</span>
+<span id="cb22-33"><a href="#cb22-33" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb22-34"><a href="#cb22-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-35"><a href="#cb22-35" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(fit_multi)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>inlabru version: 2.13.0.9024 
+INLA version: 25.12.02 
+Latent components:
+Intercept_binom: main = linear(1)
+elevation: main = linear(elevation)
+ndvi: main = linear(ndvi)
+urban: main = linear(urban)
+binom_field: main = spde(geometry)
+Intercept_pois: main = linear(1)
+shared(=binom_field): main = unknown(geometry)
+pois_field: main = spde(geometry)
+Observation models:
+  Model tag: &lt;No tag&gt;
+    Family: 'binomial'
+    Data class: 'sf', 'tbl_df', 'tbl', 'data.frame'
+    Response class: 'numeric'
+    Predictor: n_pos ~ Intercept_binom + elevation + ndvi + urban + binom_field
+    Additive/Linear/Rowwise: TRUE/TRUE/TRUE
+    Used components: effect[Intercept_binom, elevation, ndvi, urban, binom_field], latent[] 
+  Model tag: &lt;No tag&gt;
+    Family: 'poisson'
+    Data class: 'sf', 'tbl_df', 'tbl', 'data.frame'
+    Response class: 'numeric'
+    Predictor: cases ~ Intercept_pois + elevation + ndvi + urban + shared + pois_field
+    Additive/Linear/Rowwise: TRUE/TRUE/TRUE
+    Used components: effect[Intercept_pois, elevation, ndvi, urban, shared, pois_field], latent[] 
+Time used:
+    Pre = 0.831, Running = 7.7, Post = 0.297, Total = 8.83 
+Fixed effects:
+                  mean    sd 0.025quant 0.5quant 0.975quant   mode kld
+Intercept_binom -2.422 0.714     -3.790   -2.437     -0.957 -2.434   0
+elevation       -0.002 0.001     -0.004   -0.002      0.000 -0.002   0
+ndvi             1.934 1.044     -0.101    1.917      4.053  1.915   0
+urban            0.556 0.045      0.468    0.556      0.646  0.556   0
+Intercept_pois  -6.836 0.753     -8.463   -6.805     -5.428 -6.813   0
+
+Random effects:
+  Name    Model
+    binom_field SPDE2 model
+   pois_field SPDE2 model
+   shared Copy
+
+Model hyperparameters:
+                           mean       sd 0.025quant  0.5quant 0.975quant
+Range for binom_field  3.57e+05 8.09e+04   2.29e+05  3.46e+05   5.45e+05
+Stdev for binom_field  1.40e+00 2.48e-01   9.91e-01  1.37e+00   1.96e+00
+Range for pois_field   6.70e+05 2.72e+05   3.23e+05  6.12e+05   1.37e+06
+Stdev for pois_field   7.08e-01 1.74e-01   4.46e-01  6.82e-01   1.12e+00
+Beta for shared       -3.20e-02 7.90e-02  -1.90e-01 -3.20e-02   1.22e-01
+                           mode
+Range for binom_field  3.24e+05
+Stdev for binom_field  1.31e+00
+Range for pois_field   5.07e+05
+Stdev for pois_field   6.25e-01
+Beta for shared       -3.00e-02
+
+Deviance Information Criterion (DIC) ...............: 2536.98
+Deviance Information Criterion (DIC, saturated) ....: 819.91
+Effective number of parameters .....................: 200.02
+
+Watanabe-Akaike information criterion (WAIC) ...: 2562.60
+Effective number of parameters .................: 173.60
+
+Marginal log-Likelihood:  -1463.36 
+ is computed 
+Posterior summaries for the linear predictor and the fitted values are computed
+(Posterior marginals needs also 'control.compute=list(return.marginals.predictor=TRUE)')</code></pre>
+</div>
+</div>
+<ol start="4" type="1">
+<li>Predict (example: prevalence surface from the binomial part)</li>
+</ol>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>pred_grid <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="st">"data/prediction_grid_utm.csv"</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a><span class="fu">st_as_sf</span>(<span class="at">coords=</span><span class="fu">c</span>(<span class="st">"utm_x"</span>,<span class="st">"utm_y"</span>), <span class="at">crs=</span><span class="dv">32632</span>)</span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a>pred_binom_multi <span class="ot">&lt;-</span> <span class="fu">predict</span>(</span>
+<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a>fit_multi,</span>
+<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a><span class="at">newdata =</span> pred_grid,</span>
+<span id="cb24-7"><a href="#cb24-7" aria-hidden="true" tabindex="-1"></a><span class="at">formula =</span> <span class="sc">~</span> <span class="fu">plogis</span>(Intercept_binom <span class="sc">+</span> elevation <span class="sc">+</span> ndvi <span class="sc">+</span> urban <span class="sc">+</span> binom_field),</span>
+<span id="cb24-8"><a href="#cb24-8" aria-hidden="true" tabindex="-1"></a><span class="at">n.samples =</span> <span class="dv">1000</span></span>
+<span id="cb24-9"><a href="#cb24-9" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>pred_binom_r <span class="ot">&lt;-</span> <span class="fu">st_rasterize</span>(pred_binom_multi[<span class="st">"mean"</span>], <span class="at">dx=</span><span class="dv">10000</span>, <span class="at">dy=</span><span class="dv">10000</span>)</span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>pred_binom_r <span class="ot">&lt;-</span> pred_binom_r[<span class="fu">st_union</span>(nga_admin1)]</span>
+<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>() <span class="sc">+</span></span>
+<span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_stars</span>(<span class="at">data=</span>pred_binom_r, <span class="at">na.rm =</span> <span class="cn">TRUE</span>) <span class="sc">+</span></span>
+<span id="cb25-5"><a href="#cb25-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_sf</span>(<span class="at">data=</span>nga_admin1, <span class="at">fill=</span><span class="cn">NA</span>, <span class="at">color =</span> <span class="st">"black"</span>) <span class="sc">+</span></span>
+<span id="cb25-6"><a href="#cb25-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">coord_sf</span>() <span class="sc">+</span></span>
+<span id="cb25-7"><a href="#cb25-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_fill_viridis_c</span>(<span class="at">name =</span> <span class="st">"Predicted</span><span class="sc">\n</span><span class="st">prevalence"</span>, <span class="at">na.value =</span> <span class="cn">NA</span>) <span class="sc">+</span></span>
+<span id="cb25-8"><a href="#cb25-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
+<span id="cb25-9"><a href="#cb25-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(</span>
+<span id="cb25-10"><a href="#cb25-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">panel.background =</span> <span class="fu">element_rect</span>(<span class="at">fill =</span> <span class="st">"white"</span>, <span class="at">colour =</span> <span class="cn">NA</span>),</span>
+<span id="cb25-11"><a href="#cb25-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">plot.background  =</span> <span class="fu">element_rect</span>(<span class="at">fill =</span> <span class="st">"white"</span>, <span class="at">colour =</span> <span class="cn">NA</span>),</span>
+<span id="cb25-12"><a href="#cb25-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">panel.grid       =</span> <span class="fu">element_blank</span>()</span>
+<span id="cb25-13"><a href="#cb25-13" aria-hidden="true" tabindex="-1"></a>  )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="day2_files/figure-html/unnamed-chunk-16-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>============================================================</p>
+<p><strong>Part 1B — Non-stationary spatial process (mixture of two SPDEs)</strong></p>
+<p>============================================================ We’ll fit a non-stationary field using a mixture of two spatial fields:</p>
+<ul>
+<li>one smooth / long-range SPDE</li>
+<li>one rough / short-range SPDE</li>
+<li>a spatially varying weight w(s) controlling mixture</li>
+</ul>
+<p>This is a simple, teachable non-stationary construction.</p>
+<ol type="1">
+<li>Prepare data and a mesh</li>
+</ol>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>ns_dat <span class="ot">&lt;-</span> nonstat_malaria <span class="sc">|&gt;</span></span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a><span class="fu">mutate</span>(</span>
+<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a><span class="at">y =</span> n_pos,</span>
+<span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a><span class="at">n =</span> n_tested</span>
+<span id="cb26-5"><a href="#cb26-5" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb26-6"><a href="#cb26-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-7"><a href="#cb26-7" aria-hidden="true" tabindex="-1"></a>locs_ns <span class="ot">&lt;-</span> nonstat_malaria_sf</span>
+<span id="cb26-8"><a href="#cb26-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-9"><a href="#cb26-9" aria-hidden="true" tabindex="-1"></a>mesh_ns <span class="ot">&lt;-</span> <span class="fu">inla.mesh.2d</span>(</span>
+<span id="cb26-10"><a href="#cb26-10" aria-hidden="true" tabindex="-1"></a><span class="at">loc =</span> <span class="fu">st_coordinates</span>(locs_ns),</span>
+<span id="cb26-11"><a href="#cb26-11" aria-hidden="true" tabindex="-1"></a><span class="at">max.edge =</span> <span class="fu">c</span>(<span class="dv">80000</span>, <span class="dv">250000</span>),</span>
+<span id="cb26-12"><a href="#cb26-12" aria-hidden="true" tabindex="-1"></a><span class="at">cutoff =</span> <span class="dv">20000</span>,</span>
+<span id="cb26-13"><a href="#cb26-13" aria-hidden="true" tabindex="-1"></a><span class="at">offset =</span> <span class="fu">c</span>(<span class="dv">100000</span>, <span class="dv">200000</span>)</span>
+<span id="cb26-14"><a href="#cb26-14" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb26-15"><a href="#cb26-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-16"><a href="#cb26-16" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(mesh_ns)</span>
+<span id="cb26-17"><a href="#cb26-17" aria-hidden="true" tabindex="-1"></a><span class="fu">points</span>(<span class="fu">st_coordinates</span>(locs_ns), <span class="at">pch =</span> <span class="dv">16</span>, <span class="at">cex =</span> <span class="fl">0.4</span>, <span class="at">col=</span> <span class="st">"red"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="day2_files/figure-html/unnamed-chunk-17-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<ol start="2" type="1">
+<li>Two SPDEs: smooth and rough</li>
+</ol>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb27"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>spde_smooth <span class="ot">&lt;-</span> <span class="fu">inla.spde2.pcmatern</span>(</span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a><span class="at">mesh =</span> mesh_ns,</span>
+<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a><span class="at">prior.range =</span> <span class="fu">c</span>(<span class="dv">600000</span>, <span class="fl">0.5</span>),   <span class="co"># long range</span></span>
+<span id="cb27-4"><a href="#cb27-4" aria-hidden="true" tabindex="-1"></a><span class="at">prior.sigma =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="fl">0.5</span>)</span>
+<span id="cb27-5"><a href="#cb27-5" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb27-6"><a href="#cb27-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb27-7"><a href="#cb27-7" aria-hidden="true" tabindex="-1"></a>spde_rough <span class="ot">&lt;-</span> <span class="fu">inla.spde2.pcmatern</span>(</span>
+<span id="cb27-8"><a href="#cb27-8" aria-hidden="true" tabindex="-1"></a><span class="at">mesh =</span> mesh_ns,</span>
+<span id="cb27-9"><a href="#cb27-9" aria-hidden="true" tabindex="-1"></a><span class="at">prior.range =</span> <span class="fu">c</span>(<span class="dv">200000</span>, <span class="fl">0.5</span>),   <span class="co"># short range</span></span>
+<span id="cb27-10"><a href="#cb27-10" aria-hidden="true" tabindex="-1"></a><span class="at">prior.sigma =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="fl">0.5</span>)</span>
+<span id="cb27-11"><a href="#cb27-11" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<ol start="3" type="1">
+<li>Build a spatially varying weight w(s)</li>
+</ol>
+<p>Define w(s) as a simple function of northing (utm_y). (You can later replace this with a covariate surface.)</p>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb28"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Normalised northing in [0,1]</span></span>
+<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a>ns_dat <span class="ot">&lt;-</span> ns_dat <span class="sc">|&gt;</span></span>
+<span id="cb28-4"><a href="#cb28-4" aria-hidden="true" tabindex="-1"></a><span class="fu">mutate</span>(</span>
+<span id="cb28-5"><a href="#cb28-5" aria-hidden="true" tabindex="-1"></a><span class="at">w =</span> (utm_y <span class="sc">-</span> <span class="fu">min</span>(utm_y)) <span class="sc">/</span> (<span class="fu">max</span>(utm_y) <span class="sc">-</span> <span class="fu">min</span>(utm_y)),</span>
+<span id="cb28-6"><a href="#cb28-6" aria-hidden="true" tabindex="-1"></a><span class="at">w =</span> <span class="fu">pmin</span>(<span class="fu">pmax</span>(w, <span class="dv">0</span>), <span class="dv">1</span>)</span>
+<span id="cb28-7"><a href="#cb28-7" aria-hidden="true" tabindex="-1"></a>) <span class="sc">%&gt;%</span> <span class="fu">st_as_sf</span>(<span class="at">coords=</span><span class="fu">c</span>(<span class="st">"utm_x"</span>,<span class="st">"utm_y"</span>), <span class="at">crs=</span><span class="dv">32632</span>)</span>
+<span id="cb28-8"><a href="#cb28-8" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(ns_dat)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>Simple feature collection with 6 features and 14 fields
+Geometry type: POINT
+Dimension:     XY
+Bounding box:  xmin: -182831.5 ymin: 573963.7 xmax: 1048433 ymax: 1300816
+Projected CRS: WGS 84 / UTM zone 32N
+# A tibble: 6 × 15
+     id n_tested n_pos prevalence_true S_nonstationary weight_north S_smooth
+  &lt;dbl&gt;    &lt;dbl&gt; &lt;dbl&gt;           &lt;dbl&gt;           &lt;dbl&gt;        &lt;dbl&gt;    &lt;dbl&gt;
+1     1      164    30           0.152         -0.793        0.168    -0.273
+2     2      198    69           0.342         -0.0743       0.813     0.405
+3     3      143    40           0.278         -0.0372       0.231     0.169
+4     4       62    14           0.210         -0.0809       0.0903   -0.294
+5     5      160    30           0.170         -0.857        0.481    -0.173
+6     6      197    44           0.260         -0.0663       0.425     0.159
+# ℹ 8 more variables: S_rough &lt;dbl&gt;, elevation &lt;dbl&gt;, ndvi &lt;dbl&gt;, urban &lt;dbl&gt;,
+#   y &lt;dbl&gt;, n &lt;dbl&gt;, w &lt;dbl&gt;, geometry &lt;POINT [m]&gt;</code></pre>
+</div>
+</div>
+<ol start="4" type="1">
+<li>Fit non-stationary mixture model</li>
+</ol>
+<p>We model:</p>
+<p><span class="math display">\[\eta = \beta_0 + \beta^\top x(s) + \omega(s) S_{smooth} + (1- \omega(s)) S_{rough}(s)\]</span></p>
+<p>In inlabru we do this by multiplying the fields by covariates w and 1-w.</p>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb30"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>cmp_ns <span class="ot">&lt;-</span> y <span class="sc">~</span></span>
+<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a><span class="dv">1</span> <span class="sc">+</span> elevation <span class="sc">+</span> ndvi <span class="sc">+</span> urban <span class="sc">+</span></span>
+<span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a><span class="fu">smooth</span>(geometry, <span class="at">model =</span> spde_smooth, <span class="at">weights =</span> w) <span class="sc">+</span></span>
+<span id="cb30-4"><a href="#cb30-4" aria-hidden="true" tabindex="-1"></a><span class="fu">rough</span>(geometry, <span class="at">model =</span> spde_rough,  <span class="at">weights =</span> <span class="fu">I</span>(<span class="dv">1</span> <span class="sc">-</span> w))</span>
+<span id="cb30-5"><a href="#cb30-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb30-6"><a href="#cb30-6" aria-hidden="true" tabindex="-1"></a>fit_ns <span class="ot">&lt;-</span> <span class="fu">bru</span>(</span>
+<span id="cb30-7"><a href="#cb30-7" aria-hidden="true" tabindex="-1"></a><span class="at">components =</span> cmp_ns,</span>
+<span id="cb30-8"><a href="#cb30-8" aria-hidden="true" tabindex="-1"></a><span class="at">family =</span> <span class="st">"binomial"</span>,</span>
+<span id="cb30-9"><a href="#cb30-9" aria-hidden="true" tabindex="-1"></a><span class="at">data =</span> ns_dat,</span>
+<span id="cb30-10"><a href="#cb30-10" aria-hidden="true" tabindex="-1"></a><span class="at">Ntrials =</span> ns_dat<span class="sc">$</span>n,</span>
+<span id="cb30-11"><a href="#cb30-11" aria-hidden="true" tabindex="-1"></a><span class="at">options =</span> <span class="fu">list</span>(<span class="at">control.compute =</span> <span class="fu">list</span>(<span class="at">dic =</span> <span class="cn">TRUE</span>, <span class="at">waic =</span> <span class="cn">TRUE</span>))</span>
+<span id="cb30-12"><a href="#cb30-12" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb30-13"><a href="#cb30-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb30-14"><a href="#cb30-14" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(fit_ns)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>inlabru version: 2.13.0.9024 
+INLA version: 25.12.02 
+Latent components:
+elevation: main = linear(elevation)
+ndvi: main = linear(ndvi)
+urban: main = linear(urban)
+smooth: main = spde(geometry), scale(w)
+rough: main = spde(geometry), scale(I(1 - w))
+Intercept: main = linear(1)
+Observation models:
+  Model tag: &lt;No tag&gt;
+    Family: 'binomial'
+    Data class: 'sf', 'tbl_df', 'tbl', 'data.frame'
+    Response class: 'numeric'
+    Predictor: y ~ elevation + ndvi + urban + smooth + rough + Intercept
+    Additive/Linear/Rowwise: TRUE/TRUE/TRUE
+    Used components: effect[elevation, ndvi, urban, smooth, rough, Intercept], latent[] 
+Time used:
+    Pre = 0.773, Running = 5.53, Post = 0.24, Total = 6.55 
+Fixed effects:
+            mean    sd 0.025quant 0.5quant 0.975quant   mode kld
+elevation -0.002 0.001     -0.004   -0.002      0.000 -0.002   0
+ndvi       1.440 0.965     -0.688    1.527      3.116  1.677   0
+urban      0.320 0.035      0.251    0.320      0.389  0.320   0
+Intercept -1.253 0.363     -1.957   -1.257     -0.529 -1.257   0
+
+Random effects:
+  Name    Model
+    smooth SPDE2 model
+   rough SPDE2 model
+
+Model hyperparameters:
+                     mean       sd 0.025quant 0.5quant 0.975quant     mode
+Range for smooth 6.92e+05 2.65e+05   3.28e+05 6.42e+05   1.35e+06 5.52e+05
+Stdev for smooth 8.39e-01 2.48e-01   4.70e-01 8.00e-01   1.44e+00 7.23e-01
+Range for rough  1.40e+05 4.98e+04   6.81e+04 1.32e+05   2.62e+05 1.16e+05
+Stdev for rough  5.80e-01 8.60e-02   4.31e-01 5.73e-01   7.68e-01 5.58e-01
+
+Deviance Information Criterion (DIC) ...............: 1928.91
+Deviance Information Criterion (DIC, saturated) ....: 452.02
+Effective number of parameters .....................: 143.07
+
+Watanabe-Akaike information criterion (WAIC) ...: 1925.73
+Effective number of parameters .................: 107.72
+
+Marginal log-Likelihood:  -1069.77 
+ is computed 
+Posterior summaries for the linear predictor and the fitted values are computed
+(Posterior marginals needs also 'control.compute=list(return.marginals.predictor=TRUE)')</code></pre>
+</div>
+</div>
+<ol start="5" type="1">
+<li>Predict and map (clipped to Nigeria)</li>
+</ol>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb32"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a>pred_grid_ns <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="st">"data/prediction_grid_utm.csv"</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a><span class="fu">mutate</span>(<span class="at">w =</span> (utm_y <span class="sc">-</span> <span class="fu">min</span>(utm_y)) <span class="sc">/</span> (<span class="fu">max</span>(utm_y) <span class="sc">-</span> <span class="fu">min</span>(utm_y)),</span>
+<span id="cb32-3"><a href="#cb32-3" aria-hidden="true" tabindex="-1"></a><span class="at">w =</span> <span class="fu">pmin</span>(<span class="fu">pmax</span>(w, <span class="dv">0</span>), <span class="dv">1</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb32-4"><a href="#cb32-4" aria-hidden="true" tabindex="-1"></a><span class="fu">st_as_sf</span>(<span class="at">coords=</span><span class="fu">c</span>(<span class="st">"utm_x"</span>,<span class="st">"utm_y"</span>), <span class="at">crs=</span><span class="dv">32632</span>)</span>
+<span id="cb32-5"><a href="#cb32-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-6"><a href="#cb32-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-7"><a href="#cb32-7" aria-hidden="true" tabindex="-1"></a>pred_ns_sf <span class="ot">&lt;-</span> <span class="fu">predict</span>(fit_ns, <span class="at">newdata =</span> pred_grid_ns, <span class="at">n.samples =</span> <span class="dv">200</span>,</span>
+<span id="cb32-8"><a href="#cb32-8" aria-hidden="true" tabindex="-1"></a>                      <span class="at">formula =</span> <span class="sc">~</span> <span class="fu">plogis</span>(Intercept <span class="sc">+</span> elevation <span class="sc">+</span> ndvi <span class="sc">+</span> urban <span class="sc">+</span></span>
+<span id="cb32-9"><a href="#cb32-9" aria-hidden="true" tabindex="-1"></a>w<span class="sc">*</span>smooth <span class="sc">+</span> (<span class="dv">1</span><span class="sc">-</span>w)<span class="sc">*</span>rough)) <span class="sc">|&gt;</span></span>
+<span id="cb32-10"><a href="#cb32-10" aria-hidden="true" tabindex="-1"></a><span class="fu">rename</span>(<span class="at">prev_mean =</span> mean)</span>
+<span id="cb32-11"><a href="#cb32-11" aria-hidden="true" tabindex="-1"></a>pred_ns_rast <span class="ot">&lt;-</span> <span class="fu">st_rasterize</span>(pred_ns_sf[<span class="st">"prev_mean"</span>], <span class="at">dx =</span> <span class="dv">20000</span>, <span class="at">dy =</span> <span class="dv">20000</span>)</span>
+<span id="cb32-12"><a href="#cb32-12" aria-hidden="true" tabindex="-1"></a>pred_ns_rast_ng <span class="ot">&lt;-</span> pred_ns_rast[<span class="fu">st_union</span>(nga_admin1)]</span>
+<span id="cb32-13"><a href="#cb32-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-14"><a href="#cb32-14" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>() <span class="sc">+</span></span>
+<span id="cb32-15"><a href="#cb32-15" aria-hidden="true" tabindex="-1"></a><span class="fu">geom_stars</span>(<span class="at">data =</span> pred_ns_rast_ng, <span class="at">na.rm =</span> <span class="cn">TRUE</span>) <span class="sc">+</span></span>
+<span id="cb32-16"><a href="#cb32-16" aria-hidden="true" tabindex="-1"></a><span class="fu">geom_sf</span>(<span class="at">data =</span> nga_admin1, <span class="at">fill =</span> <span class="cn">NA</span>, <span class="at">colour =</span> <span class="st">"black"</span>, <span class="at">linewidth =</span> <span class="fl">0.25</span>) <span class="sc">+</span></span>
+<span id="cb32-17"><a href="#cb32-17" aria-hidden="true" tabindex="-1"></a><span class="fu">coord_sf</span>(<span class="at">expand =</span> <span class="cn">FALSE</span>) <span class="sc">+</span></span>
+<span id="cb32-18"><a href="#cb32-18" aria-hidden="true" tabindex="-1"></a><span class="fu">scale_fill_viridis_c</span>(<span class="at">name =</span> <span class="st">"Predicted</span><span class="sc">\n</span><span class="st">prevalence"</span>, <span class="at">na.value =</span> <span class="cn">NA</span>) <span class="sc">+</span></span>
+<span id="cb32-19"><a href="#cb32-19" aria-hidden="true" tabindex="-1"></a><span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
+<span id="cb32-20"><a href="#cb32-20" aria-hidden="true" tabindex="-1"></a><span class="fu">theme</span>(<span class="at">panel.grid =</span> <span class="fu">element_blank</span>(),</span>
+<span id="cb32-21"><a href="#cb32-21" aria-hidden="true" tabindex="-1"></a><span class="at">panel.background =</span> <span class="fu">element_rect</span>(<span class="at">fill =</span> <span class="st">"white"</span>, <span class="at">colour =</span> <span class="cn">NA</span>),</span>
+<span id="cb32-22"><a href="#cb32-22" aria-hidden="true" tabindex="-1"></a><span class="at">plot.background  =</span> <span class="fu">element_rect</span>(<span class="at">fill =</span> <span class="st">"white"</span>, <span class="at">colour =</span> <span class="cn">NA</span>)) <span class="sc">+</span></span>
+<span id="cb32-23"><a href="#cb32-23" aria-hidden="true" tabindex="-1"></a><span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Non-stationary mixture model: posterior mean prevalence"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="day2_files/figure-html/unnamed-chunk-21-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<ol start="6" type="1">
+<li>(Optional) Visualise the weight surface <span class="math inline">\(\omega(s)\)</span></li>
+</ol>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb33"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a>w_rast <span class="ot">&lt;-</span> <span class="fu">st_rasterize</span>(pred_ns_sf[<span class="st">"w"</span>], <span class="at">dx =</span> <span class="dv">20000</span>, <span class="at">dy =</span> <span class="dv">20000</span>)[<span class="fu">st_union</span>(nga_admin1)]</span>
+<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>() <span class="sc">+</span></span>
+<span id="cb33-4"><a href="#cb33-4" aria-hidden="true" tabindex="-1"></a><span class="fu">geom_stars</span>(<span class="at">data =</span> w_rast, <span class="at">na.rm =</span> <span class="cn">TRUE</span>) <span class="sc">+</span></span>
+<span id="cb33-5"><a href="#cb33-5" aria-hidden="true" tabindex="-1"></a><span class="fu">geom_sf</span>(<span class="at">data =</span> nga_admin1, <span class="at">fill =</span> <span class="cn">NA</span>, <span class="at">colour =</span> <span class="st">"black"</span>, <span class="at">linewidth =</span> <span class="fl">0.25</span>) <span class="sc">+</span></span>
+<span id="cb33-6"><a href="#cb33-6" aria-hidden="true" tabindex="-1"></a><span class="fu">coord_sf</span>(<span class="at">expand =</span> <span class="cn">FALSE</span>) <span class="sc">+</span></span>
+<span id="cb33-7"><a href="#cb33-7" aria-hidden="true" tabindex="-1"></a><span class="fu">scale_fill_viridis_c</span>(<span class="at">name =</span> <span class="st">"w(s)"</span>, <span class="at">limits =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">1</span>), <span class="at">na.value =</span> <span class="cn">NA</span>) <span class="sc">+</span></span>
+<span id="cb33-8"><a href="#cb33-8" aria-hidden="true" tabindex="-1"></a><span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
+<span id="cb33-9"><a href="#cb33-9" aria-hidden="true" tabindex="-1"></a><span class="fu">theme</span>(<span class="at">panel.grid =</span> <span class="fu">element_blank</span>(),</span>
+<span id="cb33-10"><a href="#cb33-10" aria-hidden="true" tabindex="-1"></a><span class="at">panel.background =</span> <span class="fu">element_rect</span>(<span class="at">fill =</span> <span class="st">"white"</span>, <span class="at">colour =</span> <span class="cn">NA</span>),</span>
+<span id="cb33-11"><a href="#cb33-11" aria-hidden="true" tabindex="-1"></a><span class="at">plot.background  =</span> <span class="fu">element_rect</span>(<span class="at">fill =</span> <span class="st">"white"</span>, <span class="at">colour =</span> <span class="cn">NA</span>)) <span class="sc">+</span></span>
+<span id="cb33-12"><a href="#cb33-12" aria-hidden="true" tabindex="-1"></a><span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Spatially varying weight w(s): smooth (north) → rough (south)"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="day2_files/figure-html/unnamed-chunk-22-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>============================================================</p>
+<p><strong>Part 1B — Non-stationary SPDE with structured range</strong></p>
+<p>============================================================</p>
+<p>Here we make the SPDE range depend on a covariate at the mesh vertices by modelling log(kappa(s)) as: <span class="math display">\[\log(\kappa(s)) = \theta_0 + \theta_1 z(s)\]</span> and since range(s) = <span class="math inline">\(\sqrt(8)/\kappa(s)\)</span>, this gives a spatially varying range.</p>
+<ol type="1">
+<li>Mesh + vertex covariate</li>
+</ol>
+<p>Use something interpretable like northing (y) or a “ecological gradient”.</p>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb34"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Mesh for nonstationary dataset</span></span>
+<span id="cb34-2"><a href="#cb34-2" aria-hidden="true" tabindex="-1"></a>coords_ns <span class="ot">&lt;-</span> <span class="fu">st_coordinates</span>(nonstat_malaria_sf)</span>
+<span id="cb34-3"><a href="#cb34-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb34-4"><a href="#cb34-4" aria-hidden="true" tabindex="-1"></a>mesh_ns <span class="ot">&lt;-</span> <span class="fu">inla.mesh.2d</span>(</span>
+<span id="cb34-5"><a href="#cb34-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">loc =</span> coords_ns,</span>
+<span id="cb34-6"><a href="#cb34-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">max.edge =</span> <span class="fu">c</span>(<span class="dv">80000</span>, <span class="dv">250000</span>),</span>
+<span id="cb34-7"><a href="#cb34-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">cutoff   =</span> <span class="dv">20000</span>,</span>
+<span id="cb34-8"><a href="#cb34-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">offset   =</span> <span class="fu">c</span>(<span class="dv">100000</span>, <span class="dv">200000</span>)</span>
+<span id="cb34-9"><a href="#cb34-9" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb34-10"><a href="#cb34-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb34-11"><a href="#cb34-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Vertex covariate: scaled northing at mesh vertices</span></span>
+<span id="cb34-12"><a href="#cb34-12" aria-hidden="true" tabindex="-1"></a>z_vert <span class="ot">&lt;-</span> <span class="fu">scale</span>(mesh_ns<span class="sc">$</span>loc[,<span class="dv">2</span>])[,<span class="dv">1</span>]   <span class="co"># mesh vertex y coordinate (UTM northing)</span></span>
+<span id="cb34-13"><a href="#cb34-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb34-14"><a href="#cb34-14" aria-hidden="true" tabindex="-1"></a><span class="co"># Basis matrices for spatially varying kappa and/or tau</span></span>
+<span id="cb34-15"><a href="#cb34-15" aria-hidden="true" tabindex="-1"></a><span class="co"># Here: 2 hyperparameters for kappa: intercept + slope*z</span></span>
+<span id="cb34-16"><a href="#cb34-16" aria-hidden="true" tabindex="-1"></a>B_kappa <span class="ot">&lt;-</span> <span class="fu">cbind</span>(<span class="dv">1</span>, z_vert)</span>
+<span id="cb34-17"><a href="#cb34-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb34-18"><a href="#cb34-18" aria-hidden="true" tabindex="-1"></a><span class="co"># Keep tau constant (1 parameter) OR also vary it; here constant:</span></span>
+<span id="cb34-19"><a href="#cb34-19" aria-hidden="true" tabindex="-1"></a>B_tau <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">1</span>, <span class="at">nrow =</span> <span class="fu">nrow</span>(B_kappa), <span class="at">ncol =</span> <span class="dv">1</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<ol start="2" type="1">
+<li>Build B.tau / B.kappa with 4 columns</li>
+</ol>
+<p>Here we use the Lindgren/Rue parameterisation.</p>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb35"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a>nu <span class="ot">&lt;-</span> <span class="dv">1</span></span>
+<span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a>alpha <span class="ot">&lt;-</span> nu <span class="sc">+</span> <span class="dv">2</span><span class="sc">/</span><span class="dv">2</span></span>
+<span id="cb35-3"><a href="#cb35-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb35-4"><a href="#cb35-4" aria-hidden="true" tabindex="-1"></a><span class="co"># constants for the SPDE parameterisation (same approach as the book)</span></span>
+<span id="cb35-5"><a href="#cb35-5" aria-hidden="true" tabindex="-1"></a>logkappa0 <span class="ot">&lt;-</span> <span class="fu">log</span>(<span class="dv">8</span> <span class="sc">*</span> nu) <span class="sc">/</span> <span class="dv">2</span></span>
+<span id="cb35-6"><a href="#cb35-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb35-7"><a href="#cb35-7" aria-hidden="true" tabindex="-1"></a>logtau0 <span class="ot">&lt;-</span> (<span class="fu">lgamma</span>(nu) <span class="sc">-</span> <span class="fu">lgamma</span>(alpha) <span class="sc">-</span> <span class="fu">log</span>(<span class="dv">4</span><span class="sc">*</span>pi)) <span class="sc">/</span> <span class="dv">2</span></span>
+<span id="cb35-8"><a href="#cb35-8" aria-hidden="true" tabindex="-1"></a>logtau0 <span class="ot">&lt;-</span> logtau0 <span class="sc">-</span> logkappa0</span>
+<span id="cb35-9"><a href="#cb35-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb35-10"><a href="#cb35-10" aria-hidden="true" tabindex="-1"></a>B_tau   <span class="ot">&lt;-</span> <span class="fu">cbind</span>(logtau0,  <span class="sc">-</span><span class="dv">1</span>,  nu,  nu <span class="sc">*</span> z_vert)</span>
+<span id="cb35-11"><a href="#cb35-11" aria-hidden="true" tabindex="-1"></a>B_kappa <span class="ot">&lt;-</span> <span class="fu">cbind</span>(logkappa0, <span class="dv">0</span>,  <span class="sc">-</span><span class="dv">1</span>, <span class="sc">-</span><span class="dv">1</span> <span class="sc">*</span> z_vert)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<ol start="3" type="1">
+<li>Build a non-stationary SPDE using inla.spde2.matern</li>
+</ol>
+<p>We specify priors for the theta parameters. (These are on log-scales internally.)</p>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb36"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a>spde_ns <span class="ot">&lt;-</span> <span class="fu">inla.spde2.matern</span>(</span>
+<span id="cb36-2"><a href="#cb36-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">mesh =</span> mesh_ns,</span>
+<span id="cb36-3"><a href="#cb36-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">B.kappa =</span> B_kappa,</span>
+<span id="cb36-4"><a href="#cb36-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">B.tau   =</span> B_tau,</span>
+<span id="cb36-5"><a href="#cb36-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">theta.prior.mean =</span> <span class="fu">c</span>(<span class="fu">log</span>(<span class="dv">1</span><span class="sc">/</span><span class="dv">300000</span>), <span class="dv">0</span>, <span class="dv">0</span>),   <span class="co"># (kappa intercept), (kappa slope), (tau intercept)</span></span>
+<span id="cb36-6"><a href="#cb36-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">theta.prior.prec =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">1</span>)                <span class="co"># weak-ish priors, Increasing theta.prior.prec tightens the prior (less variation).</span></span>
+<span id="cb36-7"><a href="#cb36-7" aria-hidden="true" tabindex="-1"></a>  <span class="co"># The seco4)  Predict and mapnd entry in theta.prior.mean / prec controls how strongly the range can vary with z.</span></span>
+<span id="cb36-8"><a href="#cb36-8" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<ol start="4" type="1">
+<li>Fit binomial model with this structured-range SPDE</li>
+</ol>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb37"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a>cmp_ns_struct <span class="ot">&lt;-</span> y <span class="sc">~</span></span>
+<span id="cb37-2"><a href="#cb37-2" aria-hidden="true" tabindex="-1"></a>  <span class="dv">1</span> <span class="sc">+</span> elevation <span class="sc">+</span> ndvi <span class="sc">+</span> urban <span class="sc">+</span></span>
+<span id="cb37-3"><a href="#cb37-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">field_ns</span>(geometry, <span class="at">model =</span> spde_ns)</span>
+<span id="cb37-4"><a href="#cb37-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb37-5"><a href="#cb37-5" aria-hidden="true" tabindex="-1"></a>fit_ns_struct <span class="ot">&lt;-</span> <span class="fu">bru</span>(</span>
+<span id="cb37-6"><a href="#cb37-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">components =</span> cmp_ns_struct,</span>
+<span id="cb37-7"><a href="#cb37-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">family =</span> <span class="st">"binomial"</span>,</span>
+<span id="cb37-8"><a href="#cb37-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> ns_dat,</span>
+<span id="cb37-9"><a href="#cb37-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">Ntrials =</span> ns_dat<span class="sc">$</span>n_tested,</span>
+<span id="cb37-10"><a href="#cb37-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">options =</span> <span class="fu">list</span>(<span class="at">control.compute =</span> <span class="fu">list</span>(<span class="at">dic =</span> <span class="cn">TRUE</span>, <span class="at">waic =</span> <span class="cn">TRUE</span>))</span>
+<span id="cb37-11"><a href="#cb37-11" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb37-12"><a href="#cb37-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb37-13"><a href="#cb37-13" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(fit_ns_struct)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>inlabru version: 2.13.0.9024 
+INLA version: 25.12.02 
+Latent components:
+elevation: main = linear(elevation)
+ndvi: main = linear(ndvi)
+urban: main = linear(urban)
+field_ns: main = spde(geometry)
+Intercept: main = linear(1)
+Observation models:
+  Model tag: &lt;No tag&gt;
+    Family: 'binomial'
+    Data class: 'sf', 'tbl_df', 'tbl', 'data.frame'
+    Response class: 'numeric'
+    Predictor: y ~ elevation + ndvi + urban + field_ns + Intercept
+    Additive/Linear/Rowwise: TRUE/TRUE/TRUE
+    Used components: effect[elevation, ndvi, urban, field_ns, Intercept], latent[] 
+Time used:
+    Pre = 0.919, Running = 1.24, Post = 0.328, Total = 2.48 
+Fixed effects:
+            mean    sd 0.025quant 0.5quant 0.975quant   mode kld
+elevation -0.001 0.000     -0.002   -0.001     -0.001 -0.001   0
+ndvi       2.963 0.067      2.831    2.963      3.094  2.963   0
+urban      0.265 0.024      0.219    0.265      0.311  0.265   0
+Intercept -1.700 0.086     -1.867   -1.700     -1.532 -1.700   0
+
+Random effects:
+  Name    Model
+    field_ns SPDE2 model
+
+Model hyperparameters:
+                      mean   sd 0.025quant 0.5quant 0.975quant   mode
+Theta1 for field_ns -12.61 1.00     -14.58   -12.61     -10.64 -12.61
+Theta2 for field_ns   0.00 1.00      -1.97     0.00       1.97   0.00
+Theta3 for field_ns   0.00 1.00      -1.97     0.00       1.97   0.00
+
+Deviance Information Criterion (DIC) ...............: 3488.63
+Deviance Information Criterion (DIC, saturated) ....: 2011.74
+Effective number of parameters .....................: 4.00
+
+Watanabe-Akaike information criterion (WAIC) ...: 3514.04
+Effective number of parameters .................: 28.89
+
+Marginal log-Likelihood:  -1773.36 
+ is computed 
+Posterior summaries for the linear predictor and the fitted values are computed
+(Posterior marginals needs also 'control.compute=list(return.marginals.predictor=TRUE)')</code></pre>
+</div>
+</div>
+<ol start="5" type="1">
+<li>Predict and map</li>
+</ol>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb39"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a>pred_ns_sf <span class="ot">&lt;-</span> <span class="fu">predict</span>(fit_ns_struct, <span class="at">newdata =</span> pred_grid_ns, <span class="at">n.samples =</span> <span class="dv">200</span>, </span>
+<span id="cb39-2"><a href="#cb39-2" aria-hidden="true" tabindex="-1"></a>                      <span class="sc">~</span> <span class="fu">plogis</span>(Intercept <span class="sc">+</span> elevation <span class="sc">+</span> ndvi <span class="sc">+</span> urban <span class="sc">+</span> field_ns)) <span class="sc">|&gt;</span></span>
+<span id="cb39-3"><a href="#cb39-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="at">prev_mean =</span> mean)</span>
+<span id="cb39-4"><a href="#cb39-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb39-5"><a href="#cb39-5" aria-hidden="true" tabindex="-1"></a>pred_rast <span class="ot">&lt;-</span> <span class="fu">st_rasterize</span>(pred_ns_sf[<span class="st">"prev_mean"</span>], <span class="at">dx =</span> <span class="dv">20000</span>, <span class="at">dy =</span> <span class="dv">20000</span>)</span>
+<span id="cb39-6"><a href="#cb39-6" aria-hidden="true" tabindex="-1"></a>pred_rast_ng <span class="ot">&lt;-</span> pred_rast[<span class="fu">st_union</span>(nga_admin1)]   <span class="co"># mask outside Nigeria</span></span>
+<span id="cb39-7"><a href="#cb39-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb39-8"><a href="#cb39-8" aria-hidden="true" tabindex="-1"></a><span class="co"># --- (D) Plot ---</span></span>
+<span id="cb39-9"><a href="#cb39-9" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>() <span class="sc">+</span></span>
+<span id="cb39-10"><a href="#cb39-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_stars</span>(<span class="at">data =</span> pred_rast_ng, <span class="at">na.rm =</span> <span class="cn">TRUE</span>) <span class="sc">+</span></span>
+<span id="cb39-11"><a href="#cb39-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_sf</span>(<span class="at">data =</span> nga_admin1, <span class="at">fill =</span> <span class="cn">NA</span>, <span class="at">colour =</span> <span class="st">"black"</span>, <span class="at">linewidth =</span> <span class="fl">0.25</span>) <span class="sc">+</span></span>
+<span id="cb39-12"><a href="#cb39-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">coord_sf</span>(<span class="at">expand =</span> <span class="cn">FALSE</span>) <span class="sc">+</span></span>
+<span id="cb39-13"><a href="#cb39-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_fill_viridis_c</span>(<span class="at">name =</span> <span class="st">"Predicted</span><span class="sc">\n</span><span class="st">prevalence"</span>, <span class="at">na.value =</span> <span class="cn">NA</span>) <span class="sc">+</span></span>
+<span id="cb39-14"><a href="#cb39-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
+<span id="cb39-15"><a href="#cb39-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(</span>
+<span id="cb39-16"><a href="#cb39-16" aria-hidden="true" tabindex="-1"></a>    <span class="at">panel.grid =</span> <span class="fu">element_blank</span>(),</span>
+<span id="cb39-17"><a href="#cb39-17" aria-hidden="true" tabindex="-1"></a>    <span class="at">panel.background =</span> <span class="fu">element_rect</span>(<span class="at">fill =</span> <span class="st">"white"</span>, <span class="at">colour =</span> <span class="cn">NA</span>),</span>
+<span id="cb39-18"><a href="#cb39-18" aria-hidden="true" tabindex="-1"></a>    <span class="at">plot.background  =</span> <span class="fu">element_rect</span>(<span class="at">fill =</span> <span class="st">"white"</span>, <span class="at">colour =</span> <span class="cn">NA</span>)</span>
+<span id="cb39-19"><a href="#cb39-19" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
+<span id="cb39-20"><a href="#cb39-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
+<span id="cb39-21"><a href="#cb39-21" aria-hidden="true" tabindex="-1"></a>    <span class="at">title =</span> <span class="st">"Posterior mean malaria prevalence"</span>,</span>
+<span id="cb39-22"><a href="#cb39-22" aria-hidden="true" tabindex="-1"></a>    <span class="at">subtitle =</span> <span class="st">"Non-stationary SPDE with structured range"</span></span>
+<span id="cb39-23"><a href="#cb39-23" aria-hidden="true" tabindex="-1"></a>  )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="day2_files/figure-html/unnamed-chunk-27-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="summary-day-2" class="level2">
+<h2 class="anchored" data-anchor-id="summary-day-2">Summary (Day 2)</h2>
+<p>Joint model: shared + group-specific spatial structure, two outcomes in one model</p>
+<p>Non-stationary model: mixture of SPDEs with a spatially varying weight and structured range.</p>
+<p>Mapping: predictions rasterised and clipped to Nigeria boundary</p>
 
 
 </section>

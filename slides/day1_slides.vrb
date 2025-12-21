@@ -1,0 +1,32 @@
+\frametitle{Generalized Linear Models (GLMs)}
+\phantomsection\label{generalized-linear-models-glms}
+\begin{itemize}
+\tightlist
+\item
+  Extension of linear models to handle non-normal response
+  distributions.
+\item
+  Three components:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    Random component: Distribution from the exponential family (e.g.,
+    Binomial, Poisson).
+  \item
+    Systematic component: Linear predictor \(\eta = X\beta\).
+  \item
+    Link function: Relates \(E(Y)\) to \(\eta\).
+  \end{itemize}
+\item
+  Examples:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    Logistic regression for binary outcomes --
+    {\texttt{logit\ link\ function}}
+  \item
+    Poisson regression for count data -- {\texttt{log\ link\ function}}
+  \end{itemize}
+\end{itemize}

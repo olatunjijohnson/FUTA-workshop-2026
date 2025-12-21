@@ -5,54 +5,637 @@ format: html
 editor: visual
 ---
 
-
 ## Overview
 
 Today we will cover two key advanced topics in spatial modelling:
 
-1. **Joint modelling** of multiple malaria processes  
-   - Shared spatial fields  
-   - Process-specific fields  
-   - Multiple outcomes (e.g., children vs pregnant women)
+1.  **Joint modelling** of multiple malaria processes
+    -   Shared spatial fields\
+    -   Process-specific fields\
+    -   Multiple outcomes (e.g., children vs pregnant women)
+    -   Multiple likelihoods (Binomial + Poisson)
+2.  **Non-stationary spatial processes**
+    -   Region-varying smoothness\
+    -   Covariate-driven nonstationarity\
+    -   Combining multiple spatial SPDEs
 
-2. **Non-stationary spatial processes**  
-   - Region-varying smoothness  
-   - Covariate-driven nonstationarity  
-   - Combining multiple spatial SPDEs
-
----
+------------------------------------------------------------------------
 
 ## Load Day 2 datasets
 
 ```{r}
 library(tidyverse)
+library(INLA)
+library(inlabru)
+library(ggplot2)
+library(sf)
+library(stars)
+library(rnaturalearth)
+library(rnaturalearthdata)
+library(geoR)
 
 joint_malaria <- read_csv("data/joint_malaria_processes.csv")
 nonstat_malaria <- read_csv("data/nonstationary_malaria_data.csv")
 
+nga_admin1 <- ne_states("Nigeria", returnclass = "sf") %>%
+st_transform(32632)
+
 head(joint_malaria)
+```
+
+## 2. Convert to sf for mapping
+
+We need an `sf` layer to overlay boundaries, plot points, and feed coordinates into SPDE meshes.
+
+```{r}
+joint_malaria_sf <- joint_malaria %>%
+  st_as_sf(coords = c("utm_x", "utm_y"), crs = 32632)
+nonstat_malaria_sf <- nonstat_malaria %>%
+  st_as_sf(coords = c("utm_x", "utm_y"), crs = 32632)
 ```
 
 Quick visualisation
 
 ```{r}
-library(ggplot2)
-
-ggplot(joint_malaria, aes(utm_x, utm_y, colour = group)) +
+ggplot() +
+geom_sf(data = joint_malaria_sf, aes(colour = prevalence_true)) +
+facet_wrap(~group) +
+geom_sf(data = nga_admin1, fill = NA) +
 geom_point() +
-coord_equal() +
 theme_minimal()
 ```
 
 Quick visualisation (non-stationary dataset)
 
 ```{r}
-ggplot(nonstat_malaria, aes(utm_x, utm_y, colour = prevalence_true)) +
+ggplot() +
+geom_sf(data = nonstat_malaria_sf, aes(colour = prevalence_true)) +
+geom_sf(data = nga_admin1, fill = NA) +
 geom_point() +
-coord_equal() +
-scale_colour_viridis_c() +
 theme_minimal()
+```
+
+============================================================
+
+**Part 1A — Joint modelling (shared + group-specific fields)**
+
+============================================================
+
+1.  Create a single stacked dataset
+
+We will model both groups jointly with: - one shared spatial field - one group-specific spatial field (replicated by group)
+
+```{r}
+joint_dat <- joint_malaria_sf |>
+mutate(
+group = factor(group),
+y = n_pos,
+n = n_tested
+)
+
+levels(joint_dat$group)
+```
+
+2.  Build SPDE mesh
+
+```{r}
+locs_joint <- joint_malaria_sf
+
+mesh_joint <- inla.mesh.2d(
+loc = st_coordinates(locs_joint),
+max.edge = c(80000, 250000),   # tune for smoothness vs speed
+cutoff = 20000,                # remove very close points
+offset = c(100000, 200000)
+)
+
+plot(mesh_joint)
+points(st_coordinates(locs_joint), pch = 16, cex = 0.4, col= "red")
+```
+
+3.  Define SPDEs (shared + group-specific)
+
+-   spde_shared: one latent field for all data
+-   spde_group: replicated field with one replicate per group
+
+```{r}
+spde_shared <- inla.spde2.pcmatern(
+mesh = mesh_joint,
+prior.range = c(300000, 0.5),   # P(range < 300km) = 0.5
+prior.sigma = c(1, 0.5)         # P(sigma > 1) = 0.5
+)
+
+spde_group <- inla.spde2.pcmatern(
+mesh = mesh_joint,
+prior.range = c(200000, 0.5),
+prior.sigma = c(1, 0.5)
+)
+```
+
+4.  Fit joint model in inlabru
+
+Model:
+
+-   Binomial likelihood for counts
+-   Fixed effects (elevation, ndvi, urban)
+-   field_shared() applies to all
+-   field_group() replicated by group
+
+```{r}
+cmp_joint <- y ~
+1 +
+elevation + ndvi + urban +
+field_shared(geometry, model = spde_shared) +
+field_group(geometry, model = spde_group, replicate = group)
+
+fit_joint <- bru(
+components = cmp_joint,
+family = "binomial",
+data = joint_dat,
+Ntrials = joint_dat$n,
+options = list(control.compute = list(dic = TRUE, waic = TRUE))
+)
+
+summary(fit_joint)
+```
+
+5.  Prediction grid inside Nigeria (UTM)
+
+```{r}
+# make_grid_utm <- function(polygon_utm, dx = 20000) {
+# bb <- st_bbox(polygon_utm)
+# xs <- seq(bb["xmin"], bb["xmax"], by = dx)
+# ys <- seq(bb["ymin"], bb["ymax"], by = dx)
+# grid <- expand.grid(utm_x = xs, utm_y = ys)
+# pts  <- st_as_sf(grid, coords = c("utm_x", "utm_y"), crs = st_crs(polygon_utm))
+# inside <- st_within(pts, polygon_utm, sparse = FALSE)[, 1]
+# grid[inside, ]
+# }
+# 
+# pred_grid_joint <- make_grid_utm(nga_poly %>% st_transform(32632), dx = 100000) |>
+# mutate(
+# # For teaching: use simple smooth-ish covariates (replace with real rasters later)
+# elevation = 250 + 80 * scale(utm_y)[,1] + rnorm(n(), sd = 15),
+# ndvi      = plogis(-0.2 + 0.8 * scale(utm_y)[,1] + 0.3 * sin(scale(utm_x)[,1])),
+# urban     = rbinom(n(), 1, plogis(-0.2 + 0.3 * scale(utm_x)[,1]))
+# )
+
+pred_grid_joint <- read_csv("data/prediction_grid_utm.csv") %>% 
+tidyr::expand_grid(group = levels(joint_dat$group)) %>%
+st_as_sf(coords=c("utm_x","utm_y"), crs=32632)
+head(pred_grid_joint)
+```
+
+6.  Predict for each group and map
+
+```{r}
+pred_joint <- predict(
+fit_joint,
+newdata = pred_grid_joint,
+formula = ~ plogis(Intercept + elevation + ndvi + urban +
+field_shared + field_group),
+n.samples = 200
+)
+
+pred_joint_sf <- pred_joint |>
+rename(prev_mean = mean)
+
+head(pred_joint_sf)
+```
+
+7.  Raster map per group (clipped to Nigeria)
+
+```{r}
+pred_joint_map <- function(group_name, dx = 20000) {
+dat_g <- pred_joint_sf |> filter(group == group_name)
+
+rast <- st_rasterize(dat_g["prev_mean"], dx = dx, dy = dx)
+rast_ng <- rast[st_union(nga_admin1)]
+
+ggplot() +
+geom_stars(data = rast_ng, na.rm = TRUE) +
+geom_sf(data = nga_admin1, fill = NA, colour = "black", linewidth = 0.25) +
+coord_sf(expand = FALSE) +
+scale_fill_viridis_c(name = "Predicted\nprevalence", na.value = NA) +
+theme_minimal() +
+theme(panel.grid = element_blank(),
+panel.background = element_rect(fill = "white", colour = NA),
+plot.background  = element_rect(fill = "white", colour = NA)) +
+labs(title = paste("Joint model: posterior mean prevalence –", group_name))
+}
+
+pred_joint_map("children_u5")
+pred_joint_map("pregnant_women")
+```
+
+============================================================
+
+**Part 2A — Joint modelling with multiple likelihoods (Binomial + Poisson)**
+
+============================================================
+
+1)  Prepare the two datasets and create the mesh
+
+Here we used the binomial and poisson malaria data: - spatial_binom with n_pos, n_tested - spatial_pois with cases, population
+
+```{r}
+# Example: take children as binomial and pretend pregnant are poisson (toy)
+binom_dat <- read_csv("data/spatial_binomial_data.csv") 
+pois_dat <- read_csv("data/spatial_poisson_data.csv")
+
+binom_sf <- st_as_sf(binom_dat, coords = c("utm_x","utm_y"), crs = 32632)
+pois_sf  <- st_as_sf(pois_dat,  coords = c("utm_x","utm_y"), crs = 32632)
+
+
+mesh_binom <- inla.mesh.2d(
+loc = st_coordinates(binom_sf),
+max.edge = c(100000, 200000), # inner and outer triangle sizes
+cutoff = 20000,  # merge points closer than 20km
+offset = c(50000, 200000)  # extend mesh beyond convex hull
+)
+
+plot(mesh_binom)
+points(st_coordinates(binom_sf), col="red", pch=16, cex = 0.4)
+
+
+####
+mesh_pois <- inla.mesh.2d(
+loc = st_coordinates(binom_sf),
+max.edge = c(100000, 200000), # inner and outer triangle sizes
+cutoff = 20000,  # merge points closer than 20km
+offset = c(50000, 200000)  # extend mesh beyond convex hull
+)
+
+plot(mesh_pois)
+points(st_coordinates(binom_sf), col="red", pch=16, cex = 0.4)
+
+
+# Mesh on all locations
+all_coords <- rbind(st_coordinates(binom_sf), st_coordinates(pois_sf))
+
+mesh_joint <- inla.mesh.2d(
+  loc = all_coords,
+  max.edge = c(80000, 250000),
+  cutoff   = 20000,
+  offset   = c(100000, 200000)
+)
+
+plot(mesh_joint); points(all_coords, pch = 16, cex = 0.4, col="red")
+```
+
+2)  Shared + likelihood-specific spatial fields
+
+```{r}
+spde_shared <- inla.spde2.pcmatern(
+  mesh = mesh_joint,
+  prior.range = c(300000, 0.5),
+  prior.sigma = c(1, 0.5)
+)
+
+spde_binom <- inla.spde2.pcmatern(
+  mesh = mesh_binom,
+  prior.range = c(200000, 0.5),
+  prior.sigma = c(1, 0.5)
+)
+
+spde_pois <- inla.spde2.pcmatern(
+  mesh = mesh_pois,
+  prior.range = c(200000, 0.5),
+  prior.sigma = c(1, 0.5)
+)
+```
+
+3)  Fit a multi-likelihood model in inlabru
+
+Key idea: use like() twice, and call bru() once.
+
+```{r}
+# Components: shared + outcome-specific fields
+cmp <- ~
+  Intercept_binom(1) + Intercept_pois(1) + 
+  elevation + ndvi + urban +
+  shared(geometry, copy = "binom_field", fixed = FALSE) +
+  binom_field(geometry, model = spde_binom) +
+  pois_field(geometry,  model = spde_pois)
+
+# Likelihood 1: binomial prevalence
+like_binom <- like(
+  formula = n_pos ~ Intercept_binom + elevation + ndvi + urban +
+  binom_field,
+  family  = "binomial",
+  data    = binom_sf,
+  Ntrials = binom_sf$n_tested
+)
+
+# Likelihood 2: poisson cases with offset(log(population))
+like_pois <- like(
+  formula = cases ~ Intercept_pois + elevation + ndvi + urban +
+  shared +
+  pois_field, # + offset(log(population)),
+  family  = "poisson",
+  data    = pois_sf,
+  E = pois_sf$population
+)
+
+fit_multi <- bru(
+  components = cmp,
+  like_binom,
+  like_pois,
+  options = list(control.compute = list(dic = TRUE, waic = TRUE))
+)
+
+summary(fit_multi)
+```
+
+4)  Predict (example: prevalence surface from the binomial part)
+
+```{r}
+pred_grid <- read_csv("data/prediction_grid_utm.csv") %>%
+st_as_sf(coords=c("utm_x","utm_y"), crs=32632)
+
+pred_binom_multi <- predict(
+fit_multi,
+newdata = pred_grid,
+formula = ~ plogis(Intercept_binom + elevation + ndvi + urban + binom_field),
+n.samples = 1000
+)
+```
+
+```{r}
+pred_binom_r <- st_rasterize(pred_binom_multi["mean"], dx=10000, dy=10000)
+pred_binom_r <- pred_binom_r[st_union(nga_admin1)]
+ggplot() +
+  geom_stars(data=pred_binom_r, na.rm = TRUE) +
+  geom_sf(data=nga_admin1, fill=NA, color = "black") +
+  coord_sf() +
+  scale_fill_viridis_c(name = "Predicted\nprevalence", na.value = NA) +
+  theme_minimal() +
+  theme(
+    panel.background = element_rect(fill = "white", colour = NA),
+    plot.background  = element_rect(fill = "white", colour = NA),
+    panel.grid       = element_blank()
+  )
+
+```
+
+============================================================
+
+**Part 1B — Non-stationary spatial process (mixture of two SPDEs)**
+
+============================================================ We’ll fit a non-stationary field using a mixture of two spatial fields:
+
+-   one smooth / long-range SPDE
+-   one rough / short-range SPDE
+-   a spatially varying weight w(s) controlling mixture
+
+This is a simple, teachable non-stationary construction.
+
+1.  Prepare data and a mesh
+
+```{r}
+ns_dat <- nonstat_malaria |>
+mutate(
+y = n_pos,
+n = n_tested
+)
+
+locs_ns <- nonstat_malaria_sf
+
+mesh_ns <- inla.mesh.2d(
+loc = st_coordinates(locs_ns),
+max.edge = c(80000, 250000),
+cutoff = 20000,
+offset = c(100000, 200000)
+)
+
+plot(mesh_ns)
+points(st_coordinates(locs_ns), pch = 16, cex = 0.4, col= "red")
+```
+
+2.  Two SPDEs: smooth and rough
+
+```{r}
+spde_smooth <- inla.spde2.pcmatern(
+mesh = mesh_ns,
+prior.range = c(600000, 0.5),   # long range
+prior.sigma = c(1, 0.5)
+)
+
+spde_rough <- inla.spde2.pcmatern(
+mesh = mesh_ns,
+prior.range = c(200000, 0.5),   # short range
+prior.sigma = c(1, 0.5)
+)
+```
+
+3.  Build a spatially varying weight w(s)
+
+Define w(s) as a simple function of northing (utm_y). (You can later replace this with a covariate surface.)
+
+```{r}
+# Normalised northing in [0,1]
+
+ns_dat <- ns_dat |>
+mutate(
+w = (utm_y - min(utm_y)) / (max(utm_y) - min(utm_y)),
+w = pmin(pmax(w, 0), 1)
+) %>% st_as_sf(coords=c("utm_x","utm_y"), crs=32632)
+head(ns_dat)
+```
+
+4.  Fit non-stationary mixture model
+
+We model:
+
+$$\eta = \beta_0 + \beta^\top x(s) + \omega(s) S_{smooth} + (1- \omega(s)) S_{rough}(s)$$
+
+In inlabru we do this by multiplying the fields by covariates w and 1-w.
+
+```{r}
+cmp_ns <- y ~
+1 + elevation + ndvi + urban +
+smooth(geometry, model = spde_smooth, weights = w) +
+rough(geometry, model = spde_rough,  weights = I(1 - w))
+
+fit_ns <- bru(
+components = cmp_ns,
+family = "binomial",
+data = ns_dat,
+Ntrials = ns_dat$n,
+options = list(control.compute = list(dic = TRUE, waic = TRUE))
+)
+
+summary(fit_ns)
+```
+
+5.  Predict and map (clipped to Nigeria)
+
+```{r}
+pred_grid_ns <- read_csv("data/prediction_grid_utm.csv") %>% 
+mutate(w = (utm_y - min(utm_y)) / (max(utm_y) - min(utm_y)),
+w = pmin(pmax(w, 0), 1)) %>%
+st_as_sf(coords=c("utm_x","utm_y"), crs=32632)
+
+
+pred_ns_sf <- predict(fit_ns, newdata = pred_grid_ns, n.samples = 200,
+                      formula = ~ plogis(Intercept + elevation + ndvi + urban +
+w*smooth + (1-w)*rough)) |>
+rename(prev_mean = mean)
+pred_ns_rast <- st_rasterize(pred_ns_sf["prev_mean"], dx = 20000, dy = 20000)
+pred_ns_rast_ng <- pred_ns_rast[st_union(nga_admin1)]
+
+ggplot() +
+geom_stars(data = pred_ns_rast_ng, na.rm = TRUE) +
+geom_sf(data = nga_admin1, fill = NA, colour = "black", linewidth = 0.25) +
+coord_sf(expand = FALSE) +
+scale_fill_viridis_c(name = "Predicted\nprevalence", na.value = NA) +
+theme_minimal() +
+theme(panel.grid = element_blank(),
+panel.background = element_rect(fill = "white", colour = NA),
+plot.background  = element_rect(fill = "white", colour = NA)) +
+labs(title = "Non-stationary mixture model: posterior mean prevalence")
+```
+
+6.  (Optional) Visualise the weight surface $\omega(s)$
+
+```{r}
+w_rast <- st_rasterize(pred_ns_sf["w"], dx = 20000, dy = 20000)[st_union(nga_admin1)]
+
+ggplot() +
+geom_stars(data = w_rast, na.rm = TRUE) +
+geom_sf(data = nga_admin1, fill = NA, colour = "black", linewidth = 0.25) +
+coord_sf(expand = FALSE) +
+scale_fill_viridis_c(name = "w(s)", limits = c(0, 1), na.value = NA) +
+theme_minimal() +
+theme(panel.grid = element_blank(),
+panel.background = element_rect(fill = "white", colour = NA),
+plot.background  = element_rect(fill = "white", colour = NA)) +
+labs(title = "Spatially varying weight w(s): smooth (north) → rough (south)")
+```
+
+============================================================
+
+**Part 1B — Non-stationary SPDE with structured range**
+
+============================================================
+
+Here we make the SPDE range depend on a covariate at the mesh vertices by modelling log(kappa(s)) as: $$\log(\kappa(s)) = \theta_0 + \theta_1 z(s)$$ and since range(s) = $\sqrt(8)/\kappa(s)$, this gives a spatially varying range.
+
+1)  Mesh + vertex covariate
+
+Use something interpretable like northing (y) or a “ecological gradient”.
+
+```{r}
+# Mesh for nonstationary dataset
+coords_ns <- st_coordinates(nonstat_malaria_sf)
+
+mesh_ns <- inla.mesh.2d(
+  loc = coords_ns,
+  max.edge = c(80000, 250000),
+  cutoff   = 20000,
+  offset   = c(100000, 200000)
+)
+
+# Vertex covariate: scaled northing at mesh vertices
+z_vert <- scale(mesh_ns$loc[,2])[,1]   # mesh vertex y coordinate (UTM northing)
+
+# Basis matrices for spatially varying kappa and/or tau
+# Here: 2 hyperparameters for kappa: intercept + slope*z
+B_kappa <- cbind(1, z_vert)
+
+# Keep tau constant (1 parameter) OR also vary it; here constant:
+B_tau <- matrix(1, nrow = nrow(B_kappa), ncol = 1)
+
+
+```
+
+2)  Build B.tau / B.kappa with 4 columns
+
+Here we use the Lindgren/Rue parameterisation.
+
+```{r}
+nu <- 1
+alpha <- nu + 2/2
+
+# constants for the SPDE parameterisation (same approach as the book)
+logkappa0 <- log(8 * nu) / 2
+
+logtau0 <- (lgamma(nu) - lgamma(alpha) - log(4*pi)) / 2
+logtau0 <- logtau0 - logkappa0
+
+B_tau   <- cbind(logtau0,  -1,  nu,  nu * z_vert)
+B_kappa <- cbind(logkappa0, 0,  -1, -1 * z_vert)
+
 ```
 
 
 
+
+3)  Build a non-stationary SPDE using inla.spde2.matern
+
+We specify priors for the theta parameters. (These are on log-scales internally.)
+
+```{r}
+spde_ns <- inla.spde2.matern(
+  mesh = mesh_ns,
+  B.kappa = B_kappa,
+  B.tau   = B_tau,
+  theta.prior.mean = c(log(1/300000), 0, 0),   # (kappa intercept), (kappa slope), (tau intercept)
+  theta.prior.prec = c(1, 1, 1)                # weak-ish priors, Increasing theta.prior.prec tightens the prior (less variation).
+  # The seco4)  Predict and mapnd entry in theta.prior.mean / prec controls how strongly the range can vary with z.
+)
+```
+
+4)  Fit binomial model with this structured-range SPDE
+
+```{r}
+
+cmp_ns_struct <- y ~
+  1 + elevation + ndvi + urban +
+  field_ns(geometry, model = spde_ns)
+
+fit_ns_struct <- bru(
+  components = cmp_ns_struct,
+  family = "binomial",
+  data = ns_dat,
+  Ntrials = ns_dat$n_tested,
+  options = list(control.compute = list(dic = TRUE, waic = TRUE))
+)
+
+summary(fit_ns_struct)
+```
+
+5)  Predict and map
+
+```{r}
+pred_ns_sf <- predict(fit_ns_struct, newdata = pred_grid_ns, n.samples = 200, 
+                      ~ plogis(Intercept + elevation + ndvi + urban + field_ns)) |>
+  rename(prev_mean = mean)
+
+pred_rast <- st_rasterize(pred_ns_sf["prev_mean"], dx = 20000, dy = 20000)
+pred_rast_ng <- pred_rast[st_union(nga_admin1)]   # mask outside Nigeria
+
+# --- (D) Plot ---
+ggplot() +
+  geom_stars(data = pred_rast_ng, na.rm = TRUE) +
+  geom_sf(data = nga_admin1, fill = NA, colour = "black", linewidth = 0.25) +
+  coord_sf(expand = FALSE) +
+  scale_fill_viridis_c(name = "Predicted\nprevalence", na.value = NA) +
+  theme_minimal() +
+  theme(
+    panel.grid = element_blank(),
+    panel.background = element_rect(fill = "white", colour = NA),
+    plot.background  = element_rect(fill = "white", colour = NA)
+  ) +
+  labs(
+    title = "Posterior mean malaria prevalence",
+    subtitle = "Non-stationary SPDE with structured range"
+  )
+```
+
+## Summary (Day 2)
+
+Joint model: shared + group-specific spatial structure, two outcomes in one model
+
+Non-stationary model: mixture of SPDEs with a spatially varying weight and structured range.
+
+Mapping: predictions rasterised and clipped to Nigeria boundary

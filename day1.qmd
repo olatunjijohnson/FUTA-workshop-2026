@@ -35,7 +35,9 @@ These form the foundation for Days 2 and 3.
 
 ## 1. Load data
 
-These data were generated during preprocessing and saved to data/
+The data used for Day 1 are a simulated malaria prevalence dataset from Nigeria. If malaria is of particular interest in your research, you can download real datasets from the DHS website. Malaria data can be obtained either from prevalence surveys or from hospital records.
+
+When derived from prevalence surveys, the data can be treated as binomial, since you observe the number of individuals surveyed and the number who tested positive. When obtained from hospital records, the data typically consist of counts of positive malaria cases at specific locations and can be modelled as Poisson data.
 
 ```{r}
 library(tidyverse)
@@ -46,6 +48,7 @@ library(sf)
 library(stars)
 library(rnaturalearth)
 library(rnaturalearthdata)
+library(geoR)
 
 nga_admin1 <- ne_states("Nigeria", returnclass = "sf") %>%
 st_transform(32632)
@@ -80,6 +83,22 @@ geom_sf(data = nga_admin1, fill = NA) +
 scale_colour_viridis_c(name="Prevalence") +
 theme_minimal()
 ```
+
+## 4. Variogram
+
+Before proceeding to spatial modelling, there is a need to check for the evidence of spatial correlation in the residual. Variagram can be used to achieve this.
+
+```{r}
+non_spatial_fit <- glm(prevalence_true ~ elevation + ndvi + urban, data = spatial_binom, weights = n_tested)
+resid <- residuals(non_spatial_fit)
+spatial_binom$resid <-resid
+geo_data <- as.geodata(obj = spatial_binom, coords.col=2:3, data.col=ncol(spatial_binom))
+vari <- variog(geo_data)
+vari.mc <- variog.mc.env(geo_data, obj.variog=vari, nsim=1000)
+plot(vari, envelope.obj=vari.mc)
+```
+
+We can see that there is an evidence of spatial correlation because the empirical semi-variogram for the data does not completely lie inside the envelopes, especially at smaller distances.
 
 ## 4. Build the SPDE mesh
 
@@ -274,7 +293,18 @@ Should contain:
 
 -   UTM coordinates
 
-## 11. Spatio-temporal components
+## 11. Mapping the spatio-temporal empirical prevalence
+
+```{r}
+ggplot() +
+geom_sf(data = st_binom, aes(colour = prevalence_true)) +
+  facet_wrap(~time)  + 
+geom_sf(data = nga_admin1, fill = NA) +
+scale_colour_viridis_c(name="Prevalence") +
+theme_minimal()
+```
+
+## 11. Spatio-temporal components - sum of a purely spatial and a purely temporal trend.
 
 Use: - RW1 for time - SPDE for space - Additive interaction
 
@@ -308,7 +338,41 @@ fit_st_binom <- bru(components_st, lik_st)
 summary(fit_st_binom)
 ```
 
+## 12. Spatio-temporal components - Inseparable covariance function
+
+Use: - Exchageable for time - SPDE for space - interaction
+
+```{r}
+components_st2 <- ~
+Intercept(1, model="linear") +
+beta_elev(elevation, model="linear") +
+beta_ndvi(ndvi, model="linear") +
+beta_urban(urban, model="linear") +
+field(geometry, model = spde, group = time, control.group=list(model="iid")) #?control.group
+```
+
+Likelihood:
+
+```{r}
+lik_st2 <- like(
+family="binomial",
+data = st_binom,
+formula = n_pos ~ Intercept + beta_elev + beta_ndvi + beta_urban + field,
+Ntrials = n_tested
+)
+```
+
+Fit:
+
+```{r}
+#| cache: true
+fit_st_binom2 <- bru(components_st2, lik_st2)
+summary(fit_st_binom2)
+```
+
 ## 12. Predict spatio-temporal prevalence (example: time = 7)
+
+Here we used the sum of purely spatial and purely temporal process for prediction at time 7.
 
 ```{r}
 pred_grid$time <- 7
