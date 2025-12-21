@@ -9,14 +9,14 @@ editor: visual
 
 Today we combine:
 
-- **Machine learning models** (e.g., Random Forest, XGBoost)
-- **Spatial residual modelling** via SPDE + inlabru
-- **Hybrid prediction pipelines** for malaria prevalence
+-   **Machine learning models** (e.g., Random Forest, XGBoost)
+-   **Spatial residual modelling** via SPDE + inlabru
+-   **Hybrid prediction pipelines** for malaria prevalence
 
-The goal:  
+The goal:\
 Use ML to model complex covariate effects, and INLA/SPDE to model spatial dependence in the residuals.
 
----
+------------------------------------------------------------------------
 
 ## Load Day 3 dataset
 

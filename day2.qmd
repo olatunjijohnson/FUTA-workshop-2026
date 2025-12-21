@@ -4,6 +4,11 @@ author: "Olatunji Johnson"
 freeze: auto
 format: html
 editor: visual
+
+execute:
+  echo: true      # show code
+  warning: false
+  message: false
 ---
 
 ## Overview
@@ -637,3 +642,5 @@ Joint model: shared + group-specific spatial structure, two outcomes in one mode
 Non-stationary model: mixture of SPDEs with a spatially varying weight and structured range.
 
 Mapping: predictions rasterised and clipped to Nigeria boundary
+
+---

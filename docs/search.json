@@ -294,34 +294,6 @@
     "text": "Practical guidance for modelling\n\nStart with a simple covariate \\(z(s)\\) (e.g. northing or ecozone index)\nScale it to have mean 0, sd 1\nUse weak-to-moderate priors on the slope parameter to avoid extreme range variation\n\nIn interpretation:\n\nshow the covariate map\nshow the predicted prevalence map\n(optionally) show a derived “implied range” surface"
   },
   {
-    "objectID": "slides/day2_slides.html#example-1-joint-model-outputs-to-discuss",
-    "href": "slides/day2_slides.html#example-1-joint-model-outputs-to-discuss",
-    "title": "Day 2 – Joint modelling and Non-stationary processes",
-    "section": "Example 1: Joint model outputs to discuss",
-    "text": "Example 1: Joint model outputs to discuss\nFor the joint prevalence model: - How similar are children vs pregnant spatial patterns? - Is the shared field dominant? - Where do groups diverge?\nDiscussion prompts: - Are differences biological, behavioural, or sampling-related? - Could this be explained by covariates?"
-  },
-  {
-    "objectID": "slides/day2_slides.html#example-2-multi-likelihood-model-outputs-to-discuss",
-    "href": "slides/day2_slides.html#example-2-multi-likelihood-model-outputs-to-discuss",
-    "title": "Day 2 – Joint modelling and Non-stationary processes",
-    "section": "Example 2: Multi-likelihood model outputs to discuss",
-    "text": "Example 2: Multi-likelihood model outputs to discuss\nFor binomial + poisson: - Does adding case counts sharpen predictions? - Do we see evidence of strong coupling (())? - Where do outcome-specific fields absorb discrepancies?\nDiscussion prompts: - What might cause facility counts to disagree with survey prevalence?"
-  },
-  {
-    "objectID": "slides/day2_slides.html#example-3-nonstationary-mixture-outputs-to-discuss",
-    "href": "slides/day2_slides.html#example-3-nonstationary-mixture-outputs-to-discuss",
-    "title": "Day 2 – Joint modelling and Non-stationary processes",
-    "section": "Example 3: Nonstationary mixture outputs to discuss",
-    "text": "Example 3: Nonstationary mixture outputs to discuss\n\nWhere does the model behave smoothly vs roughly?\nDoes ((s)) align with your ecological intuition?\nHow sensitive is the result to the choice of ((s))?"
-  },
-  {
-    "objectID": "slides/day2_slides.html#example-4-structured-range-outputs-to-discuss",
-    "href": "slides/day2_slides.html#example-4-structured-range-outputs-to-discuss",
-    "title": "Day 2 – Joint modelling and Non-stationary processes",
-    "section": "Example 4: Structured range outputs to discuss",
-    "text": "Example 4: Structured range outputs to discuss"
-  },
-  {
     "objectID": "slides/day2_slides.html#summary",
     "href": "slides/day2_slides.html#summary",
     "title": "Day 2 – Joint modelling and Non-stationary processes",
@@ -438,7 +410,7 @@
     "href": "slides/day1_slides.html#classification-of-spatial-statistics",
     "title": "Day 1 – Spatial & Spatio-temporal Modelling",
     "section": "Classification of spatial statistics",
-    "text": "Classification of spatial statistics\nCressie’s book classifies spatial statistics according to data format:\n\nGeostatistical data\n\nLattice data\n\nPoint patterns\n\nGelfand’s book classifies spatial statistics according to spatial variation:\n\nDiscrete spatial variation: Gaussian Markov Random Field (GMRF)\n\nContinuous spatial variation: Gaussian Random Field (GMRF)"
+    "text": "Classification of spatial statistics\nCressie’s book classifies spatial statistics according to data format:\n\nGeostatistical data\n\nLattice data\n\nPoint patterns\n\nGelfand’s book classifies spatial statistics according to spatial variation:\n\nDiscrete spatial variation: Gaussian Markov Random Field (GMRF)\n\nContinuous spatial variation: Gaussian Random Field (GRF)"
   },
   {
     "objectID": "slides/day1_slides.html#geostatistical-data-river-blindness-in-cameroon",
@@ -473,49 +445,49 @@
     "href": "slides/day1_slides.html#standard-mbg-model",
     "title": "Day 1 – Spatial & Spatio-temporal Modelling",
     "section": "Standard MBG model",
-    "text": "Standard MBG model\n\\[\nY_i = \\beta_0\n+ \\underbrace{\\beta_1 d_1(x_i) + \\beta_2 d_2(x_i)}_{\\text{explained}}\n+ \\underbrace{S(x_i) + Z_j}_{\\text{unexplained}},\n\\]\nwhere\n\n\\(\\beta_0\\), \\(\\beta_1\\), and \\(\\beta_2\\) are regression coefficients;\n\\(d_1(x)\\) and \\(d_2(x)\\) denote covariates/predictors at location \\(x\\);\n\\(S(x)\\) is the stochastic spatial process;\n\\(Z_j\\) represents measurement error."
+    "text": "Standard MBG model\n\\[\nY_i = \\beta_0\n+ \\underbrace{\\beta_1 d_1(s_i) + \\beta_2 d_2(s_i)}_{\\text{explained}}\n+ \\underbrace{S(s_i) + Z_j}_{\\text{unexplained}},\n\\]\nwhere\n\n\\(\\beta_0\\), \\(\\beta_1\\), and \\(\\beta_2\\) are regression coefficients;\n\\(d_1(x)\\) and \\(d_2(x)\\) denote covariates/predictors at location \\(x\\);\n\\(S(s)\\) is the stochastic spatial process;\n\\(Z_j\\) represents measurement error."
   },
   {
-    "objectID": "slides/day1_slides.html#modelling-sx-and-z_j",
-    "href": "slides/day1_slides.html#modelling-sx-and-z_j",
+    "objectID": "slides/day1_slides.html#modelling-ss-and-z_j",
+    "href": "slides/day1_slides.html#modelling-ss-and-z_j",
     "title": "Day 1 – Spatial & Spatio-temporal Modelling",
-    "section": "Modelling \\(S(x)\\) and \\(Z_j\\)",
-    "text": "Modelling \\(S(x)\\) and \\(Z_j\\)\n\n\\(Z_i \\sim N(0, \\tau^2)\\)\nWe assume that \\(S(x)\\) is a zero-mean stationary and isotropic Gaussian process. i.e \\(S \\sim \\text{MVN}(0, \\Sigma)\\)\nThe \\((i,j)\\)th entry of \\(\\Sigma\\) is \\[\n\\Sigma_{ij} = \\operatorname{Cov}\\big(S(x_i), S(x_j)\\big) = \\sigma^2 \\rho(u)\n\\]\n\\(u = \\|x_i - x_j\\|\\) is the Euclidean distance between locations \\(x_i\\) and \\(x_j\\)\nHow do we choose parametric correlation function \\(\\rho(\\cdot)\\)?"
+    "section": "Modelling \\(S(s)\\) and \\(Z_j\\)",
+    "text": "Modelling \\(S(s)\\) and \\(Z_j\\)\n\n\\(Z_i \\sim N(0, \\tau^2)\\)\nWe assume that \\(S(s)\\) is a zero-mean stationary and isotropic Gaussian Random Field. i.e \\(S \\sim \\text{MVN}(0, \\Sigma)\\)\nThe \\((i,j)\\)th entry of \\(\\Sigma\\) is \\[\n\\Sigma_{ij} = \\operatorname{Cov}\\big(S(s_i), S(s_j)\\big) = \\sigma^2 r(u)\n\\]\n\\(u = \\|s_i - s_j\\|\\) is the Euclidean distance between locations \\(s_i\\) and \\(s_j\\)\nHow do we choose parametric correlation function \\(r(\\cdot)\\)?"
   },
   {
     "objectID": "slides/day1_slides.html#the-matérn-correlation-function",
     "href": "slides/day1_slides.html#the-matérn-correlation-function",
     "title": "Day 1 – Spatial & Spatio-temporal Modelling",
     "section": "The Matérn correlation function",
-    "text": "The Matérn correlation function\n\\[\n\\rho(u; \\phi, \\kappa)\n= \\frac{1}{2^{\\kappa-1}\\Gamma(\\kappa)}\n\\left(\\frac{u}{\\phi}\\right)^\\kappa\nK_\\kappa\\!\\left(\\frac{u}{\\phi}\\right),\n\\]\n\n\\(K_\\kappa(\\cdot)\\): modified Bessel function of order \\(\\kappa\\)\nInterpretation\n\n\\(\\kappa\\) determines the smoothness: \\(\\kappa &gt; r \\Rightarrow S(x)\\) is \\(r\\) times differentiable\n\\(\\phi\\) determines the scale of spatial correlation\n\nSpecial cases\n\n\\(\\kappa = 0.5 \\Rightarrow \\rho(u) = \\exp\\{-u/\\phi\\}\\)\n\\(\\kappa \\to \\infty \\Rightarrow \\rho(u) = \\exp\\{-(u/\\phi)^2\\}\\)\n\nOften sufficient to choose \\(\\kappa \\in \\{0.5, 1.5, 2.5\\}\\)"
+    "text": "The Matérn correlation function\n\\[\nr(u; \\rho, \\nu)\n= \\frac{1}{2^{\\nu-1}\\Gamma(\\nu)}\n\\left(\\frac{u}{\\rho}\\right)^\\nu\nK_\\nu\\!\\left(\\frac{u}{\\rho}\\right),\n\\]\n\n\\(K_\\nu(\\cdot)\\): modified Bessel function of order \\(\\nu\\)\nInterpretation\n\n\\(\\nu\\) determines the smoothness: \\(\\nu &gt; r \\Rightarrow S(s)\\) is \\(r\\) times differentiable\n\\(\\rho\\) determines the scale/range of spatial correlation\n\nSpecial cases\n\n\\(\\nu = 0.5 \\Rightarrow r(u) = \\exp\\{-u/\\rho\\}\\)\n\\(\\nu \\to \\infty \\Rightarrow r(u) = \\exp\\{-(u/\\rho)^2\\}\\)\n\nOften sufficient to choose \\(\\nu \\in \\{0.5, 1.5, 2.5\\}\\)"
   },
   {
-    "objectID": "slides/day1_slides.html#matérn-correlation-function-kappa",
-    "href": "slides/day1_slides.html#matérn-correlation-function-kappa",
+    "objectID": "slides/day1_slides.html#matérn-correlation-function-nu",
+    "href": "slides/day1_slides.html#matérn-correlation-function-nu",
     "title": "Day 1 – Spatial & Spatio-temporal Modelling",
-    "section": "Matérn correlation function – \\(\\kappa\\)",
-    "text": "Matérn correlation function – \\(\\kappa\\)\n\\[\n\\rho(u; \\phi, \\kappa)\n= \\frac{1}{2^{\\kappa-1}\\Gamma(\\kappa)}\n\\left(\\frac{u}{\\phi}\\right)^\\kappa\nK_\\kappa\\!\\left(\\frac{u}{\\phi}\\right),\n\\]\n\nExponential correlation function: \\(\\rho(u; \\phi, 0.5) = \\exp\\{-u/\\phi\\}\\)"
+    "section": "Matérn correlation function – \\(\\nu\\)",
+    "text": "Matérn correlation function – \\(\\nu\\)\n\\[\nr(u; \\rho, \\nu)\n= \\frac{1}{2^{\\nu-1}\\Gamma(\\nu)}\n\\left(\\frac{u}{\\rho}\\right)^\\nu\nK_\\nu\\!\\left(\\frac{u}{\\rho}\\right),\n\\]\n\nExponential correlation function: \\(r(u; \\rho, 0.5) = \\exp\\{-u/\\rho\\}\\)"
   },
   {
-    "objectID": "slides/day1_slides.html#the-scale-of-the-spatial-correlation-phi",
-    "href": "slides/day1_slides.html#the-scale-of-the-spatial-correlation-phi",
+    "objectID": "slides/day1_slides.html#the-scale-of-the-spatial-correlation-rho",
+    "href": "slides/day1_slides.html#the-scale-of-the-spatial-correlation-rho",
     "title": "Day 1 – Spatial & Spatio-temporal Modelling",
-    "section": "The scale of the spatial correlation – \\(\\phi\\)",
-    "text": "The scale of the spatial correlation – \\(\\phi\\)"
+    "section": "The scale of the spatial correlation – \\(\\rho\\)",
+    "text": "The scale of the spatial correlation – \\(\\rho\\)"
   },
   {
-    "objectID": "slides/day1_slides.html#do-we-need-the-process-sx",
-    "href": "slides/day1_slides.html#do-we-need-the-process-sx",
+    "objectID": "slides/day1_slides.html#do-we-need-the-process-ss",
+    "href": "slides/day1_slides.html#do-we-need-the-process-ss",
     "title": "Day 1 – Spatial & Spatio-temporal Modelling",
-    "section": "Do we need the process \\(S(x)\\)?",
-    "text": "Do we need the process \\(S(x)\\)?\n\nRegression residuals\n\\[\n\\hat{r}_i = Y_i - \\hat{Y}_i\n\\] from a GLM\nEach \\(\\hat{r}_i\\) estimates\n\\[\nS(x_i) + Z_i\n\\]"
+    "section": "Do we need the process \\(S(s)\\)?",
+    "text": "Do we need the process \\(S(s)\\)?\n\nRegression residuals\n\\[\n\\hat{r}_i = Y_i - \\hat{Y}_i\n\\] from a GLM\nEach \\(\\hat{r}_i\\) estimates\n\\[\nS(s_i) + Z_i\n\\]"
   },
   {
     "objectID": "slides/day1_slides.html#the-variogram",
     "href": "slides/day1_slides.html#the-variogram",
     "title": "Day 1 – Spatial & Spatio-temporal Modelling",
     "section": "The variogram",
-    "text": "The variogram\n\n\n\nEmpirical variogram \\[\n\\hat{V}(u) = \\frac{1}{2|N(u)|}\\sum_{(i,j)\\in N(u)}(\\hat{r}_i-\\hat{r}_j)^2\n\\]\nwhere\n\\[\nN(u)=\\{(i,j): \\lVert x_i-x_j\\rVert=u\\}\n\\]"
+    "text": "The variogram\n\n\n\nEmpirical variogram \\[\n\\hat{V}(u) = \\frac{1}{2|N(u)|}\\sum_{(i,j)\\in N(u)}(\\hat{r}_i-\\hat{r}_j)^2\n\\]\nwhere\n\\[\nN(u)=\\{(i,j): \\lVert s_i-s_j\\rVert=u\\}\n\\]"
   },
   {
     "objectID": "slides/day1_slides.html#confirming-existence-of-spatial-correlation",
@@ -529,7 +501,7 @@
     "href": "slides/day1_slides.html#inference-maximum-likelihood-estimation",
     "title": "Day 1 – Spatial & Spatio-temporal Modelling",
     "section": "Inference: Maximum likelihood estimation",
-    "text": "Inference: Maximum likelihood estimation\n\nMultivariate Gaussian distribution\n\\[\nY \\sim \\text{MVN}(D\\beta, \\sigma^2 R + \\tau^2 I)\n\\]\n\n\\(D\\): matrix of covariates, \\([D]_{ik} = d_k(x_i)\\)\n\n\\(R\\): spatial correlation matrix,\n\\([R]_{ij} = \\rho(u_{ij})\\), with \\(u_{ij} = \\|x_i - x_j\\|\\)\n\nFitting process\n\nInitialise \\(\\beta\\) (e.g. using ordinary least squares)\nInitialise \\(\\theta\\) (e.g. using the empirical variogram)\nMaximise \\[\n\\ell(\\theta) = \\log\\{f(y; \\beta, \\theta)\\},\n\\] where \\(f(\\cdot; \\beta, \\theta)\\) is the multivariate Gaussian density"
+    "text": "Inference: Maximum likelihood estimation\n\nMultivariate Gaussian distribution\n\\[\nY \\sim \\text{MVN}(D\\beta, \\sigma^2 R + \\tau^2 I)\n\\]\n\n\\(D\\): matrix of covariates, \\([D]_{ik} = d_k(s_i)\\)\n\n\\(R\\): spatial correlation matrix,\n\\([R]_{ij} = r(u_{ij})\\), with \\(u_{ij} = \\|s_i - s_j\\|\\)\n\nFitting process\n\nInitialise \\(\\beta\\) (e.g. using ordinary least squares)\nInitialise \\(\\theta\\) (e.g. using the empirical variogram)\nMaximise \\[\n\\ell(\\theta) = \\log\\{f(y; \\beta, \\theta)\\},\n\\] where \\(f(\\cdot; \\beta, \\theta)\\) is the multivariate Gaussian density"
   },
   {
     "objectID": "slides/day1_slides.html#beyond-gaussian-responses",
@@ -543,7 +515,7 @@
     "href": "slides/day1_slides.html#separating-data-and-process-models",
     "title": "Day 1 – Spatial & Spatio-temporal Modelling",
     "section": "Separating data and process models",
-    "text": "Separating data and process models\nModel-based geostatistics distinguishes between:\n\nObservation model (likelihood): \\[\nY_i \\mid \\eta_i \\sim \\pi(y_i \\mid \\eta_i)\n\\]\nLatent process model: \\[\n\\eta_i = X_i \\beta + S(x_i) + Z_i\n\\]\n\nKey idea:\n\nNon-Gaussian data\nGaussian latent structure"
+    "text": "Separating data and process models\nModel-based geostatistics distinguishes between:\n\nObservation model (likelihood): \\[\nY_i \\mid \\eta_i \\sim \\pi(y_i \\mid \\eta_i)\n\\]\nLatent process model: \\[\n\\eta_i = X_i \\beta + S(s_i) + Z_i\n\\]\n\nKey idea:\n\nNon-Gaussian data\nGaussian latent structure"
   },
   {
     "objectID": "slides/day1_slides.html#common-likelihoods-in-practice",
@@ -557,7 +529,7 @@
     "href": "slides/day1_slides.html#link-functions",
     "title": "Day 1 – Spatial & Spatio-temporal Modelling",
     "section": "Link functions",
-    "text": "Link functions\nThe linear predictor enters the likelihood via a link:\n\\[\ng(\\mu_i) = \\eta_i = X_i\\beta + S(x_i) + Z_i\n\\]\nExamples:\n\nIdentity link → Gaussian data\nLogit link → Binomial data\nLog link → Poisson data\n\nThis gives a generalized linear mixed model (GLMM) structure"
+    "text": "Link functions\nThe linear predictor enters the likelihood via a link:\n\\[\ng(\\mu_i) = \\eta_i = X_i\\beta + S(s_i) + Z_i\n\\]\nExamples:\n\nIdentity link → Gaussian data\nLogit link → Binomial data\nLog link → Poisson data\n\nThis gives a generalized linear mixed model (GLMM) structure"
   },
   {
     "objectID": "slides/day1_slides.html#computational-challenges",
@@ -609,6 +581,13 @@
     "text": "Key idea: sparsity\n\nLatent field \\(S\\) is modelled as a Gaussian Markov Random Field (GMRF)\nGMRFs have sparse precision matrices \\(Q(\\theta)\\)\n\nWhy this matters:\n\nSparse matrix algebra is fast\nEnables scalable inference for large spatial problems\nCrucial for INLA’s computational efficiency"
   },
   {
+    "objectID": "slides/day1_slides.html#gaussian-markov-random-fields-gmrfs",
+    "href": "slides/day1_slides.html#gaussian-markov-random-fields-gmrfs",
+    "title": "Day 1 – Spatial & Spatio-temporal Modelling",
+    "section": "Gaussian Markov Random Fields (GMRFs)",
+    "text": "Gaussian Markov Random Fields (GMRFs)\nA Gaussian Markov Random Field (GMRF) is a Gaussian random vector with conditional independence structure.\nLet\n\\[\n\\mathbf{S} = (S_1,\\dots,S_n)^\\top \\sim \\mathcal{N}(0, Q^{-1})\n\\]\nwhere:\n\n\\(Q\\) is the precision matrix\nZeros in \\(Q\\) encode conditional independence"
+  },
+  {
     "objectID": "slides/day1_slides.html#stage-1-hyperparameter-inference",
     "href": "slides/day1_slides.html#stage-1-hyperparameter-inference",
     "title": "Day 1 – Spatial & Spatio-temporal Modelling",
@@ -634,7 +613,7 @@
     "href": "slides/day1_slides.html#grf-vs-gmrf-concept-vs-computation",
     "title": "Day 1 – Spatial & Spatio-temporal Modelling",
     "section": "GRF vs GMRF: concept vs computation",
-    "text": "GRF vs GMRF: concept vs computation\nLindgren, Rue, and Lindström (2011) provides the link between the two.\n\nGaussian Random Field (GRF):\n\nDefined on a continuous spatial domain\nUsed for geostatistical modelling\nDense covariance structure\n\nGaussian Markov Random Field (GMRF):\n\nDefined on a finite set of locations\nSparse precision matrix\nComputationally efficient\n\n\nKey point:\n👉 In INLA, a GMRF is used as a computational approximation to a continuous GRF"
+    "text": "GRF vs GMRF: concept vs computation\nLindgren, Rue, and Lindström (2011) provides the link between the two.\n\nGaussian Random Field (GRF):\n\nDefined on a continuous spatial domain\nUsed for geostatistical modelling\nDense covariance structure\n\nGaussian Markov Random Field (GMRF):\n\nDefined on a finite set of locations\nSparse precision matrix\nComputationally efficient\n\n\nKey point:\nIn INLA, a GMRF is used as a computational approximation to a continuous GRF"
   },
   {
     "objectID": "slides/day1_slides.html#spatial-modelling-in-inla-spde-approach",
@@ -648,35 +627,63 @@
     "href": "slides/day1_slides.html#why-the-spde-approach",
     "title": "Day 1 – Spatial & Spatio-temporal Modelling",
     "section": "Why the SPDE approach?",
-    "text": "Why the SPDE approach?\n\nIn geostatistics, we often model spatial dependence using Gaussian random fields (GRFs) with Matérn covariance\nFor observations at locations \\(x_1, \\dots, x_n\\):\n\nCovariance matrix is dense\nComputational cost is \\(\\mathcal{O}(n^3)\\)\n\n\nThis becomes infeasible for large spatial datasets"
+    "text": "Why the SPDE approach?\n\nIn geostatistics, we often model spatial dependence using Gaussian random fields (GRFs) with Matérn covariance\nFor observations at locations \\(s_1, \\dots, s_n\\):\n\nCovariance matrix is dense\nComputational cost is \\(\\mathcal{O}(n^3)\\)\n\n\nThis becomes infeasible for large spatial datasets"
   },
   {
     "objectID": "slides/day1_slides.html#gaussian-random-fields",
     "href": "slides/day1_slides.html#gaussian-random-fields",
     "title": "Day 1 – Spatial & Spatio-temporal Modelling",
     "section": "Gaussian random fields",
-    "text": "Gaussian random fields\nA spatial Gaussian random field is defined as:\n\\[\nS(x) \\sim \\text{GRF}(0, C(\\cdot))\n\\]\nwith covariance function: \\[\n\\text{Cov}\\{S(x), S(x')\\} = C(\\|x - x'\\|)\n\\]\n\nThe Matérn family is widely used\nDefined on a continuous spatial domain"
+    "text": "Gaussian random fields\nA spatial Gaussian random field is defined as\n\\[\nS(s) \\sim \\text{GRF}(0, C(\\cdot))\n\\]\nwith covariance function: \\[\n\\text{Cov}\\{S(s), S(s')\\} = C(\\|s - s'\\|)\n\\]\n\nThe Matérn family is widely used\nDefined on a continuous spatial domain"
   },
   {
     "objectID": "slides/day1_slides.html#from-covariance-to-spde",
     "href": "slides/day1_slides.html#from-covariance-to-spde",
     "title": "Day 1 – Spatial & Spatio-temporal Modelling",
     "section": "From covariance to SPDE",
-    "text": "From covariance to SPDE\nA key result (Whittle, 1954):\nA Matérn GRF is the solution to the SPDE: \\[\n(\\kappa^2 - \\Delta)^{\\alpha/2} S(x)\n= \\mathcal{W}(x),\n\\]\nwhere: - \\(\\Delta\\) is the Laplacian operator - \\(\\mathcal{W}(x)\\) is Gaussian white noise - Parameters \\((\\kappa, \\alpha)\\) control range and smoothness"
+    "text": "From covariance to SPDE\nA key result (Whittle, 1954):\nA Matérn GRF is the solution to the SPDE: \\[\n(\\kappa^2 - \\Delta)^{\\alpha/2} S(s)\n= \\mathcal{W}(x),\n\\]\nwhere:\n\n\\(\\Delta\\) is the Laplacian operator\n\\(\\mathcal{W}(x)\\) is Gaussian white noise\nParameters \\((\\kappa, \\alpha)\\) control range and smoothness"
+  },
+  {
+    "objectID": "slides/day1_slides.html#matérn-parameters-vs-spde-parameters",
+    "href": "slides/day1_slides.html#matérn-parameters-vs-spde-parameters",
+    "title": "Day 1 – Spatial & Spatio-temporal Modelling",
+    "section": "Matérn parameters vs SPDE parameters",
+    "text": "Matérn parameters vs SPDE parameters\nWe often describe a Matérn GRF using:\n\nRange \\(\\rho\\): distance where correlation becomes small\n\nMarginal standard deviation \\(\\sigma\\)\nSmoothness \\(\\nu\\)\n\nINLA/SPDE uses a different (equivalent) parameterisation:\n\n\\(\\kappa\\): controls the range\n\n\\(\\tau\\): controls the marginal variance\n\n\\(\\alpha = \\nu + d/2\\) (with spatial dimension \\(d=2\\))"
+  },
+  {
+    "objectID": "slides/day1_slides.html#from-spde-parameters-to-range-and-variance",
+    "href": "slides/day1_slides.html#from-spde-parameters-to-range-and-variance",
+    "title": "Day 1 – Spatial & Spatio-temporal Modelling",
+    "section": "From SPDE parameters to range and variance",
+    "text": "From SPDE parameters to range and variance\nKey relationships (common INLA convention):\n\nPractical range \\[\n\\rho \\approx \\frac{\\sqrt{8\\nu}}{\\kappa}\n\\]\nMarginal variance \\[\n\\text{Var}\\{S(s)\\} = \\sigma^2 \\propto \\frac{1}{\\tau^2 \\kappa^{2\\nu}}\n\\]\n\nInterpretation:\n\nlarger \\(\\kappa\\) \\(\\Rightarrow\\) shorter range (rougher field)\nlarger \\(\\tau\\) \\(\\Rightarrow\\) smaller marginal variance"
+  },
+  {
+    "objectID": "slides/day1_slides.html#what-inla-reports-hyperparameters",
+    "href": "slides/day1_slides.html#what-inla-reports-hyperparameters",
+    "title": "Day 1 – Spatial & Spatio-temporal Modelling",
+    "section": "What INLA reports (hyperparameters)",
+    "text": "What INLA reports (hyperparameters)\nIn INLA output you will often see hyperparameters related to:\n\nRange \\(\\rho\\)\nStdev \\(\\sigma\\)\nNugget / observation noise \\(\\tau_\\epsilon\\) (depending on model)\n\nEven if the underlying SPDE uses \\((\\kappa,\\tau)\\), INLA/inlabru often provides summaries in the more interpretable scale:\n\nrange (km or m)\nmarginal sd"
+  },
+  {
+    "objectID": "slides/day1_slides.html#pc-priors-in-practice-what-you-set-in-code",
+    "href": "slides/day1_slides.html#pc-priors-in-practice-what-you-set-in-code",
+    "title": "Day 1 – Spatial & Spatio-temporal Modelling",
+    "section": "PC priors in practice (what you set in code)",
+    "text": "PC priors in practice (what you set in code)\nIn inla.spde2.pcmatern() you specify:\nprior.range = c(r0, p)   # P(range &lt; r0) = p\nprior.sigma = c(s0, p)   # P(sigma &gt; s0) = p"
   },
   {
     "objectID": "slides/day1_slides.html#discretising-the-spde",
     "href": "slides/day1_slides.html#discretising-the-spde",
     "title": "Day 1 – Spatial & Spatio-temporal Modelling",
     "section": "Discretising the SPDE",
-    "text": "Discretising the SPDE\n\nThe spatial domain is discretised using a triangular mesh\nThe continuous field is approximated as: \\[\nS(x) \\approx \\sum_{k=1}^K w_k \\psi_k(x)\n\\]\n\nwhere:\n\n\\(\\psi_k(x)\\) are basis functions\n\\(w_k\\) are random weights\n\nLocal support of basis functions ⇒ sparsity"
+    "text": "Discretising the SPDE\n\nThe spatial domain is discretised using a triangular mesh\nThe continuous field is approximated as: \\[\nS(s) \\approx \\sum_{k=1}^K w_k \\psi_k(x)\n\\] where:\n\\(\\psi_k(x)\\) are basis functions\n\\(w_k\\) are random weights\n\nLocal support of basis functions ⇒ sparsity"
   },
   {
     "objectID": "slides/day1_slides.html#from-grf-to-gmrf",
     "href": "slides/day1_slides.html#from-grf-to-gmrf",
     "title": "Day 1 – Spatial & Spatio-temporal Modelling",
     "section": "From GRF to GMRF",
-    "text": "From GRF to GMRF\n\nThe SPDE discretisation yields \\[\n\\mathbf{w} \\sim \\mathcal{N}(0, Q^{-1})\n\\]\nPrecision matrix \\(Q\\) is sparse\nThis defines a Gaussian Markov Random Field (GMRF)\n\nKey consequence: - Fast computation - Scales to large spatial problems"
+    "text": "From GRF to GMRF\n\nThe SPDE discretisation yields \\[\n\\mathbf{w} \\sim \\mathcal{N}(0, Q^{-1})\n\\]\nPrecision matrix \\(Q\\) is sparse\nThis defines a Gaussian Markov Random Field (GMRF)\n\nKey consequence:\n\nFast computation\nScales to large spatial problems"
   },
   {
     "objectID": "slides/day1_slides.html#spde-approach-summary",

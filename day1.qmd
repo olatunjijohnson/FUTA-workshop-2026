@@ -4,6 +4,11 @@ author: "Olatunji Johnson"
 freeze: auto
 format: html
 editor: visual
+
+execute:
+  echo: true      # show code
+  warning: false
+  message: false
 ---
 
 # Overview

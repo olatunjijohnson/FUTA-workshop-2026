@@ -28,6 +28,71 @@
       margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
       vertical-align: middle;
     }
+    /* CSS for syntax highlighting */
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      { color: #003b4f; background-color: #f1f3f5; }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span { color: #003b4f; } /* Normal */
+    code span.al { color: #ad0000; } /* Alert */
+    code span.an { color: #5e5e5e; } /* Annotation */
+    code span.at { color: #657422; } /* Attribute */
+    code span.bn { color: #ad0000; } /* BaseN */
+    code span.bu { } /* BuiltIn */
+    code span.cf { color: #003b4f; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #20794d; } /* Char */
+    code span.cn { color: #8f5902; } /* Constant */
+    code span.co { color: #5e5e5e; } /* Comment */
+    code span.cv { color: #5e5e5e; font-style: italic; } /* CommentVar */
+    code span.do { color: #5e5e5e; font-style: italic; } /* Documentation */
+    code span.dt { color: #ad0000; } /* DataType */
+    code span.dv { color: #ad0000; } /* DecVal */
+    code span.er { color: #ad0000; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #ad0000; } /* Float */
+    code span.fu { color: #4758ab; } /* Function */
+    code span.im { color: #00769e; } /* Import */
+    code span.in { color: #5e5e5e; } /* Information */
+    code span.kw { color: #003b4f; font-weight: bold; } /* Keyword */
+    code span.op { color: #5e5e5e; } /* Operator */
+    code span.ot { color: #003b4f; } /* Other */
+    code span.pp { color: #ad0000; } /* Preprocessor */
+    code span.sc { color: #5e5e5e; } /* SpecialChar */
+    code span.ss { color: #20794d; } /* SpecialString */
+    code span.st { color: #20794d; } /* String */
+    code span.va { color: #111111; } /* Variable */
+    code span.vs { color: #20794d; } /* VerbatimString */
+    code span.wa { color: #5e5e5e; font-style: italic; } /* Warning */
     /* CSS for citations */
     div.csl-bib-body { }
     div.csl-entry {
@@ -274,7 +339,7 @@ Account for spatial correlation to improve prediction and inference.</p></li>
 <ol type="1">
 <li>Discrete spatial variation: Gaussian Markov Random Field (GMRF)<br>
 </li>
-<li>Continuous spatial variation: Gaussian Random Field (GMRF)</li>
+<li>Continuous spatial variation: Gaussian Random Field (GRF)</li>
 </ol>
 </section>
 <section id="geostatistical-data-river-blindness-in-cameroon" class="slide level2">
@@ -307,69 +372,69 @@ Account for spatial correlation to improve prediction and inference.</p></li>
 <h2>Standard MBG model</h2>
 <p><span class="math display">\[
 Y_i = \beta_0
-+ \underbrace{\beta_1 d_1(x_i) + \beta_2 d_2(x_i)}_{\text{explained}}
-+ \underbrace{S(x_i) + Z_j}_{\text{unexplained}},
++ \underbrace{\beta_1 d_1(s_i) + \beta_2 d_2(s_i)}_{\text{explained}}
++ \underbrace{S(s_i) + Z_j}_{\text{unexplained}},
 \]</span></p>
 <p>where</p>
 <ul>
 <li><span class="math inline">\(\beta_0\)</span>, <span class="math inline">\(\beta_1\)</span>, and <span class="math inline">\(\beta_2\)</span> are regression coefficients;</li>
 <li><span class="math inline">\(d_1(x)\)</span> and <span class="math inline">\(d_2(x)\)</span> denote covariates/predictors at location <span class="math inline">\(x\)</span>;</li>
-<li><span class="math inline">\(S(x)\)</span> is the stochastic spatial process;</li>
+<li><span class="math inline">\(S(s)\)</span> is the stochastic spatial process;</li>
 <li><span class="math inline">\(Z_j\)</span> represents measurement error.</li>
 </ul>
 </section>
-<section id="modelling-sx-and-z_j" class="slide level2">
-<h2>Modelling <span class="math inline">\(S(x)\)</span> and <span class="math inline">\(Z_j\)</span></h2>
+<section id="modelling-ss-and-z_j" class="slide level2">
+<h2>Modelling <span class="math inline">\(S(s)\)</span> and <span class="math inline">\(Z_j\)</span></h2>
 <ul>
 <li><span class="math inline">\(Z_i \sim N(0, \tau^2)\)</span></li>
-<li>We assume that <span class="math inline">\(S(x)\)</span> is a zero-mean <strong><span style="color:blue;">stationary and isotropic Gaussian process</span></strong>. i.e <span class="math inline">\(S \sim \text{MVN}(0, \Sigma)\)</span></li>
+<li>We assume that <span class="math inline">\(S(s)\)</span> is a zero-mean <strong><span style="color:blue;">stationary and isotropic Gaussian Random Field</span></strong>. i.e <span class="math inline">\(S \sim \text{MVN}(0, \Sigma)\)</span></li>
 <li>The <span class="math inline">\((i,j)\)</span>th entry of <span class="math inline">\(\Sigma\)</span> is <span class="math display">\[
-\Sigma_{ij} = \operatorname{Cov}\big(S(x_i), S(x_j)\big) = \sigma^2 \rho(u)
+\Sigma_{ij} = \operatorname{Cov}\big(S(s_i), S(s_j)\big) = \sigma^2 r(u)
 \]</span></li>
-<li><span class="math inline">\(u = \|x_i - x_j\|\)</span> is the Euclidean distance between locations <span class="math inline">\(x_i\)</span> and <span class="math inline">\(x_j\)</span></li>
-<li><strong><span style="color:blue;">How do we choose parametric correlation function <span class="math inline">\(\rho(\cdot)\)</span>?</span></strong></li>
+<li><span class="math inline">\(u = \|s_i - s_j\|\)</span> is the Euclidean distance between locations <span class="math inline">\(s_i\)</span> and <span class="math inline">\(s_j\)</span></li>
+<li><strong><span style="color:blue;">How do we choose parametric correlation function <span class="math inline">\(r(\cdot)\)</span>?</span></strong></li>
 </ul>
 </section>
 <section id="the-matérn-correlation-function" class="slide level2 smaller">
 <h2>The Matérn correlation function</h2>
 <p><span class="math display">\[
-\rho(u; \phi, \kappa)
-= \frac{1}{2^{\kappa-1}\Gamma(\kappa)}
-\left(\frac{u}{\phi}\right)^\kappa
-K_\kappa\!\left(\frac{u}{\phi}\right),
+r(u; \rho, \nu)
+= \frac{1}{2^{\nu-1}\Gamma(\nu)}
+\left(\frac{u}{\rho}\right)^\nu
+K_\nu\!\left(\frac{u}{\rho}\right),
 \]</span></p>
 <ul>
-<li><p><span class="math inline">\(K_\kappa(\cdot)\)</span>: modified Bessel function of order <span class="math inline">\(\kappa\)</span></p></li>
+<li><p><span class="math inline">\(K_\nu(\cdot)\)</span>: modified Bessel function of order <span class="math inline">\(\nu\)</span></p></li>
 <li><p><strong><span style="color:red;">Interpretation</span></strong></p>
 <ul>
-<li><span class="math inline">\(\kappa\)</span> determines the smoothness: <span class="math inline">\(\kappa &gt; r \Rightarrow S(x)\)</span> is <span class="math inline">\(r\)</span> times differentiable</li>
-<li><span class="math inline">\(\phi\)</span> determines the scale of spatial correlation</li>
+<li><span class="math inline">\(\nu\)</span> determines the smoothness: <span class="math inline">\(\nu &gt; r \Rightarrow S(s)\)</span> is <span class="math inline">\(r\)</span> times differentiable</li>
+<li><span class="math inline">\(\rho\)</span> determines the scale/range of spatial correlation</li>
 </ul></li>
 <li><p><strong><span style="color:red;">Special cases</span></strong></p>
 <ul>
-<li><span class="math inline">\(\kappa = 0.5 \Rightarrow \rho(u) = \exp\{-u/\phi\}\)</span></li>
-<li><span class="math inline">\(\kappa \to \infty \Rightarrow \rho(u) = \exp\{-(u/\phi)^2\}\)</span></li>
+<li><span class="math inline">\(\nu = 0.5 \Rightarrow r(u) = \exp\{-u/\rho\}\)</span></li>
+<li><span class="math inline">\(\nu \to \infty \Rightarrow r(u) = \exp\{-(u/\rho)^2\}\)</span></li>
 </ul></li>
-<li><p>Often sufficient to choose <span class="math inline">\(\kappa \in \{0.5, 1.5, 2.5\}\)</span></p></li>
+<li><p>Often sufficient to choose <span class="math inline">\(\nu \in \{0.5, 1.5, 2.5\}\)</span></p></li>
 </ul>
 </section>
-<section id="matérn-correlation-function-kappa" class="slide level2 smaller">
-<h2>Matérn correlation function – <span class="math inline">\(\kappa\)</span></h2>
+<section id="matérn-correlation-function-nu" class="slide level2 smaller">
+<h2>Matérn correlation function – <span class="math inline">\(\nu\)</span></h2>
 <p><span class="math display">\[
-\rho(u; \phi, \kappa)
-= \frac{1}{2^{\kappa-1}\Gamma(\kappa)}
-\left(\frac{u}{\phi}\right)^\kappa
-K_\kappa\!\left(\frac{u}{\phi}\right),
+r(u; \rho, \nu)
+= \frac{1}{2^{\nu-1}\Gamma(\nu)}
+\left(\frac{u}{\rho}\right)^\nu
+K_\nu\!\left(\frac{u}{\rho}\right),
 \]</span></p>
 
-<img data-src="images2/correlationfuncplot1.png" style="width:50.0%" class="r-stretch"><p><strong><span style="color:blue;">Exponential correlation function:</span></strong> <span class="math inline">\(\rho(u; \phi, 0.5) = \exp\{-u/\phi\}\)</span></p>
+<img data-src="images2/correlationfuncplot1.png" style="width:50.0%" class="r-stretch"><p><strong><span style="color:blue;">Exponential correlation function:</span></strong> <span class="math inline">\(r(u; \rho, 0.5) = \exp\{-u/\rho\}\)</span></p>
 </section>
-<section id="the-scale-of-the-spatial-correlation-phi" class="slide level2">
-<h2>The scale of the spatial correlation – <span class="math inline">\(\phi\)</span></h2>
+<section id="the-scale-of-the-spatial-correlation-rho" class="slide level2">
+<h2>The scale of the spatial correlation – <span class="math inline">\(\rho\)</span></h2>
 
 <img data-src="images2/spatial_cor.png" style="width:50.0%" class="r-stretch"></section>
-<section id="do-we-need-the-process-sx" class="slide level2">
-<h2>Do we need the process <span class="math inline">\(S(x)\)</span>?</h2>
+<section id="do-we-need-the-process-ss" class="slide level2">
+<h2>Do we need the process <span class="math inline">\(S(s)\)</span>?</h2>
 <ul>
 <li><p>Regression residuals<br>
 <span class="math display">\[
@@ -377,7 +442,7 @@ K_\kappa\!\left(\frac{u}{\phi}\right),
 \]</span> from a GLM</p></li>
 <li><p>Each <span class="math inline">\(\hat{r}_i\)</span> estimates<br>
 <span class="math display">\[
-S(x_i) + Z_i
+S(s_i) + Z_i
 \]</span></p></li>
 </ul>
 </section>
@@ -391,7 +456,7 @@ S(x_i) + Z_i
 \]</span></p></li>
 <li><p>where<br>
 <span class="math display">\[
-N(u)=\{(i,j): \lVert x_i-x_j\rVert=u\}
+N(u)=\{(i,j): \lVert s_i-s_j\rVert=u\}
 \]</span></p></li>
 </ul>
 </div><div class="column">
@@ -427,10 +492,10 @@ N(u)=\{(i,j): \lVert x_i-x_j\rVert=u\}
 Y \sim \text{MVN}(D\beta, \sigma^2 R + \tau^2 I)
 \]</span></p>
 <ul>
-<li><span class="math inline">\(D\)</span>: matrix of covariates, <span class="math inline">\([D]_{ik} = d_k(x_i)\)</span><br>
+<li><span class="math inline">\(D\)</span>: matrix of covariates, <span class="math inline">\([D]_{ik} = d_k(s_i)\)</span><br>
 </li>
 <li><span class="math inline">\(R\)</span>: spatial correlation matrix,<br>
-<span class="math inline">\([R]_{ij} = \rho(u_{ij})\)</span>, with <span class="math inline">\(u_{ij} = \|x_i - x_j\|\)</span></li>
+<span class="math inline">\([R]_{ij} = r(u_{ij})\)</span>, with <span class="math inline">\(u_{ij} = \|s_i - s_j\|\)</span></li>
 </ul></li>
 <li><p><strong><span style="color:red;">Fitting process</span></strong></p>
 <ol type="1">
@@ -463,7 +528,7 @@ Y \sim \text{MVN}(D\beta, \sigma^2 R + \tau^2 I)
 Y_i \mid \eta_i \sim \pi(y_i \mid \eta_i)
 \]</span></p></li>
 <li><p><strong>Latent process model:</strong> <span class="math display">\[
-\eta_i = X_i \beta + S(x_i) + Z_i
+\eta_i = X_i \beta + S(s_i) + Z_i
 \]</span></p></li>
 </ul>
 <p>Key idea:</p>
@@ -492,7 +557,7 @@ Y_i \mid \eta_i \sim \text{Poisson}(\lambda_i),
 <h2>Link functions</h2>
 <p>The linear predictor enters the likelihood via a link:</p>
 <p><span class="math display">\[
-g(\mu_i) = \eta_i = X_i\beta + S(x_i) + Z_i
+g(\mu_i) = \eta_i = X_i\beta + S(s_i) + Z_i
 \]</span></p>
 <p>Examples:</p>
 <ul>
@@ -605,6 +670,33 @@ y_i \mid \eta_i, \theta \sim \pi(y_i \mid \eta_i, \theta),
 <li>Crucial for INLA’s computational efficiency</li>
 </ul>
 </section>
+<section id="gaussian-markov-random-fields-gmrfs" class="slide level2">
+<h2>Gaussian Markov Random Fields (GMRFs)</h2>
+<p>A <strong>Gaussian Markov Random Field (GMRF)</strong> is a Gaussian random vector with <strong>conditional independence</strong> structure.</p>
+<p>Let<br>
+<span class="math display">\[
+\mathbf{S} = (S_1,\dots,S_n)^\top \sim \mathcal{N}(0, Q^{-1})
+\]</span></p>
+<p>where:</p>
+<ul>
+<li><span class="math inline">\(Q\)</span> is the <strong>precision matrix</strong></li>
+<li><strong>Zeros in <span class="math inline">\(Q\)</span></strong> encode conditional independence</li>
+</ul>
+</section>
+<section class="slide level2">
+
+<h3 id="markov-property-key-idea">Markov property (key idea)</h3>
+<p>For a GMRF:</p>
+<p><span class="math display">\[
+Q_{ij} = 0 \quad \Longleftrightarrow \quad
+S_i \;\perp\!\!\!\perp\; S_j \mid \mathbf{S}_{-ij}
+\]</span></p>
+<p>Interpretation:</p>
+<ul>
+<li>Each location depends <strong>only on its neighbours</strong></li>
+<li>No long-range conditional dependence</li>
+</ul>
+</section>
 <section id="stage-1-hyperparameter-inference" class="slide level2 smaller">
 <h2>Stage 1: Hyperparameter inference</h2>
 <p>Goal: <span class="math display">\[
@@ -679,7 +771,7 @@ y_i \mid \eta_i, \theta \sim \pi(y_i \mid \eta_i, \theta),
 </ul></li>
 </ul>
 <p>Key point:</p>
-<p>👉 In INLA, a <strong>GMRF is used as a computational approximation</strong> to a <strong>continuous GRF</strong></p>
+<p>In INLA, a <strong>GMRF is used as a computational approximation</strong> to a <strong>continuous GRF</strong></p>
 </section>
 <section id="spatial-modelling-in-inla-spde-approach" class="slide level2 smaller">
 <h2>Spatial modelling in INLA: SPDE approach</h2>
@@ -703,7 +795,7 @@ y_i \mid \eta_i, \theta \sim \pi(y_i \mid \eta_i, \theta),
 <h2>Why the SPDE approach?</h2>
 <ul>
 <li><p>In geostatistics, we often model spatial dependence using <strong>Gaussian random fields (GRFs)</strong> with Matérn covariance</p></li>
-<li><p>For observations at locations <span class="math inline">\(x_1, \dots, x_n\)</span>:</p>
+<li><p>For observations at locations <span class="math inline">\(s_1, \dots, s_n\)</span>:</p>
 <ul>
 <li>Covariance matrix is <strong>dense</strong></li>
 <li>Computational cost is <span class="math inline">\(\mathcal{O}(n^3)\)</span></li>
@@ -713,12 +805,12 @@ y_i \mid \eta_i, \theta \sim \pi(y_i \mid \eta_i, \theta),
 </section>
 <section id="gaussian-random-fields" class="slide level2">
 <h2>Gaussian random fields</h2>
-<p>A spatial Gaussian random field is defined as:</p>
+<p>A spatial Gaussian random field is defined as</p>
 <p><span class="math display">\[
-S(x) \sim \text{GRF}(0, C(\cdot))
+S(s) \sim \text{GRF}(0, C(\cdot))
 \]</span></p>
 <p>with covariance function: <span class="math display">\[
-\text{Cov}\{S(x), S(x')\} = C(\|x - x'\|)
+\text{Cov}\{S(s), S(s')\} = C(\|s - s'\|)
 \]</span></p>
 <ul>
 <li>The Matérn family is widely used</li>
@@ -729,23 +821,80 @@ S(x) \sim \text{GRF}(0, C(\cdot))
 <h2>From covariance to SPDE</h2>
 <p>A key result (Whittle, 1954):</p>
 <p>A Matérn GRF is the solution to the SPDE: <span class="math display">\[
-(\kappa^2 - \Delta)^{\alpha/2} S(x)
+(\kappa^2 - \Delta)^{\alpha/2} S(s)
 = \mathcal{W}(x),
 \]</span></p>
-<p>where: - <span class="math inline">\(\Delta\)</span> is the Laplacian operator - <span class="math inline">\(\mathcal{W}(x)\)</span> is Gaussian white noise - Parameters <span class="math inline">\((\kappa, \alpha)\)</span> control range and smoothness</p>
-</section>
-<section id="discretising-the-spde" class="slide level2 smaller">
-<h2>Discretising the SPDE</h2>
-<ul>
-<li>The spatial domain is discretised using a <strong>triangular mesh</strong></li>
-<li>The continuous field is approximated as: <span class="math display">\[
-S(x) \approx \sum_{k=1}^K w_k \psi_k(x)
-\]</span></li>
-</ul>
 <p>where:</p>
 <ul>
-<li><span class="math inline">\(\psi_k(x)\)</span> are basis functions</li>
-<li><span class="math inline">\(w_k\)</span> are random weights</li>
+<li><span class="math inline">\(\Delta\)</span> is the Laplacian operator</li>
+<li><span class="math inline">\(\mathcal{W}(x)\)</span> is Gaussian white noise</li>
+<li>Parameters <span class="math inline">\((\kappa, \alpha)\)</span> control range and smoothness</li>
+</ul>
+</section>
+<section id="matérn-parameters-vs-spde-parameters" class="slide level2 smaller">
+<h2>Matérn parameters vs SPDE parameters</h2>
+<p>We often describe a Matérn GRF using:</p>
+<ul>
+<li><strong>Range</strong> <span class="math inline">\(\rho\)</span>: distance where correlation becomes small<br>
+</li>
+<li><strong>Marginal standard deviation</strong> <span class="math inline">\(\sigma\)</span></li>
+<li><strong>Smoothness</strong> <span class="math inline">\(\nu\)</span></li>
+</ul>
+<p>INLA/SPDE uses a different (equivalent) parameterisation:</p>
+<ul>
+<li><span class="math inline">\(\kappa\)</span>: controls the range<br>
+</li>
+<li><span class="math inline">\(\tau\)</span>: controls the marginal variance<br>
+</li>
+<li><span class="math inline">\(\alpha = \nu + d/2\)</span> (with spatial dimension <span class="math inline">\(d=2\)</span>)</li>
+</ul>
+</section>
+<section id="from-spde-parameters-to-range-and-variance" class="slide level2 smaller">
+<h2>From SPDE parameters to range and variance</h2>
+<p>Key relationships (common INLA convention):</p>
+<ul>
+<li><strong>Practical range</strong> <span class="math display">\[
+\rho \approx \frac{\sqrt{8\nu}}{\kappa}
+\]</span></li>
+<li><strong>Marginal variance</strong> <span class="math display">\[
+\text{Var}\{S(s)\} = \sigma^2 \propto \frac{1}{\tau^2 \kappa^{2\nu}}
+\]</span></li>
+</ul>
+<p>Interpretation:</p>
+<ul>
+<li>larger <span class="math inline">\(\kappa\)</span> <span class="math inline">\(\Rightarrow\)</span> shorter range (rougher field)</li>
+<li>larger <span class="math inline">\(\tau\)</span> <span class="math inline">\(\Rightarrow\)</span> smaller marginal variance</li>
+</ul>
+</section>
+<section id="what-inla-reports-hyperparameters" class="slide level2">
+<h2>What INLA reports (hyperparameters)</h2>
+<p>In INLA output you will often see hyperparameters related to:</p>
+<ul>
+<li><strong>Range</strong> <span class="math inline">\(\rho\)</span></li>
+<li><strong>Stdev</strong> <span class="math inline">\(\sigma\)</span></li>
+<li><strong>Nugget / observation noise</strong> <span class="math inline">\(\tau_\epsilon\)</span> (depending on model)</li>
+</ul>
+<p>Even if the underlying SPDE uses <span class="math inline">\((\kappa,\tau)\)</span>, INLA/inlabru often provides summaries in the more interpretable scale:</p>
+<ul>
+<li>range (km or m)</li>
+<li>marginal sd</li>
+</ul>
+</section>
+<section id="pc-priors-in-practice-what-you-set-in-code" class="slide level2">
+<h2>PC priors in practice (what you set in code)</h2>
+<p>In <code>inla.spde2.pcmatern()</code> you specify:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a></a>prior.range <span class="ot">=</span> <span class="fu">c</span>(r0, p)   <span class="co"># P(range &lt; r0) = p</span></span>
+<span id="cb1-2"><a></a>prior.sigma <span class="ot">=</span> <span class="fu">c</span>(s0, p)   <span class="co"># P(sigma &gt; s0) = p</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</section>
+<section id="discretising-the-spde" class="slide level2">
+<h2>Discretising the SPDE</h2>
+<ul>
+<li><p>The spatial domain is discretised using a <strong>triangular mesh</strong></p></li>
+<li><p>The continuous field is approximated as: <span class="math display">\[
+S(s) \approx \sum_{k=1}^K w_k \psi_k(x)
+\]</span> where:</p></li>
+<li><p><span class="math inline">\(\psi_k(x)\)</span> are basis functions</p></li>
+<li><p><span class="math inline">\(w_k\)</span> are random weights</p></li>
 </ul>
 <p>Local support of basis functions ⇒ sparsity</p>
 </section>
@@ -758,7 +907,11 @@ S(x) \approx \sum_{k=1}^K w_k \psi_k(x)
 <li><p>Precision matrix <span class="math inline">\(Q\)</span> is <strong>sparse</strong></p></li>
 <li><p>This defines a <strong>Gaussian Markov Random Field (GMRF)</strong></p></li>
 </ul>
-<p>Key consequence: - Fast computation - Scales to large spatial problems</p>
+<p>Key consequence:</p>
+<ul>
+<li>Fast computation</li>
+<li>Scales to large spatial problems</li>
+</ul>
 </section>
 <section id="spde-approach-summary" class="slide level2">
 <h2>SPDE approach: summary</h2>

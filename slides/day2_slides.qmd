@@ -484,44 +484,6 @@ In interpretation:
 
 ---
 
-# Part D — Examples and discussion
-
-## Example 1: Joint model outputs to discuss
-
-For the joint prevalence model:
-- How similar are children vs pregnant spatial patterns?
-- Is the shared field dominant?
-- Where do groups diverge?
-
-Discussion prompts:
-- Are differences biological, behavioural, or sampling-related?
-- Could this be explained by covariates?
-
----
-
-## Example 2: Multi-likelihood model outputs to discuss
-
-For binomial + poisson:
-- Does adding case counts sharpen predictions?
-- Do we see evidence of strong coupling (\(\alpha\))?
-- Where do outcome-specific fields absorb discrepancies?
-
-Discussion prompts:
-- What might cause facility counts to disagree with survey prevalence?
-
----
-
-## Example 3: Nonstationary mixture outputs to discuss
-
-- Where does the model behave smoothly vs roughly?
-- Does \(\omega(s)\) align with your ecological intuition?
-- How sensitive is the result to the choice of \(\omega(s)\)?
-
----
-
-## Example 4: Structured range outputs to discuss
-
-
 ## Summary
 
 **Joint models**

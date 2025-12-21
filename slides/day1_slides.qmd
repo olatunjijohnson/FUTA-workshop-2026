@@ -120,7 +120,7 @@ Cressie’s book classifies spatial statistics according to **data format**:
 Gelfand’s book classifies spatial statistics according to **spatial variation**:
 
 1. Discrete spatial variation: Gaussian Markov Random Field (GMRF)  
-2. Continuous spatial variation: Gaussian Random Field (GMRF)  
+2. Continuous spatial variation: Gaussian Random Field (GRF)  
 
 ::: 
 
@@ -161,29 +161,29 @@ Gelfand’s book classifies spatial statistics according to **spatial variation*
 
 $$
 Y_i = \beta_0 
-+ \underbrace{\beta_1 d_1(x_i) + \beta_2 d_2(x_i)}_{\text{explained}}
-+ \underbrace{S(x_i) + Z_j}_{\text{unexplained}},
++ \underbrace{\beta_1 d_1(s_i) + \beta_2 d_2(s_i)}_{\text{explained}}
++ \underbrace{S(s_i) + Z_j}_{\text{unexplained}},
 $$
 
 where
 
 - $\beta_0$, $\beta_1$, and $\beta_2$ are regression coefficients;
 - $d_1(x)$ and $d_2(x)$ denote covariates/predictors at location $x$;
-- $S(x)$ is the stochastic spatial process;
+- $S(s)$ is the stochastic spatial process;
 - $Z_j$ represents measurement error.
 
 ------------------------------------------------------------------------
 
-## Modelling $S(x)$ and $Z_j$
+## Modelling $S(s)$ and $Z_j$
 
 - $Z_i \sim N(0, \tau^2)$
-- We assume that $S(x)$ is a zero-mean **[stationary and isotropic Gaussian process]{style="color:blue;"}**. i.e $S \sim \text{MVN}(0, \Sigma)$
+- We assume that $S(s)$ is a zero-mean **[stationary and isotropic Gaussian Random Field]{style="color:blue;"}**. i.e $S \sim \text{MVN}(0, \Sigma)$
 - The $(i,j)$th entry of $\Sigma$ is
   $$
-  \Sigma_{ij} = \operatorname{Cov}\big(S(x_i), S(x_j)\big) = \sigma^2 \rho(u)
+  \Sigma_{ij} = \operatorname{Cov}\big(S(s_i), S(s_j)\big) = \sigma^2 r(u)
   $$
-- $u = \|x_i - x_j\|$ is the Euclidean distance between locations $x_i$ and $x_j$
-- **[How do we choose parametric correlation function $\rho(\cdot)$?]{style="color:blue;"}**
+- $u = \|s_i - s_j\|$ is the Euclidean distance between locations $s_i$ and $s_j$
+- **[How do we choose parametric correlation function $r(\cdot)$?]{style="color:blue;"}**
 
 
 
@@ -191,35 +191,35 @@ where
 ## The Matérn correlation function
 
 $$
-\rho(u; \phi, \kappa)
-= \frac{1}{2^{\kappa-1}\Gamma(\kappa)}
-\left(\frac{u}{\phi}\right)^\kappa
-K_\kappa\!\left(\frac{u}{\phi}\right),
+r(u; \rho, \nu)
+= \frac{1}{2^{\nu-1}\Gamma(\nu)}
+\left(\frac{u}{\rho}\right)^\nu
+K_\nu\!\left(\frac{u}{\rho}\right),
 $$
 
-- $K_\kappa(\cdot)$: modified Bessel function of order $\kappa$
+- $K_\nu(\cdot)$: modified Bessel function of order $\nu$
 
 - **[Interpretation]{style="color:red;"}**
-  - $\kappa$ determines the smoothness:
-    $\kappa > r \Rightarrow S(x)$ is $r$ times differentiable
-  - $\phi$ determines the scale of spatial correlation
+  - $\nu$ determines the smoothness:
+    $\nu > r \Rightarrow S(s)$ is $r$ times differentiable
+  - $\rho$ determines the scale/range of spatial correlation
 
 - **[Special cases]{style="color:red;"}**
-  - $\kappa = 0.5 \Rightarrow \rho(u) = \exp\{-u/\phi\}$
-  - $\kappa \to \infty \Rightarrow \rho(u) = \exp\{-(u/\phi)^2\}$
+  - $\nu = 0.5 \Rightarrow r(u) = \exp\{-u/\rho\}$
+  - $\nu \to \infty \Rightarrow r(u) = \exp\{-(u/\rho)^2\}$
 
-- Often sufficient to choose $\kappa \in \{0.5, 1.5, 2.5\}$
+- Often sufficient to choose $\nu \in \{0.5, 1.5, 2.5\}$
 :::
 
 
 ::: {.smaller}
-## Matérn correlation function – $\kappa$
+## Matérn correlation function – $\nu$
 
 $$
-\rho(u; \phi, \kappa)
-= \frac{1}{2^{\kappa-1}\Gamma(\kappa)}
-\left(\frac{u}{\phi}\right)^\kappa
-K_\kappa\!\left(\frac{u}{\phi}\right),
+r(u; \rho, \nu)
+= \frac{1}{2^{\nu-1}\Gamma(\nu)}
+\left(\frac{u}{\rho}\right)^\nu
+K_\nu\!\left(\frac{u}{\rho}\right),
 $$
 
 
@@ -227,20 +227,20 @@ $$
 
 
 **[Exponential correlation function:]{style="color:blue;"}**
-$\rho(u; \phi, 0.5) = \exp\{-u/\phi\}$
+$r(u; \rho, 0.5) = \exp\{-u/\rho\}$
 
 :::
 
 
 
-## The scale of the spatial correlation – $\phi$
+## The scale of the spatial correlation – $\rho$
 
 ![](images2/spatial_cor){width=50%}
 
 
 ---
 
-## Do we need the process $S(x)$?
+## Do we need the process $S(s)$?
 
 - Regression residuals  
   $$
@@ -250,7 +250,7 @@ $\rho(u; \phi, 0.5) = \exp\{-u/\phi\}$
 
 - Each $\hat{r}_i$ estimates  
   $$
-  S(x_i) + Z_i
+  S(s_i) + Z_i
   $$
 
 ::: {.smaller}
@@ -266,7 +266,7 @@ $\rho(u; \phi, 0.5) = \exp\{-u/\phi\}$
 
 - where  
   $$
-  N(u)=\{(i,j): \lVert x_i-x_j\rVert=u\}
+  N(u)=\{(i,j): \lVert s_i-s_j\rVert=u\}
   $$
 :::
 
@@ -310,9 +310,9 @@ $\rho(u; \phi, 0.5) = \exp\{-u/\phi\}$
   Y \sim \text{MVN}(D\beta, \sigma^2 R + \tau^2 I)
   $$
 
-  - $D$: matrix of covariates, $[D]_{ik} = d_k(x_i)$  
+  - $D$: matrix of covariates, $[D]_{ik} = d_k(s_i)$  
   - $R$: spatial correlation matrix,  
-    $[R]_{ij} = \rho(u_{ij})$, with $u_{ij} = \|x_i - x_j\|$
+    $[R]_{ij} = r(u_{ij})$, with $u_{ij} = \|s_i - s_j\|$
 
 - **[Fitting process]{style="color:red;"}**
   1. Initialise $\beta$ (e.g. using ordinary least squares)
@@ -354,7 +354,7 @@ Model-based geostatistics distinguishes between:
 
 - **Latent process model:**
   $$
-  \eta_i = X_i \beta + S(x_i) + Z_i
+  \eta_i = X_i \beta + S(s_i) + Z_i
   $$
 
 Key idea:
@@ -393,7 +393,7 @@ Key idea:
 The linear predictor enters the likelihood via a link:
 
 $$
-g(\mu_i) = \eta_i = X_i\beta + S(x_i) + Z_i
+g(\mu_i) = \eta_i = X_i\beta + S(s_i) + Z_i
 $$
 
 Examples:
@@ -524,6 +524,38 @@ Why this matters:
 - Enables scalable inference for large spatial problems
 - Crucial for INLA’s computational efficiency
 
+---
+
+## Gaussian Markov Random Fields (GMRFs)
+
+A **Gaussian Markov Random Field (GMRF)** is a Gaussian random vector with
+**conditional independence** structure.
+
+Let  
+$$
+\mathbf{S} = (S_1,\dots,S_n)^\top \sim \mathcal{N}(0, Q^{-1})
+$$
+
+where:
+
+- $Q$ is the **precision matrix**
+- **Zeros in $Q$** encode conditional independence
+
+---
+
+### Markov property (key idea)
+
+For a GMRF:
+
+$$
+Q_{ij} = 0 \quad \Longleftrightarrow \quad
+S_i \;\perp\!\!\!\perp\; S_j \mid \mathbf{S}_{-ij}
+$$
+
+Interpretation:
+
+- Each location depends **only on its neighbours**
+- No long-range conditional dependence
 
 
 ::: {.smaller}
@@ -612,9 +644,8 @@ $$
 
 Key point:
 
-👉 In INLA, a **GMRF is used as a computational approximation**
+In INLA, a **GMRF is used as a computational approximation**
 to a **continuous GRF**
-
 
 
 ::: {.smaller}
@@ -643,31 +674,29 @@ Benefits:
 - In geostatistics, we often model spatial dependence using
   **Gaussian random fields (GRFs)** with Matérn covariance
 
-- For observations at locations $x_1, \dots, x_n$:
+- For observations at locations $s_1, \dots, s_n$:
   - Covariance matrix is **dense**
   - Computational cost is $\mathcal{O}(n^3)$
 
 This becomes infeasible for large spatial datasets
 
-
 ---
 
 ## Gaussian random fields
 
-A spatial Gaussian random field is defined as:
+A spatial Gaussian random field is defined as
 
 $$
-S(x) \sim \text{GRF}(0, C(\cdot))
+S(s) \sim \text{GRF}(0, C(\cdot))
 $$
 
 with covariance function:
 $$
-\text{Cov}\{S(x), S(x')\} = C(\|x - x'\|)
+\text{Cov}\{S(s), S(s')\} = C(\|s - s'\|)
 $$
 
 - The Matérn family is widely used
 - Defined on a **continuous spatial domain**
-
 
 ---
 
@@ -677,11 +706,12 @@ A key result (Whittle, 1954):
 
 A Matérn GRF is the solution to the SPDE:
 $$
-(\kappa^2 - \Delta)^{\alpha/2} S(x)
+(\kappa^2 - \Delta)^{\alpha/2} S(s)
 = \mathcal{W}(x),
 $$
 
 where:
+
 - $\Delta$ is the Laplacian operator
 - $\mathcal{W}(x)$ is Gaussian white noise
 - Parameters $(\kappa, \alpha)$ control range and smoothness
@@ -689,14 +719,79 @@ where:
 
 ::: {.smaller}
 
+## Matérn parameters vs SPDE parameters
+
+We often describe a Matérn GRF using:
+
+- **Range** $\rho$: distance where correlation becomes small  
+- **Marginal standard deviation** $\sigma$ 
+- **Smoothness** $\nu$
+
+INLA/SPDE uses a different (equivalent) parameterisation:
+
+- $\kappa$: controls the range  
+- $\tau$: controls the marginal variance  
+- $\alpha = \nu + d/2$ (with spatial dimension $d=2$)
+
+:::
+
+
+::: {.smaller}
+
+## From SPDE parameters to range and variance
+
+Key relationships (common INLA convention):
+
+- **Practical range**
+  $$
+  \rho \approx \frac{\sqrt{8\nu}}{\kappa}
+  $$
+- **Marginal variance**
+  $$
+  \text{Var}\{S(s)\} = \sigma^2 \propto \frac{1}{\tau^2 \kappa^{2\nu}}
+  $$
+
+Interpretation:
+
+- larger $\kappa$  $\Rightarrow$ shorter range (rougher field)
+- larger $\tau$    $\Rightarrow$ smaller marginal variance
+
+:::
+
+
+## What INLA reports (hyperparameters)
+
+In INLA output you will often see hyperparameters related to:
+
+- **Range** $\rho$
+- **Stdev** $\sigma$
+- **Nugget / observation noise** $\tau_\epsilon$ (depending on model)
+
+Even if the underlying SPDE uses $(\kappa,\tau)$, INLA/inlabru often provides summaries in the more interpretable scale:
+
+- range (km or m)
+- marginal sd
+
+---
+
+## PC priors in practice (what you set in code)
+
+In `inla.spde2.pcmatern()` you specify:
+
+```r
+prior.range = c(r0, p)   # P(range < r0) = p
+prior.sigma = c(s0, p)   # P(sigma > s0) = p
+```
+
+---
+
 ## Discretising the SPDE
 
 - The spatial domain is discretised using a **triangular mesh**
 - The continuous field is approximated as:
   $$
-  S(x) \approx \sum_{k=1}^K w_k \psi_k(x)
+  S(s) \approx \sum_{k=1}^K w_k \psi_k(x)
   $$
-
 where:
 
 - $\psi_k(x)$ are basis functions
@@ -705,7 +800,7 @@ where:
 Local support of basis functions ⇒ sparsity
 
 
-:::
+---
 
 ## From GRF to GMRF
 
@@ -718,6 +813,7 @@ Local support of basis functions ⇒ sparsity
 - This defines a **Gaussian Markov Random Field (GMRF)**
 
 Key consequence:
+
 - Fast computation
 - Scales to large spatial problems
 
