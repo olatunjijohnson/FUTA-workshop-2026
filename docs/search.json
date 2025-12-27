@@ -301,6 +301,13 @@
     "text": "Summary\nJoint models - share spatial information across related outcomes - can handle: - multiple groups (same likelihood) - multiple likelihoods (binomial + poisson)\nNonstationarity - mixture SPDE: simple and robust - structured range SPDE: mechanistic, covariate-driven\nTake-away - choose the simplest model that answers your scientific question - use nonstationarity when stationary assumptions are visibly violated"
   },
   {
+    "objectID": "slides/day2_slides.html#navigation",
+    "href": "slides/day2_slides.html#navigation",
+    "title": "Day 2 – Joint modelling and Non-stationary processes",
+    "section": "Navigation",
+    "text": "Navigation\n\nBack to website home\nDay 1 slides\nDay 2 slides\nDay 3 slides"
+  },
+  {
     "objectID": "day3.html",
     "href": "day3.html",
     "title": "Day 3 – Hybrid Machine Learning + Geostatistics",
@@ -1029,6 +1036,13 @@
     "text": "INLA and inlabru R packages\nWhat is inlabru?\n\nAn R package built on top of INLA\nDesigned for spatial and spatio-temporal modelling using\nIntegrated Nested Laplace Approximation (INLA)\nProvides an intuitive interface for:\n\nSpatial point process models\nGeostatistical models\n\nInstall INLA: https://www.r-inla.org/download-install\nExamples and documentation: https://inlabru-org.github.io/inlabru/\n\nKey features\n\nFormula-based model specification\nFlexible integration with sf, sp, and raster"
   },
   {
+    "objectID": "slides/day1_slides.html#navigation",
+    "href": "slides/day1_slides.html#navigation",
+    "title": "Day 1 – Spatial & Spatio-temporal Modelling",
+    "section": "Navigation",
+    "text": "Navigation\n\nBack to website home\nDay 1 slides\nDay 2 slides\nDay 3 slides"
+  },
+  {
     "objectID": "slides/day1_slides.html#references",
     "href": "slides/day1_slides.html#references",
     "title": "Day 1 – Spatial & Spatio-temporal Modelling",
@@ -1223,5 +1237,12 @@
     "title": "Day 3 – Hybrid Machine Learning + Geostatistics",
     "section": "Where to go next (research directions)",
     "text": "Where to go next (research directions)\nFull Bayesian hybrid:\n\nBART + SPDE\nBayesian deep learning + spatial random effects\nJoint models with multiple outcomes + ML mean functions\nNonstationary residual fields (Day 2 ideas + ML)\n\nSpatio-temporal hybrids (Bamidele Toba):\n\\[\\eta(s,t)=m(x(s,t))+S(s,t)\\]"
+  },
+  {
+    "objectID": "slides/day3_slides.html#navigation",
+    "href": "slides/day3_slides.html#navigation",
+    "title": "Day 3 – Hybrid Machine Learning + Geostatistics",
+    "section": "Navigation",
+    "text": "Navigation\n\nBack to website home\nDay 1 slides\nDay 2 slides\nDay 3 slides"
   }
 ]

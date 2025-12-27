@@ -500,6 +500,15 @@ In interpretation:
 - choose the simplest model that answers your scientific question
 - use nonstationarity when stationary assumptions are visibly violated
 
+
 ---
+
+## Navigation
+
+- [Back to website home](../index.html)
+- [Day 1 slides](day1_slides.html)
+- [Day 2 slides](day2_slides.html)
+- [Day 3 slides](day3_slides.html)
+
 
 
