@@ -186,6 +186,10 @@ window.Quarto = {
   </li>  
     </ul>
   </li>
+  <li class="nav-item">
+    <a class="nav-link" href="./data.zip"> 
+<span class="menu-text">Download data</span></a>
+  </li>  
 </ul>
           </div> <!-- /navcollapse -->
             <div class="quarto-navbar-tools">
@@ -208,16 +212,16 @@ window.Quarto = {
   <li><a href="#convert-to-sf-for-mapping" id="toc-convert-to-sf-for-mapping" class="nav-link" data-scroll-target="#convert-to-sf-for-mapping">2. Convert to sf for mapping</a></li>
   <li><a href="#visualise-sampling-locations" id="toc-visualise-sampling-locations" class="nav-link" data-scroll-target="#visualise-sampling-locations">3. Visualise sampling locations</a></li>
   <li><a href="#variogram" id="toc-variogram" class="nav-link" data-scroll-target="#variogram">4. Variogram</a></li>
-  <li><a href="#build-the-spde-mesh" id="toc-build-the-spde-mesh" class="nav-link" data-scroll-target="#build-the-spde-mesh">4. Build the SPDE mesh</a></li>
-  <li><a href="#spde-model-pc-priors" id="toc-spde-model-pc-priors" class="nav-link" data-scroll-target="#spde-model-pc-priors">5. SPDE model (PC priors)</a></li>
-  <li><a href="#spatial-binomial-model" id="toc-spatial-binomial-model" class="nav-link" data-scroll-target="#spatial-binomial-model">6. Spatial BINOMIAL model</a></li>
-  <li><a href="#spatial-poisson-model" id="toc-spatial-poisson-model" class="nav-link" data-scroll-target="#spatial-poisson-model">7. Spatial POISSON model</a></li>
-  <li><a href="#predictive-surfaces-binomial-example" id="toc-predictive-surfaces-binomial-example" class="nav-link" data-scroll-target="#predictive-surfaces-binomial-example">8. Predictive surfaces (binomial example)</a></li>
-  <li><a href="#exceedance-probability-binomial" id="toc-exceedance-probability-binomial" class="nav-link" data-scroll-target="#exceedance-probability-binomial">9. Exceedance probability (binomial)</a></li>
+  <li><a href="#build-the-spde-mesh" id="toc-build-the-spde-mesh" class="nav-link" data-scroll-target="#build-the-spde-mesh">5. Build the SPDE mesh</a></li>
+  <li><a href="#spde-model-pc-priors" id="toc-spde-model-pc-priors" class="nav-link" data-scroll-target="#spde-model-pc-priors">6. SPDE model (PC priors)</a></li>
+  <li><a href="#spatial-binomial-model" id="toc-spatial-binomial-model" class="nav-link" data-scroll-target="#spatial-binomial-model">7. Spatial BINOMIAL model</a></li>
+  <li><a href="#spatial-poisson-model" id="toc-spatial-poisson-model" class="nav-link" data-scroll-target="#spatial-poisson-model">8. Spatial POISSON model</a></li>
+  <li><a href="#predictive-surfaces-binomial-example" id="toc-predictive-surfaces-binomial-example" class="nav-link" data-scroll-target="#predictive-surfaces-binomial-example">9. Predictive surfaces (binomial example)</a></li>
+  <li><a href="#exceedance-probability-binomial" id="toc-exceedance-probability-binomial" class="nav-link" data-scroll-target="#exceedance-probability-binomial">10. Exceedance probability (binomial)</a></li>
   <li><a href="#mapping-the-spatio-temporal-empirical-prevalence" id="toc-mapping-the-spatio-temporal-empirical-prevalence" class="nav-link" data-scroll-target="#mapping-the-spatio-temporal-empirical-prevalence">11. Mapping the spatio-temporal empirical prevalence</a></li>
-  <li><a href="#spatio-temporal-components---sum-of-a-purely-spatial-and-a-purely-temporal-trend." id="toc-spatio-temporal-components---sum-of-a-purely-spatial-and-a-purely-temporal-trend." class="nav-link" data-scroll-target="#spatio-temporal-components---sum-of-a-purely-spatial-and-a-purely-temporal-trend.">11. Spatio-temporal components - sum of a purely spatial and a purely temporal trend.</a></li>
-  <li><a href="#spatio-temporal-components---inseparable-covariance-function" id="toc-spatio-temporal-components---inseparable-covariance-function" class="nav-link" data-scroll-target="#spatio-temporal-components---inseparable-covariance-function">12. Spatio-temporal components - Inseparable covariance function</a></li>
-  <li><a href="#predict-spatio-temporal-prevalence-example-time-7" id="toc-predict-spatio-temporal-prevalence-example-time-7" class="nav-link" data-scroll-target="#predict-spatio-temporal-prevalence-example-time-7">12. Predict spatio-temporal prevalence (example: time = 7)</a></li>
+  <li><a href="#spatio-temporal-components---sum-of-a-purely-spatial-and-a-purely-temporal-trend." id="toc-spatio-temporal-components---sum-of-a-purely-spatial-and-a-purely-temporal-trend." class="nav-link" data-scroll-target="#spatio-temporal-components---sum-of-a-purely-spatial-and-a-purely-temporal-trend.">12. Spatio-temporal components - sum of a purely spatial and a purely temporal trend.</a></li>
+  <li><a href="#spatio-temporal-components---inseparable-covariance-function" id="toc-spatio-temporal-components---inseparable-covariance-function" class="nav-link" data-scroll-target="#spatio-temporal-components---inseparable-covariance-function">13. Spatio-temporal components - Inseparable covariance function</a></li>
+  <li><a href="#predict-spatio-temporal-prevalence-example-time-7" id="toc-predict-spatio-temporal-prevalence-example-time-7" class="nav-link" data-scroll-target="#predict-spatio-temporal-prevalence-example-time-7">14. Predict spatio-temporal prevalence (example: time = 7)</a></li>
   </ul></li>
   <li><a href="#end-of-day-1" id="toc-end-of-day-1" class="nav-link" data-scroll-target="#end-of-day-1">End of Day 1</a></li>
   </ul>
@@ -392,7 +396,7 @@ variog.env: computing the envelops</code></pre>
 <p>We can see that there is an evidence of spatial correlation because the empirical semi-variogram for the data does not completely lie inside the envelopes, especially at smaller distances.</p>
 </section>
 <section id="build-the-spde-mesh" class="level2">
-<h2 class="anchored" data-anchor-id="build-the-spde-mesh">4. Build the SPDE mesh</h2>
+<h2 class="anchored" data-anchor-id="build-the-spde-mesh">5. Build the SPDE mesh</h2>
 <p>The mesh defines the geometry on which the latent spatial field is approximated.</p>
 <div class="cell">
 <details class="code-fold">
@@ -422,7 +426,7 @@ A coarser mesh → faster, less precise.<br>
 We balance cost vs smoothness.</p>
 </section>
 <section id="spde-model-pc-priors" class="level2">
-<h2 class="anchored" data-anchor-id="spde-model-pc-priors">5. SPDE model (PC priors)</h2>
+<h2 class="anchored" data-anchor-id="spde-model-pc-priors">6. SPDE model (PC priors)</h2>
 <p>Penalised complexity (PC) priors make spatial models robust and interpretable.</p>
 <div class="cell">
 <details class="code-fold">
@@ -436,7 +440,7 @@ We balance cost vs smoothness.</p>
 </div>
 </section>
 <section id="spatial-binomial-model" class="level2">
-<h2 class="anchored" data-anchor-id="spatial-binomial-model">6. Spatial BINOMIAL model</h2>
+<h2 class="anchored" data-anchor-id="spatial-binomial-model">7. Spatial BINOMIAL model</h2>
 <p>The model is:</p>
 <p><span class="math display">\[logit(pi​)=\beta_0​+\beta_1​ elevation_i​+ \beta_2​ndvi_i​+ \beta_3 ​urban_i​+ S(s_i​)\]</span></p>
 <p>Where <span class="math inline">\(S(\mathbf{s})\)</span> is a spatial Gaussian field.</p>
@@ -504,7 +508,7 @@ Posterior summaries for the linear predictor and the fitted values are computed
 </div>
 </section>
 <section id="spatial-poisson-model" class="level2">
-<h2 class="anchored" data-anchor-id="spatial-poisson-model">7. Spatial POISSON model</h2>
+<h2 class="anchored" data-anchor-id="spatial-poisson-model">8. Spatial POISSON model</h2>
 <p>Often used for malaria case counts or incidence.</p>
 <p>Model: <span class="math display">\[\log(\lambda_i)= \beta_0 + \beta_1 X_i + S(s_i)\]</span></p>
 <div class="cell">
@@ -570,7 +574,7 @@ Posterior summaries for the linear predictor and the fitted values are computed
 </div>
 </section>
 <section id="predictive-surfaces-binomial-example" class="level2">
-<h2 class="anchored" data-anchor-id="predictive-surfaces-binomial-example">8. Predictive surfaces (binomial example)</h2>
+<h2 class="anchored" data-anchor-id="predictive-surfaces-binomial-example">9. Predictive surfaces (binomial example)</h2>
 <div class="cell">
 <details class="code-fold">
 <summary>Code</summary>
@@ -619,7 +623,7 @@ Posterior summaries for the linear predictor and the fitted values are computed
 </div>
 </section>
 <section id="exceedance-probability-binomial" class="level2">
-<h2 class="anchored" data-anchor-id="exceedance-probability-binomial">9. Exceedance probability (binomial)</h2>
+<h2 class="anchored" data-anchor-id="exceedance-probability-binomial">10. Exceedance probability (binomial)</h2>
 <p>Goal:</p>
 <p><span class="math display">\[P(prevalence&gt;0.5∣data)\]</span></p>
 <div class="cell">
@@ -727,7 +731,7 @@ Projected CRS: WGS 84 / UTM zone 32N
 </div>
 </section>
 <section id="spatio-temporal-components---sum-of-a-purely-spatial-and-a-purely-temporal-trend." class="level2">
-<h2 class="anchored" data-anchor-id="spatio-temporal-components---sum-of-a-purely-spatial-and-a-purely-temporal-trend.">11. Spatio-temporal components - sum of a purely spatial and a purely temporal trend.</h2>
+<h2 class="anchored" data-anchor-id="spatio-temporal-components---sum-of-a-purely-spatial-and-a-purely-temporal-trend.">12. Spatio-temporal components - sum of a purely spatial and a purely temporal trend.</h2>
 <p>Use: - RW1 for time - SPDE for space - Additive interaction</p>
 <div class="cell">
 <details class="code-fold">
@@ -807,7 +811,7 @@ Posterior summaries for the linear predictor and the fitted values are computed
 </div>
 </section>
 <section id="spatio-temporal-components---inseparable-covariance-function" class="level2">
-<h2 class="anchored" data-anchor-id="spatio-temporal-components---inseparable-covariance-function">12. Spatio-temporal components - Inseparable covariance function</h2>
+<h2 class="anchored" data-anchor-id="spatio-temporal-components---inseparable-covariance-function">13. Spatio-temporal components - Inseparable covariance function</h2>
 <p>Use: - Exchageable for time - SPDE for space - interaction</p>
 <div class="cell">
 <details class="code-fold">
@@ -882,7 +886,7 @@ Posterior summaries for the linear predictor and the fitted values are computed
 </div>
 </section>
 <section id="predict-spatio-temporal-prevalence-example-time-7" class="level2">
-<h2 class="anchored" data-anchor-id="predict-spatio-temporal-prevalence-example-time-7">12. Predict spatio-temporal prevalence (example: time = 7)</h2>
+<h2 class="anchored" data-anchor-id="predict-spatio-temporal-prevalence-example-time-7">14. Predict spatio-temporal prevalence (example: time = 7)</h2>
 <p>Here we used the sum of purely spatial and purely temporal process for prediction at time 7.</p>
 <div class="cell">
 <details class="code-fold">

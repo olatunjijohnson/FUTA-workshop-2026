@@ -23,6 +23,8 @@ website:
             text: Day 2 slides
           - href: slides/day3_slides.qmd
             text: Day 3 slides
+      - href: data.zip
+        text: Download data
 
 format:
   html:

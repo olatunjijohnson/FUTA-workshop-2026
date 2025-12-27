@@ -9,6 +9,7 @@
 <link href="../site_libs/quarto-html/quarto-syntax-highlighting-2f5df379a58b258e96c21c0638c20c03.css" rel="stylesheet" id="quarto-text-highlighting-styles"><meta charset="utf-8">
   <meta name="generator" content="quarto-1.6.42">
 
+  <meta name="author" content="Olatunji Johnson">
   <title>Geostatistical Modelling with inlabru – Day 3 – Hybrid Machine Learning + Geostatistics</title>
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -27,71 +28,6 @@
       margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
       vertical-align: middle;
     }
-    /* CSS for syntax highlighting */
-    pre > code.sourceCode { white-space: pre; position: relative; }
-    pre > code.sourceCode > span { line-height: 1.25; }
-    pre > code.sourceCode > span:empty { height: 1.2em; }
-    .sourceCode { overflow: visible; }
-    code.sourceCode > span { color: inherit; text-decoration: inherit; }
-    div.sourceCode { margin: 1em 0; }
-    pre.sourceCode { margin: 0; }
-    @media screen {
-    div.sourceCode { overflow: auto; }
-    }
-    @media print {
-    pre > code.sourceCode { white-space: pre-wrap; }
-    pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
-    }
-    pre.numberSource code
-      { counter-reset: source-line 0; }
-    pre.numberSource code > span
-      { position: relative; left: -4em; counter-increment: source-line; }
-    pre.numberSource code > span > a:first-child::before
-      { content: counter(source-line);
-        position: relative; left: -1em; text-align: right; vertical-align: baseline;
-        border: none; display: inline-block;
-        -webkit-touch-callout: none; -webkit-user-select: none;
-        -khtml-user-select: none; -moz-user-select: none;
-        -ms-user-select: none; user-select: none;
-        padding: 0 4px; width: 4em;
-        color: #aaaaaa;
-      }
-    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
-    div.sourceCode
-      { color: #003b4f; background-color: #f1f3f5; }
-    @media screen {
-    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
-    }
-    code span { color: #003b4f; } /* Normal */
-    code span.al { color: #ad0000; } /* Alert */
-    code span.an { color: #5e5e5e; } /* Annotation */
-    code span.at { color: #657422; } /* Attribute */
-    code span.bn { color: #ad0000; } /* BaseN */
-    code span.bu { } /* BuiltIn */
-    code span.cf { color: #003b4f; font-weight: bold; } /* ControlFlow */
-    code span.ch { color: #20794d; } /* Char */
-    code span.cn { color: #8f5902; } /* Constant */
-    code span.co { color: #5e5e5e; } /* Comment */
-    code span.cv { color: #5e5e5e; font-style: italic; } /* CommentVar */
-    code span.do { color: #5e5e5e; font-style: italic; } /* Documentation */
-    code span.dt { color: #ad0000; } /* DataType */
-    code span.dv { color: #ad0000; } /* DecVal */
-    code span.er { color: #ad0000; } /* Error */
-    code span.ex { } /* Extension */
-    code span.fl { color: #ad0000; } /* Float */
-    code span.fu { color: #4758ab; } /* Function */
-    code span.im { color: #00769e; } /* Import */
-    code span.in { color: #5e5e5e; } /* Information */
-    code span.kw { color: #003b4f; font-weight: bold; } /* Keyword */
-    code span.op { color: #5e5e5e; } /* Operator */
-    code span.ot { color: #003b4f; } /* Other */
-    code span.pp { color: #ad0000; } /* Preprocessor */
-    code span.sc { color: #5e5e5e; } /* SpecialChar */
-    code span.ss { color: #20794d; } /* SpecialString */
-    code span.st { color: #20794d; } /* String */
-    code span.va { color: #111111; } /* Variable */
-    code span.vs { color: #20794d; } /* VerbatimString */
-    code span.wa { color: #5e5e5e; font-style: italic; } /* Warning */
   </style>
   <link rel="stylesheet" href="../site_libs/revealjs/dist/theme/quarto-8f3eebe07241f08526c91a7e9cbef8fd.css">
   <link href="../site_libs/revealjs/plugin/quarto-line-highlight/line-highlight.css" rel="stylesheet">
@@ -194,51 +130,438 @@
   <h1 class="title">Day 3 – Hybrid Machine Learning + Geostatistics</h1>
 
 <div class="quarto-title-authors">
+<div class="quarto-title-author">
+<div class="quarto-title-author-name">
+Olatunji Johnson 
+</div>
+</div>
 </div>
 
-</section><section id="TOC">
-<nav role="doc-toc"> 
-<h2 id="toc-title">Table of contents</h2>
+</section>
+<section>
+<section id="overview" class="title-slide slide level1 center">
+<h1>Overview</h1>
+
+</section>
+<section id="what-day-3-is-about" class="slide level2 smaller">
+<h2>What Day 3 is about</h2>
+<p>We want <strong>high-quality malaria prevalence maps</strong> using:</p>
 <ul>
-<li><a href="#/todays-goal" id="/toc-todays-goal">Today’s Goal</a></li>
-<li><a href="#/load-data" id="/toc-load-data">Load Data</a></li>
+<li><strong>Machine learning</strong> to learn complex covariate effects<br>
+</li>
+<li><strong>Geostatistics</strong> to model residual spatial dependence<br>
+</li>
+<li><strong>INLA/SPDE</strong> to quantify uncertainty efficiently</li>
 </ul>
-</nav>
-</section>
-<section id="todays-goal" class="slide level2">
-<h2>Today’s Goal</h2>
-<p>Integrate:</p>
+<p>The main idea:</p>
+<p><span class="math display">\[
+\text{Observed data} \approx \underbrace{\text{Complex covariate signal}}_{\text{ML}} + \underbrace{\text{Residual spatial structure}}_{\text{SPDE/INLA}}
+\]</span></p>
+<p>We will:</p>
 <ul>
-<li>Machine learning<br>
-</li>
-<li>Spatial geostatistics<br>
-</li>
-<li>Hybrid prediction modelling</li>
+<li>let <strong>ML</strong> learn flexible, nonlinear covariate effects</li>
+<li>let <strong>SPDE/INLA</strong> capture remaining <strong>spatial dependence</strong></li>
 </ul>
 </section>
-<section id="load-data" class="slide level2">
-<h2>Load Data</h2>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a></a><span class="fu">library</span>(readr)</span>
-<span id="cb1-2"><a></a>hybrid_ml_geo <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="st">"../data/hybrid_ml_geostatistical_data.csv"</span>)</span>
-<span id="cb1-3"><a></a><span class="fu">head</span>(hybrid_ml_geo)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code># A tibble: 6 × 11
-     id   utm_x    utm_y n_tested n_pos prevalence_true ml_signal_true
-  &lt;dbl&gt;   &lt;dbl&gt;    &lt;dbl&gt;    &lt;dbl&gt; &lt;dbl&gt;           &lt;dbl&gt;          &lt;dbl&gt;
-1     1 279090.  838870.       63     0        0.00167           -5.04
-2     2  57751.  672968.      125     0        0.000452          -6.60
-3     3 160759. 1365476.      139     0        0.00694           -3.80
-4     4 949111. 1230481.      126     0        0.000334          -7.10
-5     5 434005.  682490.       97     0        0.00205           -5.51
-6     6 -91406.  925776.      122     3        0.00767           -3.16
-# ℹ 4 more variables: S_residual_true &lt;dbl&gt;, elevation &lt;dbl&gt;, ndvi &lt;dbl&gt;,
-#   urban &lt;dbl&gt;</code></pre>
-</div>
-</div>
-
+<section id="why-hybrid-ml-geostatistics" class="slide level2">
+<h2>Why hybrid ML + geostatistics?</h2>
+<p>In practice, malaria risk depends on covariates in complicated ways:</p>
+<ul>
+<li>nonlinear responses (e.g., NDVI has an “optimal” range)<br>
+</li>
+<li>interactions (urban × elevation, rainfall × temperature)<br>
+</li>
+<li>thresholds and saturation</li>
+</ul>
+<p>ML models handle these patterns well.</p>
+<p>But ML typically <strong>does not</strong> provide:</p>
+<ul>
+<li>explicit spatial dependence modelling<br>
+</li>
+<li>coherent spatial uncertainty quantification</li>
+</ul>
+<p>So we combine them.</p>
+</section>
+<section id="learning-objectives" class="slide level2 smaller">
+<h2>Learning objectives</h2>
+<p>By the end of Day 3 you should be able to:</p>
+<ul>
+<li>Build a hybrid model: <strong>ML mean + spatial residual field</strong><br>
+</li>
+<li>Explain how RF/XGBoost learn nonlinearities and interactions<br>
+</li>
+<li>Diagnose spatial autocorrelation in ML residuals (e.g., variogram)<br>
+</li>
+<li>Explain what uncertainty the spatial residual model contributes<br>
+</li>
+<li>Produce posterior mean + uncertainty maps (clipped to Nigeria)<br>
+</li>
+<li>Compare baseline geostatistical vs hybrid predictive performance</li>
+</ul>
+</section></section>
+<section>
+<section id="part-0-data-and-notation" class="title-slide slide level1 center">
+<h1>Part 0 — Data and notation</h1>
 
 </section>
+<section id="data-structure-prevalence-surveys" class="slide level2 smaller">
+<h2>Data structure (prevalence surveys)</h2>
+<p>At locations <span class="math inline">\(s_i\)</span>, we observe:</p>
+<ul>
+<li><span class="math inline">\(Y_i\)</span>: number positive</li>
+<li><span class="math inline">\(N_i\)</span>: number tested</li>
+</ul>
+<p><span class="math display">\[Y_i∣p(s_i) \sim \text{Binomial}(N_i,p(s_i))\]</span> We work on the linear predictor scale:</p>
+<p><span class="math display">\[\eta(s)=\text{logit}\{p(s)\}\]</span></p>
+</section>
+<section id="hybrid-modelling-target" class="slide level2 smaller">
+<h2>Hybrid modelling target</h2>
+<p>We decompose the linear predictor as:</p>
+<p><span class="math display">\[\eta(s)=m(x(s))+S(s)+ϵ(s)\]</span></p>
+<ul>
+<li><span class="math inline">\(x(s)\)</span>: covariates at s(NDVI, elevation, urban, …)</li>
+<li><span class="math inline">\(m(x(s))\)</span>: ML mean function (nonlinear, interactions)</li>
+<li><span class="math inline">\(S(s)\)</span>: spatial residual field (Matérn SPDE / INLA)</li>
+<li><span class="math inline">\(\epsilon(s)\)</span>: small-scale noise / nugget (optional)</li>
+</ul>
+<p>We will estimate:</p>
+<ul>
+<li><span class="math inline">\(m(\cdot)\)</span> using RF (or XGBoost)</li>
+<li><span class="math inline">\(S(\cdot)\)</span> using SPDE + INLA/inlabru</li>
+</ul>
+</section>
+<section id="why-work-on-the-logit-scale" class="slide level2">
+<h2>Why work on the logit scale?</h2>
+<p>Directly fitting ML on <span class="math inline">\(Y_i/N_i\)</span> is possible, but:</p>
+<ul>
+<li>proportions are heteroskedastic</li>
+<li>0’s and 1’s are problematic</li>
+</ul>
+<p>We use an empirical logit transform:</p>
+<p><span class="math display">\[\tilde{\eta_i} =\log\left(\frac{Y_i+0.5}{(N_i−Y_i)+0.5}\right)\]</span></p>
+<p>This stabilises extremes and matches the binomial model scale.</p>
+</section></section>
+<section>
+<section id="part-1-baseline-model-reference-point" class="title-slide slide level1 center">
+<h1>Part 1 — Baseline model (reference point)</h1>
+
+</section>
+<section id="baseline-model-geostatistics-only" class="slide level2 smaller">
+<h2>Baseline model (geostatistics only)</h2>
+<p>We already covered MBG/SPDE in Day 1, so here it’s a reference:</p>
+<p><span class="math display">\[Y_i∣p(s_i) \sim \text{Binomial}(N_i,p(s_i))\]</span></p>
+<p><span class="math display">\[\text{logit}\{p(s)\} = m(x(s))+S(s)+ϵ(s) \]</span></p>
+<h3 id="strengths">Strengths</h3>
+<ul>
+<li>coherent uncertainty</li>
+<li>explicit spatial dependence</li>
+</ul>
+<h3 id="limitation">Limitation</h3>
+<ul>
+<li>covariate effects often too rigid (linear terms)</li>
+</ul>
+</section>
+<section id="baseline-workflow-conceptual" class="slide level2">
+<h2>Baseline workflow (conceptual)</h2>
+<ul>
+<li>Build mesh</li>
+<li>Specify SPDE priors (range, <span class="math inline">\(\sigma\)</span>)</li>
+<li>Fit binomial model</li>
+<li>Predict <span class="math inline">\(p(s)\)</span> on a grid</li>
+<li>Map mean + uncertainty</li>
+</ul>
+<p>(We will compare this to the hybrid later.)</p>
+</section></section>
+<section>
+<section id="part-2-machine-learning-for-mx" class="title-slide slide level1 center">
+<h1>Part 2 — Machine learning for m(x)</h1>
+
+</section>
+<section id="what-ml-is-doing-here" class="slide level2 smaller">
+<h2>What ML is doing here</h2>
+<p>We treat ML as a flexible estimator of the systematic component:</p>
+<p><span class="math display">\[m(x) \approx E\{\eta(s)∣x(s)=x\}\]</span> ML learns:</p>
+<ul>
+<li>nonlinearities</li>
+<li>interactions</li>
+<li>splitting rules / ensembles</li>
+</ul>
+<p>Then we compute residuals:</p>
+<p><span class="math display">\[r_i=\tilde{\eta_i}−\hat{m}(x_i)\]</span></p>
+<p>If <span class="math inline">\(r_i\)</span> is spatially correlated → we need a spatial residual model. If not???</p>
+</section>
+<section id="random-forest-core-idea" class="slide level2 smaller">
+<h2>Random Forest: core idea</h2>
+<p>A Random Forest is an ensemble of regression trees.</p>
+<p>Each tree partitions covariate space into regions and predicts a constant:</p>
+<p><span class="math display">\[\hat{m}_b(x)= \sum_{k=1}^{K_b} c_{bk} 1 (x \in R_{bk})\]</span></p>
+<p>Forest prediction is the average:</p>
+<p><span class="math display">\[\hat{m}_{RF}(x)= \frac{1}{B} \sum_{b=1}^{B} \hat{m}_b(x)\]</span></p>
+<p>Two sources of randomness:</p>
+<ul>
+<li>bootstrap sample (bagging)</li>
+<li>random subset of covariates at each split</li>
+</ul>
+<p>This reduces variance and stabilises predictions.</p>
+</section>
+<section id="rf-captures-nonlinearities-and-interactions-automatically" class="slide level2 smaller">
+<h2>RF captures nonlinearities and interactions automatically</h2>
+<p>Example intuition:</p>
+<ul>
+<li>If risk increases with NDVI up to a point then decreases, a tree can split NDVI into intervals to capture that.</li>
+<li>Interactions appear naturally:
+<ul>
+<li>split on NDVI first, then urban</li>
+<li>different NDVI effects depending on urban class</li>
+</ul></li>
+</ul>
+<p>No explicit interaction terms required.</p>
+</section></section>
+<section id="rf-model-uncertainty-what-it-is-and-isnt" class="title-slide slide level1 smaller center">
+<h1>RF model uncertainty: what it is and isn’t</h1>
+<p>RF offers some uncertainty tools:</p>
+<ul>
+<li>variability across trees</li>
+<li>quantile regression forests</li>
+<li>conformal prediction</li>
+</ul>
+<p>But a standard RF fit does not produce a coherent spatial posterior.</p>
+<p>In this workshop:</p>
+<ul>
+<li>we use RF mainly to get a strong mean function <span class="math inline">\(m(x)\)</span></li>
+<li>we rely on INLA/SPDE to quantify spatial residual uncertainty</li>
+</ul>
+</section>
+
+<section id="xgboost-how-it-differs-high-level" class="slide level2 smaller">
+<h2>XGBoost: how it differs (high-level)</h2>
+<p>XGBoost uses boosting rather than bagging.</p>
+<p>Model is additive:</p>
+<p><span class="math display">\[\hat{m}(x)= \sum_{t=1}^{T}f_t(x)\]</span></p>
+<p>where each <span class="math inline">\(f_t\)</span> is a tree that corrects errors of the previous ensemble.</p>
+<p>It often achieves higher accuracy but:</p>
+<ul>
+<li>requires careful tuning (depth, learning rate, early stopping)</li>
+<li>uncertainty is not “Bayesian” by default</li>
+</ul>
+<p>Note that RF is often more transparent.</p>
+</section>
+<section id="model-selection-in-this-context" class="slide level2">
+<h2>Model selection in this context</h2>
+<p>We pick ML model based on:</p>
+<ul>
+<li>predictive performance (RMSE on <span class="math inline">\(\tilde{\eta}\)</span>)</li>
+<li>stability / robustness</li>
+<li>interpretability</li>
+</ul>
+<p>Hybrid modelling is not “RF vs XGB” as a philosophy:</p>
+<ul>
+<li>it’s ML for mean + spatial model for residual dependence</li>
+</ul>
+</section>
+<section>
+<section id="part-3-diagnosing-spatial-structure-after-ml" class="title-slide slide level1 center">
+<h1>Part 3 — Diagnosing spatial structure after ML</h1>
+
+</section>
+<section id="key-diagnostic-question" class="slide level2">
+<h2>Key diagnostic question</h2>
+<p>After ML, compute residuals:</p>
+<p><span class="math display">\[r_i=\eta_i−\hat{m}(x_i)\]</span></p>
+<p>If <span class="math inline">\(r_i\)</span> is spatially correlated, ML has not captured all structure.</p>
+<p>Then we fit:</p>
+<p><span class="math display">\[r_i=S(s_i)+\epsilon_i, \quad \epsilon_i∼N(0,\sigma^2_\epsilon)\]</span></p>
+<p>This is a clean and interpretable hybrid decomposition.</p>
+</section>
+<section id="variogram-for-ml-residuals" class="slide level2">
+<h2>Variogram for ML residuals</h2>
+<p>Empirical variogram:</p>
+<p><span class="math display">\[\hat{\gamma}(u)= \frac{1}{2|N(u)|} \sum_{(1,j) \in N(u)} (r_i−r_j)^2\]</span></p>
+<p>Interpretation:</p>
+<ul>
+<li>increasing variogram → decreasing correlation with distance</li>
+<li>near-zero at small distances → strong local similarity</li>
+</ul>
+</section>
+<section id="permutation-envelope-quick-test" class="slide level2">
+<h2>Permutation envelope (quick test)</h2>
+<p>Procedure:</p>
+<ol type="1">
+<li>permute residuals across locations</li>
+<li>compute variogram</li>
+<li>repeat many times</li>
+<li>build 95% envelope</li>
+</ol>
+<p>If observed variogram lies outside envelope → evidence of spatial correlation.</p>
+<p>This justifies adding the spatial residual field <span class="math inline">\(S(s)\)</span>.</p>
+</section></section>
+<section>
+<section id="part-4-spatial-residual-model-what-inla-adds" class="title-slide slide level1 center">
+<h1>Part 4 — Spatial residual model (what INLA adds)</h1>
+
+</section>
+<section id="spatial-residual-model-gaussian" class="slide level2 smaller">
+<h2>Spatial residual model (Gaussian)</h2>
+<p>Residuals are approximately continuous:</p>
+<p><span class="math display">\[r_i∣S(s_i) \sim N(S(s_i),\sigma^2)\]</span></p>
+<p><span class="math display">\[S(s)∼Matern SPDE\]</span></p>
+<p>Outputs we get from INLA:</p>
+<ul>
+<li>posterior mean of <span class="math inline">\(S(s)\)</span></li>
+<li>posterior sd of <span class="math inline">\(S(s)\)</span></li>
+<li>posterior of hyperparameters (range, <span class="math inline">\(\sigma\)</span>)</li>
+<li>fast prediction on dense grids</li>
+</ul>
+<p>This is where the hybrid gets principled spatial uncertainty.</p>
+</section>
+<section id="why-modelling-residuals-works-well" class="slide level2">
+<h2>Why modelling residuals works well</h2>
+<p>If ML captures most covariate structure, residual field:</p>
+<ul>
+<li>is “simpler” (closer to stationary Matérn)</li>
+<li>has smaller variance</li>
+<li>focuses purely on spatial dependence</li>
+</ul>
+<p>This often improves:</p>
+<ul>
+<li>realism of maps</li>
+<li>predictive performance</li>
+<li>interpretability (covariate vs spatial structure)</li>
+</ul>
+</section></section>
+<section>
+<section id="part-5-hybrid-prediction-and-uncertainty" class="title-slide slide level1 center">
+<h1>Part 5 — Hybrid prediction and uncertainty</h1>
+
+</section>
+<section id="hybrid-predictor" class="slide level2">
+<h2>Hybrid predictor</h2>
+<p>At a new location <span class="math inline">\(s\)</span>:</p>
+<p><span class="math display">\[\eta_{hyb}(s)=\hat{m}(x(s))+\hat{S}(s)\]</span></p>
+<p>Convert back to prevalence:</p>
+<p><span class="math display">\[\hat{p}_{hyb}(s)=\text{logit}^{−1}(\eta_{hyb}(s))\]</span></p>
+</section>
+<section id="what-uncertainty-does-the-hybrid-provide" class="slide level2">
+<h2>What uncertainty does the hybrid provide?</h2>
+<p>In principle there are three components:</p>
+<ol type="1">
+<li>Binomial sampling noise (from <span class="math inline">\(Y∣p\)</span>)</li>
+<li>Spatial residual uncertainty (from INLA: <span class="math inline">\(S(s)\)</span>)</li>
+<li>ML uncertainty (from learning <span class="math inline">\(m(x)\)</span>)</li>
+</ol>
+<p>In this workshop, we quantify (2) very clearly, and discuss how to extend to (3).</p>
+</section>
+<section id="spatial-residual-uncertainty-what-we-can-map" class="slide level2">
+<h2>Spatial residual uncertainty (what we can map)</h2>
+<p>INLA gives:</p>
+<p><span class="math display">\[S(s)∣data \approx \text{posterior with mean and sd}\]</span></p>
+<p>So we can map:</p>
+<ul>
+<li><span class="math inline">\(E\{S(s)∣y\}\)</span></li>
+<li><span class="math inline">\(\text{sd}\{S(s)∣y\}\)</span></li>
+</ul>
+<p>Propagation to prevalence (approx):</p>
+<ul>
+<li>uncertainty in <span class="math inline">\(\eta\)</span> transforms through logistic curve</li>
+</ul>
+</section>
+<section id="why-the-hybrid-improves-uncertainty-communication" class="slide level2 smaller">
+<h2>Why the hybrid improves uncertainty communication</h2>
+<p>Baseline geostatistical model uncertainty mixes:</p>
+<ul>
+<li>covariate uncertainty (via linear model)</li>
+<li>spatial field uncertainty</li>
+</ul>
+<p>Hybrid separates sources more clearly:</p>
+<ul>
+<li>ML explains systematic covariate-driven pattern</li>
+<li>SPDE explains leftover spatial dependence + uncertainty</li>
+</ul>
+<p>So we can say:</p>
+<ul>
+<li>“This area is uncertain because spatial residuals are uncertain rather than the model is uncertain for unclear reasons”.</li>
+</ul>
+</section>
+<section id="how-to-incorporate-ml-uncertainty-extensions" class="slide level2 smaller">
+<h2>How to incorporate ML uncertainty (extensions)</h2>
+<p>If you want full hybrid uncertainty you can add ML uncertainty via:</p>
+<ul>
+<li>RF variance / ensembles: train RF many times, treat predictions as draws</li>
+<li>Quantile regression forests</li>
+<li>Bayesian additive regression trees (BART) (Bayesian ML)</li>
+<li>Conformal prediction on <span class="math inline">\(m(x)\)</span></li>
+</ul>
+<p>Then combine:</p>
+<p><span class="math display">\[\eta^{(b)}(s)=m^{(b)}(x(s))+S^{(b)}(s)\]</span></p>
+<p>This yields full predictive intervals for prevalence.</p>
+</section></section>
+<section>
+<section id="part-6-comparison-to-baseline" class="title-slide slide level1 center">
+<h1>Part 6 — Comparison to baseline</h1>
+
+</section>
+<section id="what-changes-compared-to-baseline" class="slide level2">
+<h2>What changes compared to baseline?</h2>
+<p>Baseline:</p>
+<p><span class="math display">\[\eta(s)=\beta_0+ \beta^\top x(s)+S(s)\]</span></p>
+<p>Hybrid:</p>
+<p><span class="math display">\[\eta(s)=m(x(s))+S(s)\]</span></p>
+<p>So differences are entirely in how we model the systematic component:</p>
+<ul>
+<li>linear predictor vs flexible ML predictor</li>
+</ul>
+</section>
+<section id="what-should-improve" class="slide level2">
+<h2>What should improve?</h2>
+<p>Hybrid often improves:</p>
+<ul>
+<li>predictive accuracy (RMSE / log score)</li>
+<li>realism of covariate-response relationships</li>
+<li>interpretability of residual spatial signal</li>
+<li>robustness when covariate effects are highly nonlinear</li>
+</ul>
+<p>But hybrid can fail if:</p>
+<ul>
+<li>ML overfits</li>
+<li>covariates shift out-of-distribution at prediction locations</li>
+<li>residual model is mis-specified</li>
+</ul>
+</section>
+<section id="a-practical-evaluation-checklist" class="slide level2">
+<h2>A practical evaluation checklist</h2>
+<ol type="1">
+<li>Does ML reduce residual spatial structure?
+<ul>
+<li>compare variograms (pre-ML vs post-ML residuals)</li>
+</ul></li>
+<li>Does hybrid improve held-out prediction?
+<ul>
+<li>RMSE on prevalence or logit-prevalence</li>
+</ul></li>
+<li>Are maps plausible?
+<ul>
+<li>no obvious artefacts, aligned with known epidemiology</li>
+</ul></li>
+<li>Is uncertainty meaningful?
+<ul>
+<li>higher in sparse regions, lower in data-rich areas</li>
+</ul></li>
+</ol>
+</section>
+<section id="where-to-go-next-research-directions" class="slide level2">
+<h2>Where to go next (research directions)</h2>
+<p>Full Bayesian hybrid:</p>
+<ul>
+<li>BART + SPDE</li>
+<li>Bayesian deep learning + spatial random effects</li>
+<li>Joint models with multiple outcomes + ML mean functions</li>
+<li>Nonstationary residual fields (Day 2 ideas + ML)</li>
+</ul>
+<p>Spatio-temporal hybrids (Bamidele Toba):</p>
+<p><span class="math display">\[\eta(s,t)=m(x(s,t))+S(s,t)\]</span></p>
+
+
+</section></section>
     </div>
   <div class="quarto-auto-generated-content" style="display: none;">
 <div class="footer footer-default">
@@ -454,44 +777,6 @@
         ]
       });
     </script>
-    
-    <script>
-      // htmlwidgets need to know to resize themselves when slides are shown/hidden.
-      // Fire the "slideenter" event (handled by htmlwidgets.js) when the current
-      // slide changes (different for each slide format).
-      (function () {
-        // dispatch for htmlwidgets
-        function fireSlideEnter() {
-          const event = window.document.createEvent("Event");
-          event.initEvent("slideenter", true, true);
-          window.document.dispatchEvent(event);
-        }
-
-        function fireSlideChanged(previousSlide, currentSlide) {
-          fireSlideEnter();
-
-          // dispatch for shiny
-          if (window.jQuery) {
-            if (previousSlide) {
-              window.jQuery(previousSlide).trigger("hidden");
-            }
-            if (currentSlide) {
-              window.jQuery(currentSlide).trigger("shown");
-            }
-          }
-        }
-
-        // hookup for slidy
-        if (window.w3c_slidy) {
-          window.w3c_slidy.add_observer(function (slide_num) {
-            // slide_num starts at position 1
-            fireSlideChanged(null, w3c_slidy.slides[slide_num - 1]);
-          });
-        }
-
-      })();
-    </script>
-
     <script id="quarto-html-after-body" type="application/javascript">
     window.document.addEventListener("DOMContentLoaded", function (event) {
       const toggleBodyColorMode = (bsSheetEl) => {

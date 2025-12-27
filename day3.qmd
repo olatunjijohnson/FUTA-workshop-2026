@@ -5,7 +5,7 @@ format: html
 editor: visual
 ---
 
-## Overview
+# Overview
 
 Today we combine:
 
@@ -16,25 +16,469 @@ Today we combine:
 The goal:\
 Use ML to model complex covariate effects, and INLA/SPDE to model spatial dependence in the residuals.
 
-------------------------------------------------------------------------
+
+## Learning objectives
+
+By the end of Day 3 you should be able to:
+
+- Fit a baseline geostatistical prevalence model with SPDE/inlabru
+- Fit an ML model for the systematic component (covariate-driven signal)
+- Diagnose spatial autocorrelation in residuals
+- Fit a spatial residual model to ML residuals
+- Combine ML + spatial residuals into a single hybrid prediction surface
+- Map predictions and uncertainty clipped to Nigeria
 
 ## Load Day 3 dataset
 
 ```{r}
 library(tidyverse)
-
-hybrid_ml_geo <- read_csv("data/hybrid_ml_geostatistical_data.csv")
-
-head(hybrid_ml_geo)
-```
-
-Visualise ML signal + spatial residuals
-
-```{r}
+library(sf)
 library(ggplot2)
 
-ggplot(hybrid_ml_geo, aes(utm_x, utm_y, colour = ml_signal_true)) +
-geom_point() +
-coord_equal() +
-theme_minimal()
+hybrid_ml_geo <- read_csv("data/hybrid_ml_geostatistical_data.csv")
+head(hybrid_ml_geo)
+
+```
+
+Convert to sf
+
+```{r}
+hybrid_sf <- hybrid_ml_geo |>
+st_as_sf(coords = c("utm_x","utm_y"), crs = 32632)
+```
+
+# Part 1 — Baseline: purely geostatistical model 
+
+Model
+$$Y_i | p_i = \text{Binomial}(N_i,p_i), \quad \text{logit}(p_i) = \beta_0 + \beta^\top x_i + S(s_i).$$
+This is the “standard” MBG model:
+
+- interpretable
+- principled uncertainty
+- but limited if covariate effects are highly nonlinear
+
+
+## Build SPDE mesh
+
+```{r}
+library(INLA)
+library(inlabru)
+
+mesh <- inla.mesh.2d(
+loc = st_coordinates(hybrid_sf),
+max.edge = c(80000, 250000),
+cutoff   = 20000,
+offset   = c(100000, 200000)
+)
+
+plot(mesh)
+points(st_coordinates(hybrid_sf), pch = 16, cex = 0.4, col = "red")
+
+```
+
+
+## Define SPDE prior (PC priors)
+
+```{r}
+spde <- inla.spde2.pcmatern(
+mesh = mesh,
+prior.range = c(300000, 0.5),
+prior.sigma = c(1, 0.5)
+)
+```
+
+## Fit baseline geostatistical model
+
+```{r}
+hybrid_dat <- hybrid_sf |>
+mutate(y = n_pos, n = n_tested)
+
+cmp_base <- y ~ 1 + elevation + ndvi + urban +
+field(geometry, model = spde)
+
+fit_base <- bru(
+components = cmp_base,
+family = "binomial",
+data = hybrid_dat,
+Ntrials = hybrid_dat$n
+)
+
+summary(fit_base)
+```
+
+# Part 2 — ML systematic component (explain covariates flexibly)
+
+## Why ML? 
+
+Classical linear terms assume:
+
+$$\eta(s) = \beta_0 + \beta_1 \text{ndvi} + \beta_2 \text{elev} + \beta_3 \text{urban}$$
+But in practice:
+
+- nonlinear responses (e.g., risk peaks at intermediate NDVI)
+- interactions (e.g., urban × elevation)
+
+ML models are good at learning this.
+
+
+## Target for ML
+
+We want ML to model the systematic component. There are two common choices: 
+A) ML on prevalence and B) ML on the transformed prevalence 
+(empirical logit transformation). We will use B in
+this tutorial. There are many other transformations that can be considered. Hence,
+we can create a pseudo-response: 
+$$\tilde{\eta}_i = \text{log}\left(\frac{y_i + 0.5}{n-y +0.5}\right)$$
+
+Then e will use ML to predict $\tilde{\eta}_i$
+
+
+## Create ML training response (logit-prevalence)
+
+```{r}
+ml_df <- hybrid_ml_geo |>
+mutate(
+prev_obs = n_pos / n_tested,
+eta_obs = log((n_pos + 0.5) / (n_tested - n_pos + 0.5))  
+)
+
+summary(ml_df$eta_obs)
+```
+
+## Train/test split
+
+```{r}
+set.seed(123)
+idx <- sample(seq_len(nrow(ml_df)), size = floor(0.8 * nrow(ml_df)))
+
+train_df <- ml_df[idx, ]
+test_df  <- ml_df[-idx, ]
+```
+
+
+## ML model 1: Random Forest (quick baseline)
+
+```{r}
+library(ranger)
+
+rf_fit <- ranger(
+eta_obs ~ elevation + ndvi + urban,
+data = train_df,
+num.trees = 500,
+importance = "impurity"
+)
+
+rf_fit
+```
+
+## Evaluate RF performance
+
+```{r}
+test_pred_rf <- predict(rf_fit, data = test_df)$predictions
+
+rmse_rf <- sqrt(mean((test_pred_rf - test_df$eta_obs)^2))
+rmse_rf
+
+```
+
+
+## Variable importance (RF)
+
+```{r}
+sort(rf_fit$variable.importance, decreasing = TRUE)
+```
+
+
+## ML model 2: XGBoost (often stronger)
+
+```{r}
+library(xgboost)
+
+X_train <- model.matrix(~ elevation + ndvi + urban, train_df)[,-1]
+X_test  <- model.matrix(~ elevation + ndvi + urban, test_df)[,-1]
+
+dtrain <- xgb.DMatrix(data = X_train, label = train_df$eta_obs)
+dtest  <- xgb.DMatrix(data = X_test,  label = test_df$eta_obs)
+
+params <- list(
+  objective = "reg:squarederror",
+  eval_metric = "rmse",
+  eta = 0.05,
+  max_depth = 4,
+  subsample = 0.8,
+  colsample_bytree = 0.9
+)
+
+xgb_fit <- xgb.train(
+  params = params,
+  data = dtrain,
+  nrounds = 400,
+  evals = list(train = dtrain, test = dtest),
+  verbose = 0
+)
+
+test_pred_xgb <- predict(xgb_fit, dtest)
+rmse_xgb <- sqrt(mean((test_pred_xgb - test_df$eta_obs)^2))
+rmse_xgb
+```
+
+
+## Which ML model should we use?
+
+Pick the model with:
+
+- better predictive performance (RMSE)
+- stable behaviour
+- interpretability
+
+For the hybrid pipeline, either is fine. We proceed with RF, 
+but RF works similarly.
+
+
+# Part 3 — Spatial residual modelling of ML residuals
+
+# The key diagnostic question
+
+After ML, compute residuals:
+$$r_i = \tilde{\eta}_i - \hat{m}(x_i),$$
+where $\hat{m}$ is the ML prediction. If $r_i$ shows evidence of spatial correlation,
+then ML has a missing spatial structure. We then model:
+$$r_i = S(s_i) + \epsilon_i.$$
+
+## Compute ML residuals
+
+```{r}
+# ml_pred_all <- predict(
+# xgb_fit,
+# xgb.DMatrix(model.matrix(~ elevation + ndvi + urban, ml_df)[,-1])
+# )
+# 
+# ml_df <- ml_df |>
+# mutate(
+# eta_ml = ml_pred_all,
+# resid_ml = eta_obs - eta_ml
+# )
+# 
+# summary(ml_df$resid_ml)
+
+
+ml_pred_all <- predict(rf_fit, data = ml_df)$predictions
+
+ml_df <- ml_df |>
+  mutate(
+    eta_ml = ml_pred_all,
+    resid_ml = eta_obs - eta_ml
+  )
+
+summary(ml_df$resid_ml)
+
+```
+
+## Variogram of the residual
+
+```{r}
+library(geoR)
+
+coords <- ml_df[, c("utm_x","utm_y")]
+geodata <- as.geodata(
+cbind(coords, ml_df$resid_ml),
+coords.col = 1:2,
+data.col = 3
+)
+
+v <- variog(geodata, max.dist = 600000)
+plot(v, main = "Empirical variogram of ML residuals")
+
+vari.mc <- variog.mc.env(geodata, obj.variog=v, nsim=1000)
+plot(v, envelope.obj=vari.mc, main = "Empirical variogram of ML residuals with envelope")
+```
+	
+## Fit spatial model to residuals (Gaussian likelihood)
+
+Residuals are approximately continuous, so we use:
+
+$$r_i \sim \text{N}(\mu_i, \sigma_\epsilon), \quad \mu_i = S(s_i)$$
+
+This gives a clean two-stage hybrid approach.
+
+## Build sf + mesh for residual model
+
+```{r}
+resid_sf <- ml_df |>
+st_as_sf(coords = c("utm_x","utm_y"), crs = 32632)
+
+mesh_r <- inla.mesh.2d(
+loc = st_coordinates(resid_sf),
+max.edge = c(80000, 250000),
+cutoff   = 20000,
+offset   = c(100000, 200000)
+)
+
+spde_r <- inla.spde2.pcmatern(
+mesh = mesh_r,
+prior.range = c(300000, 0.5),
+prior.sigma = c(1, 0.5)
+)
+```
+
+## Fit spatial residual model in inlabru
+
+```{r}
+cmp_resid <- resid_ml ~ 1 +
+resid_field(geometry, model = spde_r)
+
+fit_resid <- bru(
+components = cmp_resid,
+family = "gaussian",
+data = resid_sf
+)
+
+summary(fit_resid)
+```
+
+
+# Part 4 — Hybrid predictions: ML + spatial residual surface
+
+## Hybrid predictor on logit scale
+
+For any location $s$:
+
+$$\hat{\eta}_\text{hyb} (s) = \hat{m}(x(s)) + \hat{S}(s)$$
+Then the prevalence becomes $$\hat{p}_\text{hyb} (s) = \text{logit}^{-1} (\hat{\eta}_\text{hyb} (s))$$
+
+## Nigeria boundaries and prediction grid
+
+```{r}
+nga_admin1 <- st_read("data/nga_shapefile.shp") 
+nga_poly <- st_union(nga_admin1)
+
+pred_grid_sf <- read_csv("data/prediction_grid_utm.csv") |>
+st_as_sf(coords = c("utm_x","utm_y"), crs = 32632)
+
+# clip grid to Nigeria
+# 
+# inside <- st_within(pred_grid_sf, nga_poly, sparse = FALSE)[,1]
+# pred_grid_sf <- pred_grid_sf[inside, ]
+```
+
+## Step 1: ML predictions on the grid
+
+```{r}
+# Xg <- model.matrix(~ elevation + ndvi + urban, st_drop_geometry(pred_grid_sf))[,-1]
+# pred_grid_sf$eta_ml <- predict(xgb_fit, xgb.DMatrix(Xg))
+
+pred_grid_sf$eta_ml <- predict(rf_fit, data = st_drop_geometry(pred_grid_sf))$predictions
+```
+
+## Step 2: Spatial residual predictions on the grid
+
+```{r}
+pred_resid <- predict(
+fit_resid,
+newdata = pred_grid_sf,
+formula = ~ resid_field,
+n.samples = 200
+)
+
+pred_grid_sf$resid_mean <- pred_resid$mean
+```
+
+
+## Combine into hybrid prevalence
+
+```{r}
+pred_grid_sf$eta_hybrid <- pred_grid_sf$eta_ml + pred_grid_sf$resid_mean
+pred_grid_sf$prev_hybrid <- plogis(pred_grid_sf$eta_hybrid)
+
+summary(pred_grid_sf$prev_hybrid)
+```
+
+## Rasterise + map (clipped to Nigeria)
+
+```{r}
+library(stars)
+
+pred_rast <- st_rasterize(pred_grid_sf["prev_hybrid"], dx = 20000, dy = 20000)
+pred_rast_ng <- pred_rast[nga_poly]
+
+ggplot() +
+geom_stars(data = pred_rast_ng, na.rm = TRUE) +
+geom_sf(data = nga_admin1, fill = NA, colour = "black", linewidth = 0.25) +
+coord_sf(expand = FALSE) +
+scale_fill_viridis_c(name = "Hybrid\nprevalence", na.value = NA) +
+theme_minimal() +
+theme(panel.grid = element_blank(),
+panel.background = element_rect(fill = "white", colour = NA),
+plot.background  = element_rect(fill = "white", colour = NA)) +
+labs(title = "Hybrid ML + spatial residual model (posterior mean)")
+```
+
+
+# Part 5 — Uncertainty (optional but recommended)
+
+# Where does uncertainty come from?
+
+Hybrid model uncertainty includes:
+
+1. ML uncertainty (often ignored unless using Bayesian ML / ensembles)
+2. Spatial residual uncertainty (captured via INLA posterior)
+3. Observation noise and binomial sampling noise
+
+In this workshop we quantify (2).
+
+# Map posterior SD of spatial residual field
+
+```{r}
+pred_grid_sf$resid_sd <- pred_resid$sd
+
+sd_rast <- st_rasterize(pred_grid_sf["resid_sd"], dx = 20000, dy = 20000)[nga_poly]
+
+ggplot() +
+geom_stars(data = sd_rast, na.rm = TRUE) +
+geom_sf(data = nga_admin1, fill = NA, colour = "black", linewidth = 0.25) +
+coord_sf(expand = FALSE) +
+scale_fill_viridis_c(name = "SD(residual)", na.value = NA) +
+theme_minimal() +
+theme(panel.grid = element_blank(),
+panel.background = element_rect(fill = "white", colour = NA),
+plot.background  = element_rect(fill = "white", colour = NA)) +
+labs(title = "Uncertainty in the spatial residual field")
+```
+
+
+
+# Part 6 — Comparison: baseline geostatistical vs hybrid
+
+## Why compare?
+
+Baseline model already uses a spatial field + covariates. Hybrid model changes 
+the systematic part by using ML. 
+
+We compare:
+
+- prediction accuracy (held-out sites)
+- residual spatial structure
+- plausibility of surfaces
+
+## Compare predictive accuracy on held-out data
+
+```{r}
+# baseline fitted values (posterior mean)
+
+base_pred <- predict(
+fit_base,
+newdata = hybrid_dat,
+formula = ~ plogis(Intercept + elevation + ndvi + urban + field)
+)$mean
+
+# hybrid fitted values
+
+hyb_pred <- plogis(ml_df$eta_ml + predict(fit_resid, newdata = resid_sf, formula = ~ resid_field)$mean)
+
+obs_prev <- hybrid_ml_geo$n_pos / hybrid_ml_geo$n_tested
+
+rmse_base <- sqrt(mean((base_pred - obs_prev)^2))
+rmse_hyb  <- sqrt(mean((hyb_pred - obs_prev)^2))
+
+c(rmse_base = rmse_base, rmse_hyb = rmse_hyb)
 ```

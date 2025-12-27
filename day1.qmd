@@ -107,7 +107,7 @@ plot(vari, envelope.obj=vari.mc)
 
 We can see that there is an evidence of spatial correlation because the empirical semi-variogram for the data does not completely lie inside the envelopes, especially at smaller distances.
 
-## 4. Build the SPDE mesh
+## 5. Build the SPDE mesh
 
 The mesh defines the geometry on which the latent spatial field is approximated.
 
@@ -129,7 +129,7 @@ A finer mesh → more accurate, more expensive.\
 A coarser mesh → faster, less precise.\
 We balance cost vs smoothness.
 
-## 5. SPDE model (PC priors)
+## 6. SPDE model (PC priors)
 
 Penalised complexity (PC) priors make spatial models robust and interpretable.
 
@@ -141,7 +141,7 @@ prior.sigma = c(1.0, 0.01)
 )
 ```
 
-## 6. Spatial BINOMIAL model
+## 7. Spatial BINOMIAL model
 
 The model is:
 
@@ -169,7 +169,7 @@ fit_binom <- bru(components_binom, lik_binom)
 summary(fit_binom)
 ```
 
-## 7. Spatial POISSON model
+## 8. Spatial POISSON model
 
 Often used for malaria case counts or incidence.
 
@@ -195,7 +195,7 @@ summary(fit_pois)
 
 ```
 
-## 8. Predictive surfaces (binomial example)
+## 9. Predictive surfaces (binomial example)
 
 ```{r}
 pred_grid <- read_csv("data/prediction_grid_utm.csv") %>%
@@ -232,7 +232,7 @@ ggplot() +
   )
 ```
 
-## 9. Exceedance probability (binomial)
+## 10. Exceedance probability (binomial)
 
 Goal:
 
@@ -311,7 +311,7 @@ scale_colour_viridis_c(name="Prevalence") +
 theme_minimal()
 ```
 
-## 11. Spatio-temporal components - sum of a purely spatial and a purely temporal trend.
+## 12. Spatio-temporal components - sum of a purely spatial and a purely temporal trend.
 
 Use: - RW1 for time - SPDE for space - Additive interaction
 
@@ -345,7 +345,7 @@ fit_st_binom <- bru(components_st, lik_st)
 summary(fit_st_binom)
 ```
 
-## 12. Spatio-temporal components - Inseparable covariance function
+## 13. Spatio-temporal components - Inseparable covariance function
 
 Use: - Exchageable for time - SPDE for space - interaction
 
@@ -377,7 +377,7 @@ fit_st_binom2 <- bru(components_st2, lik_st2)
 summary(fit_st_binom2)
 ```
 
-## 12. Predict spatio-temporal prevalence (example: time = 7)
+## 14. Predict spatio-temporal prevalence (example: time = 7)
 
 Here we used the sum of purely spatial and purely temporal process for prediction at time 7.
 

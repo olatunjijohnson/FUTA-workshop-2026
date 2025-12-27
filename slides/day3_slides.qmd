@@ -1,57 +1,505 @@
 ---
 title: "Day 3 – Hybrid Machine Learning + Geostatistics"
+author: "Olatunji Johnson"
+bibliography: references.bib
+
 format:
   revealjs:
     theme: simple
     slide-number: true
-    toc: true
+    toc: false
+
   beamer:
-    theme: default        # Madrid works nicely; you can change later
+    theme: default
     aspectratio: 169
-    header-includes: |
-      \usepackage{graphicx}
-      \usepackage{xcolor}
-
-      % UoM-style purple (change hex if you have exact brand colour)
-      \definecolor{uomPurple}{HTML}{6A1B9A}
-      \setbeamercolor{structure}{fg=uomPurple}
-      \setbeamercolor{title}{fg=uomPurple}
-      \setbeamercolor{frametitle}{fg=uomPurple}
-
-      % Define the logo (file must be in the same folder as the .qmd/.tex)
-      \newcommand{\uomlogo}{\includegraphics[height=1cm]{uom_logo.pdf}}
-
-      % Force logo into the top-right of every slide
-      \setbeamertemplate{headline}{%
-        \leavevmode%
-        \hbox{%
-          \begin{beamercolorbox}[wd=\paperwidth,ht=1.2cm]{}
-            \hfill\uomlogo\hspace{0.5cm}
-          \end{beamercolorbox}%
-        }%
-      }
-
-      % Optional: add a bit of vertical space so the frametitle
-      % doesn't clash with the custom header
-      % \addtobeamertemplate{frametitle}{}{%
-      %  \vspace*{0.3cm}%
-      % }
+    include-in-header: beamer-header.tex
 ---
 
-## Today’s Goal
+# Overview
 
-Integrate:
+::: {.smaller}
 
-- Machine learning  
-- Spatial geostatistics  
-- Hybrid prediction modelling  
+## What Day 3 is about
+
+We want **high-quality malaria prevalence maps** using:
+
+- **Machine learning** to learn complex covariate effects  
+- **Geostatistics** to model residual spatial dependence  
+- **INLA/SPDE** to quantify uncertainty efficiently  
+
+The main idea:
+
+$$
+\text{Observed data} \approx \underbrace{\text{Complex covariate signal}}_{\text{ML}} + \underbrace{\text{Residual spatial structure}}_{\text{SPDE/INLA}}
+$$
+
+We will:
+
+- let **ML** learn flexible, nonlinear covariate effects
+- let **SPDE/INLA** capture remaining **spatial dependence**
+
+:::
+
+## Why hybrid ML + geostatistics?
+
+In practice, malaria risk depends on covariates in complicated ways:
+
+- nonlinear responses (e.g., NDVI has an “optimal” range)  
+- interactions (urban × elevation, rainfall × temperature)  
+- thresholds and saturation
+
+ML models handle these patterns well.
+
+But ML typically **does not** provide:
+
+- explicit spatial dependence modelling  
+- coherent spatial uncertainty quantification  
+
+So we combine them.
+
+::: {.smaller}
+
+## Learning objectives
+
+By the end of Day 3 you should be able to:
+
+- Build a hybrid model: **ML mean + spatial residual field**  
+- Explain how RF/XGBoost learn nonlinearities and interactions  
+- Diagnose spatial autocorrelation in ML residuals (e.g., variogram)  
+- Explain what uncertainty the spatial residual model contributes  
+- Produce posterior mean + uncertainty maps (clipped to Nigeria)  
+- Compare baseline geostatistical vs hybrid predictive performance  
+
+:::
+
+# Part 0 — Data and notation
+
+::: {.smaller}
+
+## Data structure (prevalence surveys)
+
+At locations  $s_i$, we observe:
+
+- $Y_i$: number positive
+- $N_i$: number tested
+
+$$Y_i∣p(s_i) \sim \text{Binomial}(N_i,p(s_i))$$
+We work on the linear predictor scale:
+
+$$\eta(s)=\text{logit}\{p(s)\}$$
+:::
+
+::: {.smaller}
+
+## Hybrid modelling target
+
+We decompose the linear predictor as:
+
+$$\eta(s)=m(x(s))+S(s)+ϵ(s)$$
+
+
+- $x(s)$: covariates at s(NDVI, elevation, urban, …)
+- $m(x(s))$: ML mean function (nonlinear, interactions)
+- $S(s)$: spatial residual field (Matérn SPDE / INLA)
+- $\epsilon(s)$: small-scale noise / nugget (optional)
+
+We will estimate:
+
+- $m(\cdot)$ using RF (or XGBoost)
+- $S(\cdot)$ using SPDE + INLA/inlabru
+
+:::
+
+## Why work on the logit scale?
+
+Directly fitting ML on $Y_i/N_i$ is possible, but:
+
+- proportions are heteroskedastic
+- 0’s and 1’s are problematic
+
+We use an empirical logit transform:
+
+$$\tilde{\eta_i} =\log\left(\frac{Y_i+0.5}{(N_i−Y_i)+0.5}\right)$$
+
+This stabilises extremes and matches the binomial model scale.
+
+#  Part 1 — Baseline model (reference point)
+
+::: {.smaller}
+
+## Baseline model (geostatistics only)
+
+We already covered MBG/SPDE in Day 1, so here it’s a reference:
+
+$$Y_i∣p(s_i) \sim \text{Binomial}(N_i,p(s_i))$$
+
+$$\text{logit}\{p(s)\} = m(x(s))+S(s)+ϵ(s) $$
+
+### Strengths
+
+- coherent uncertainty
+- explicit spatial dependence
+
+### Limitation
+
+- covariate effects often too rigid (linear terms)
+
+:::
+
+## Baseline workflow (conceptual)
+
+- Build mesh
+- Specify SPDE priors (range, $\sigma$)
+- Fit binomial model
+- Predict $p(s)$ on a grid
+- Map mean + uncertainty
+
+(We will compare this to the hybrid later.)
+
+
+# Part 2 — Machine learning for  m(x)
+
+::: {.smaller}
+
+## What ML is doing here
+
+We treat ML as a flexible estimator of the systematic component:
+
+$$m(x) \approx E\{\eta(s)∣x(s)=x\}$$
+ML learns:
+
+- nonlinearities
+- interactions
+- splitting rules / ensembles
+
+Then we compute residuals:
+
+$$r_i=\tilde{\eta_i}−\hat{m}(x_i)$$
+
+If $r_i$ is spatially correlated → we need a spatial residual model. If not???
+
+:::
+
+::: {.smaller}
+
+## Random Forest: core idea
+
+A Random Forest is an ensemble of regression trees.
+
+Each tree partitions covariate space into regions and predicts a constant:
+
+$$\hat{m}_b(x)= \sum_{k=1}^{K_b} c_{bk} 1 (x \in R_{bk})$$
+
+Forest prediction is the average:
+
+$$\hat{m}_{RF}(x)= \frac{1}{B} \sum_{b=1}^{B} \hat{m}_b(x)$$
+
+Two sources of randomness:
+
+- bootstrap sample (bagging)
+- random subset of covariates at each split
+
+This reduces variance and stabilises predictions.
+
+:::
+
+::: {.smaller}
+
+## RF captures nonlinearities and interactions automatically
+
+Example intuition:
+
+- If risk increases with NDVI up to a point then decreases,
+a tree can split NDVI into intervals to capture that.
+- Interactions appear naturally:
+    - split on NDVI first, then urban
+    - different NDVI effects depending on urban class
+
+No explicit interaction terms required.
+
+:::
+
+::: {.smaller}
+
+# RF model uncertainty: what it is and isn’t
+
+RF offers some uncertainty tools:
+
+- variability across trees
+- quantile regression forests
+- conformal prediction
+
+But a standard RF fit does not produce a coherent spatial posterior.
+
+In this workshop:
+
+- we use RF mainly to get a strong mean function $m(x)$
+- we rely on INLA/SPDE to quantify spatial residual uncertainty
+
+:::
+
+::: {.smaller}
+
+## XGBoost: how it differs (high-level)
+
+XGBoost uses boosting rather than bagging.
+
+Model is additive:
+
+$$\hat{m}(x)= \sum_{t=1}^{T}f_t(x)$$
+
+where each $f_t$ is a tree that corrects errors of the previous ensemble.
+
+It often achieves higher accuracy but:
+
+- requires careful tuning (depth, learning rate, early stopping)
+- uncertainty is not “Bayesian” by default
+
+Note that RF is often more transparent.
+
+:::
+
+## Model selection in this context
+
+We pick ML model based on:
+
+- predictive performance (RMSE on $\tilde{\eta}$)
+- stability / robustness
+- interpretability
+
+Hybrid modelling is not “RF vs XGB” as a philosophy:
+
+- it’s ML for mean + spatial model for residual dependence
+
+
+# Part 3 — Diagnosing spatial structure after ML
+
+## Key diagnostic question
+
+After ML, compute residuals:
+
+$$r_i=\eta_i−\hat{m}(x_i)$$
+
+If $r_i$ is spatially correlated, ML has not captured all structure.
+
+Then we fit:
+
+$$r_i=S(s_i)+\epsilon_i, \quad \epsilon_i∼N(0,\sigma^2_\epsilon)$$
+
+This is a clean and interpretable hybrid decomposition.
 
 ---
 
-## Load Data
+## Variogram for ML residuals
 
-```{r}
-library(readr)
-hybrid_ml_geo <- read_csv("../data/hybrid_ml_geostatistical_data.csv")
-head(hybrid_ml_geo)
-```
+Empirical variogram:
+
+$$\hat{\gamma}(u)= \frac{1}{2|N(u)|} \sum_{(1,j) \in N(u)} (r_i−r_j)^2$$
+
+Interpretation:
+
+- increasing variogram → decreasing correlation with distance
+- near-zero at small distances → strong local similarity
+
+---
+
+## Permutation envelope (quick test)
+
+Procedure:
+
+1. permute residuals across locations
+2. compute variogram
+3. repeat many times
+4. build 95% envelope
+
+If observed variogram lies outside envelope → evidence of spatial correlation.
+
+This justifies adding the spatial residual field $S(s)$.
+
+
+
+# Part 4 — Spatial residual model (what INLA adds)
+
+::: {.smaller}
+
+## Spatial residual model (Gaussian)
+
+Residuals are approximately continuous:
+
+$$r_i∣S(s_i) \sim N(S(s_i),\sigma^2)$$
+
+$$S(s)∼Matern SPDE$$
+
+
+Outputs we get from INLA:
+
+- posterior mean of $S(s)$
+- posterior sd of $S(s)$
+- posterior of hyperparameters (range, $\sigma$)
+- fast prediction on dense grids
+
+This is where the hybrid gets principled spatial uncertainty.
+
+:::
+
+## Why modelling residuals works well
+
+If ML captures most covariate structure, residual field:
+
+- is “simpler” (closer to stationary Matérn)
+- has smaller variance
+- focuses purely on spatial dependence
+
+This often improves:
+
+- realism of maps
+- predictive performance
+- interpretability (covariate vs spatial structure)
+
+
+# Part 5 — Hybrid prediction and uncertainty
+
+## Hybrid predictor
+
+At a new location $s$:
+
+$$\eta_{hyb}(s)=\hat{m}(x(s))+\hat{S}(s)$$
+
+Convert back to prevalence:
+
+$$\hat{p}_{hyb}(s)=\text{logit}^{−1}(\eta_{hyb}(s))$$
+
+---
+
+## What uncertainty does the hybrid provide?
+
+In principle there are three components:
+
+1. Binomial sampling noise (from $Y∣p$)
+2. Spatial residual uncertainty (from INLA: $S(s)$)
+3. ML uncertainty (from learning $m(x)$)
+
+In this workshop, we quantify (2) very clearly, and discuss how to extend to (3).
+
+
+---
+
+## Spatial residual uncertainty (what we can map)
+
+INLA gives:
+
+$$S(s)∣data \approx \text{posterior with mean and sd}$$
+
+So we can map:
+
+- $E\{S(s)∣y\}$
+- $\text{sd}\{S(s)∣y\}$
+
+Propagation to prevalence (approx):
+
+- uncertainty in $\eta$ transforms through logistic curve
+
+
+::: {.smaller}
+
+## Why the hybrid improves uncertainty communication
+
+Baseline geostatistical model uncertainty mixes:
+
+- covariate uncertainty (via linear model)
+- spatial field uncertainty
+
+Hybrid separates sources more clearly:
+
+- ML explains systematic covariate-driven pattern
+- SPDE explains leftover spatial dependence + uncertainty
+
+So we can say:
+
+- “This area is uncertain because spatial residuals are uncertain rather than 
+the model is uncertain for unclear reasons”.
+
+:::
+
+::: {.smaller}
+
+## How to incorporate ML uncertainty (extensions)
+
+If you want full hybrid uncertainty you can add ML uncertainty via:
+
+- RF variance / ensembles: train RF many times, treat predictions as draws
+- Quantile regression forests
+- Bayesian additive regression trees (BART) (Bayesian ML)
+- Conformal prediction on $m(x)$
+
+Then combine:
+
+$$\eta^{(b)}(s)=m^{(b)}(x(s))+S^{(b)}(s)$$
+
+This yields full predictive intervals for prevalence.
+
+:::
+
+# Part 6 — Comparison to baseline
+
+## What changes compared to baseline?
+
+Baseline:
+
+$$\eta(s)=\beta_0+ \beta^\top x(s)+S(s)$$
+
+Hybrid:
+
+$$\eta(s)=m(x(s))+S(s)$$
+
+So differences are entirely in how we model the systematic component:
+
+- linear predictor vs flexible ML predictor
+
+---
+
+## What should improve?
+
+Hybrid often improves:
+
+- predictive accuracy (RMSE / log score)
+- realism of covariate-response relationships
+- interpretability of residual spatial signal
+- robustness when covariate effects are highly nonlinear
+
+But hybrid can fail if:
+
+- ML overfits
+- covariates shift out-of-distribution at prediction locations
+- residual model is mis-specified
+
+---
+
+## A practical evaluation checklist
+
+1. Does ML reduce residual spatial structure?
+    - compare variograms (pre-ML vs post-ML residuals)
+
+2. Does hybrid improve held-out prediction?
+    - RMSE on prevalence or logit-prevalence
+
+3. Are maps plausible?
+    - no obvious artefacts, aligned with known epidemiology
+
+4. Is uncertainty meaningful?
+    - higher in sparse regions, lower in data-rich areas
+    
+---
+
+## Where to go next (research directions)
+
+Full Bayesian hybrid:
+
+- BART + SPDE
+- Bayesian deep learning + spatial random effects
+- Joint models with multiple outcomes + ML mean functions
+- Nonstationary residual fields (Day 2 ideas + ML)
+
+Spatio-temporal hybrids (Bamidele Toba):
+
+$$\eta(s,t)=m(x(s,t))+S(s,t)$$

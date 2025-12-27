@@ -11,7 +11,7 @@ execute:
   message: false
 ---
 
-## Overview
+# Overview
 
 Today we will cover two key advanced topics in spatial modelling:
 
@@ -27,7 +27,7 @@ Today we will cover two key advanced topics in spatial modelling:
 
 ------------------------------------------------------------------------
 
-## Load Day 2 datasets
+## 1. Load Day 2 datasets
 
 ```{r}
 library(tidyverse)
@@ -57,7 +57,7 @@ nonstat_malaria_sf <- nonstat_malaria %>%
   st_as_sf(coords = c("utm_x", "utm_y"), crs = 32632)
 ```
 
-Quick visualisation
+## 3. Quick visualisation
 
 ```{r}
 ggplot() +
@@ -84,7 +84,7 @@ theme_minimal()
 
 ============================================================
 
-1.  Create a single stacked dataset
+## 4.  Create a single stacked dataset
 
 We will model both groups jointly with: - one shared spatial field - one group-specific spatial field (replicated by group)
 
@@ -99,7 +99,7 @@ n = n_tested
 levels(joint_dat$group)
 ```
 
-2.  Build SPDE mesh
+## 5.  Build SPDE mesh
 
 ```{r}
 locs_joint <- joint_malaria_sf
@@ -115,7 +115,7 @@ plot(mesh_joint)
 points(st_coordinates(locs_joint), pch = 16, cex = 0.4, col= "red")
 ```
 
-3.  Define SPDEs (shared + group-specific)
+## 6.  Define SPDEs (shared + group-specific)
 
 -   spde_shared: one latent field for all data
 -   spde_group: replicated field with one replicate per group
@@ -134,7 +134,7 @@ prior.sigma = c(1, 0.5)
 )
 ```
 
-4.  Fit joint model in inlabru
+## 7.  Fit joint model in inlabru
 
 Model:
 
@@ -161,7 +161,7 @@ options = list(control.compute = list(dic = TRUE, waic = TRUE))
 summary(fit_joint)
 ```
 
-5.  Prediction grid inside Nigeria (UTM)
+## 8.  Prediction grid inside Nigeria (UTM)
 
 ```{r}
 # make_grid_utm <- function(polygon_utm, dx = 20000) {
@@ -188,7 +188,7 @@ st_as_sf(coords=c("utm_x","utm_y"), crs=32632)
 head(pred_grid_joint)
 ```
 
-6.  Predict for each group and map
+## 9.  Predict for each group and map
 
 ```{r}
 pred_joint <- predict(
@@ -205,7 +205,7 @@ rename(prev_mean = mean)
 head(pred_joint_sf)
 ```
 
-7.  Raster map per group (clipped to Nigeria)
+## 10.  Raster map per group (clipped to Nigeria)
 
 ```{r}
 pred_joint_map <- function(group_name, dx = 20000) {
@@ -236,7 +236,7 @@ pred_joint_map("pregnant_women")
 
 ============================================================
 
-1)  Prepare the two datasets and create the mesh
+## 11.  Prepare the two datasets and create the mesh
 
 Here we used the binomial and poisson malaria data: - spatial_binom with n_pos, n_tested - spatial_pois with cases, population
 
@@ -285,7 +285,7 @@ mesh_joint <- inla.mesh.2d(
 plot(mesh_joint); points(all_coords, pch = 16, cex = 0.4, col="red")
 ```
 
-2)  Shared + likelihood-specific spatial fields
+## 12.  Shared + likelihood-specific spatial fields
 
 ```{r}
 spde_shared <- inla.spde2.pcmatern(
@@ -307,7 +307,7 @@ spde_pois <- inla.spde2.pcmatern(
 )
 ```
 
-3)  Fit a multi-likelihood model in inlabru
+## 13.  Fit a multi-likelihood model in inlabru
 
 Key idea: use like() twice, and call bru() once.
 
@@ -349,7 +349,7 @@ fit_multi <- bru(
 summary(fit_multi)
 ```
 
-4)  Predict (example: prevalence surface from the binomial part)
+## 14.  Predict (example: prevalence surface from the binomial part)
 
 ```{r}
 pred_grid <- read_csv("data/prediction_grid_utm.csv") %>%
@@ -392,7 +392,7 @@ ggplot() +
 
 This is a simple, teachable non-stationary construction.
 
-1.  Prepare data and a mesh
+## 15.  Prepare data and a mesh
 
 ```{r}
 ns_dat <- nonstat_malaria |>
@@ -414,7 +414,7 @@ plot(mesh_ns)
 points(st_coordinates(locs_ns), pch = 16, cex = 0.4, col= "red")
 ```
 
-2.  Two SPDEs: smooth and rough
+## 15.  Two SPDEs: smooth and rough
 
 ```{r}
 spde_smooth <- inla.spde2.pcmatern(
@@ -430,7 +430,7 @@ prior.sigma = c(1, 0.5)
 )
 ```
 
-3.  Build a spatially varying weight w(s)
+## 16.  Build a spatially varying weight w(s)
 
 Define w(s) as a simple function of northing (utm_y). (You can later replace this with a covariate surface.)
 
@@ -445,7 +445,7 @@ w = pmin(pmax(w, 0), 1)
 head(ns_dat)
 ```
 
-4.  Fit non-stationary mixture model
+## 17.  Fit non-stationary mixture model
 
 We model:
 
@@ -470,7 +470,7 @@ options = list(control.compute = list(dic = TRUE, waic = TRUE))
 summary(fit_ns)
 ```
 
-5.  Predict and map (clipped to Nigeria)
+## 18.  Predict and map (clipped to Nigeria)
 
 ```{r}
 pred_grid_ns <- read_csv("data/prediction_grid_utm.csv") %>% 
@@ -498,7 +498,7 @@ plot.background  = element_rect(fill = "white", colour = NA)) +
 labs(title = "Non-stationary mixture model: posterior mean prevalence")
 ```
 
-6.  (Optional) Visualise the weight surface $\omega(s)$
+## 19.  (Optional) Visualise the weight surface $\omega(s)$
 
 ```{r}
 w_rast <- st_rasterize(pred_ns_sf["w"], dx = 20000, dy = 20000)[st_union(nga_admin1)]
@@ -523,7 +523,7 @@ labs(title = "Spatially varying weight w(s): smooth (north) → rough (south)")
 
 Here we make the SPDE range depend on a covariate at the mesh vertices by modelling log(kappa(s)) as: $$\log(\kappa(s)) = \theta_0 + \theta_1 z(s)$$ and since range(s) = $\sqrt(8)/\kappa(s)$, this gives a spatially varying range.
 
-1)  Mesh + vertex covariate
+## 20.  Mesh + vertex covariate
 
 Use something interpretable like northing (y) or a “ecological gradient”.
 
@@ -551,7 +551,7 @@ B_tau <- matrix(1, nrow = nrow(B_kappa), ncol = 1)
 
 ```
 
-2)  Build B.tau / B.kappa with 4 columns
+## 21.  Build B.tau / B.kappa with 4 columns
 
 Here we use the Lindgren/Rue parameterisation.
 
@@ -573,7 +573,7 @@ B_kappa <- cbind(logkappa0, 0,  -1, -1 * z_vert)
 
 
 
-3)  Build a non-stationary SPDE using inla.spde2.matern
+## 22.  Build a non-stationary SPDE using inla.spde2.matern
 
 We specify priors for the theta parameters. (These are on log-scales internally.)
 
@@ -588,7 +588,7 @@ spde_ns <- inla.spde2.matern(
 )
 ```
 
-4)  Fit binomial model with this structured-range SPDE
+## 23.  Fit binomial model with this structured-range SPDE
 
 ```{r}
 
@@ -607,7 +607,7 @@ fit_ns_struct <- bru(
 summary(fit_ns_struct)
 ```
 
-5)  Predict and map
+## 24.  Predict and map
 
 ```{r}
 pred_ns_sf <- predict(fit_ns_struct, newdata = pred_grid_ns, n.samples = 200, 
@@ -635,7 +635,7 @@ ggplot() +
   )
 ```
 
-## Summary (Day 2)
+# Summary (Day 2)
 
 Joint model: shared + group-specific spatial structure, two outcomes in one model
 
