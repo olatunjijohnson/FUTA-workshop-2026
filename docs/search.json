@@ -585,7 +585,7 @@
     "href": "slides/day1_slides.html#discretising-the-spde",
     "title": "Day 1 – Spatial & Spatio-temporal Modelling",
     "section": "Discretising the SPDE",
-    "text": "Discretising the SPDE\n\nThe spatial domain is discretised using a triangular mesh\nThe continuous field is approximated as: \\[\nS(s) \\approx \\sum_{k=1}^K w_k \\psi_k(x)\n\\] where:\n\\(\\psi_k(x)\\) are basis functions\n\\(w_k\\) are random weights\n\nLocal support of basis functions ⇒ sparsity"
+    "text": "Discretising the SPDE\n\nThe spatial domain is discretised using a triangular mesh\nThe continuous field is approximated as: \\[\nS(s) \\approx \\sum_{k=1}^K w_k \\psi_k(s)\n\\] where:\n\\(\\psi_k(s)\\) are basis functions\n\\(w_k\\) are random weights\n\nLocal support of basis functions ⇒ sparsity"
   },
   {
     "objectID": "slides/day1_slides.html#from-grf-to-gmrf",

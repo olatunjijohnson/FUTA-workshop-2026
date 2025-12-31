@@ -790,11 +790,11 @@ prior.sigma = c(s0, p)   # P(sigma > s0) = p
 - The spatial domain is discretised using a **triangular mesh**
 - The continuous field is approximated as:
   $$
-  S(s) \approx \sum_{k=1}^K w_k \psi_k(x)
+  S(s) \approx \sum_{k=1}^K w_k \psi_k(s)
   $$
 where:
 
-- $\psi_k(x)$ are basis functions
+- $\psi_k(s)$ are basis functions
 - $w_k$ are random weights
 
 Local support of basis functions ⇒ sparsity
