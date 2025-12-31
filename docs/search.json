@@ -277,7 +277,7 @@
     "href": "slides/day1_slides.html#about-me",
     "title": "Day 1 – Spatial & Spatio-temporal Modelling",
     "section": "About me",
-    "text": "About me\n\nCompleted a Bachelor’s degree in Statistics at FUTA\nMaster’s in Mathamatical Sciences at AIMS-Tanzania\nPhD in Statistics and Epidemiology at University of Lancaster\nPostdoc at University of Manchester\nLecturer in Statistics at the University of Manchester"
+    "text": "About me\n\nCompleted a Bachelor’s degree in Statistics at FUTA\nMaster’s in Mathamatical Sciences at AIMS-Tanzania\nPhD in Statistics and Epidemiology at University of Lancaster\nPostdoc at University of Lancaster\nLecturer in Statistics at the University of Manchester"
   },
   {
     "objectID": "slides/day1_slides.html#overview-of-the-3-days",
@@ -550,7 +550,7 @@
     "href": "slides/day1_slides.html#from-covariance-to-spde",
     "title": "Day 1 – Spatial & Spatio-temporal Modelling",
     "section": "From covariance to SPDE",
-    "text": "From covariance to SPDE\nA key result (Whittle, 1954):\nA Matérn GRF is the solution to the SPDE: \\[\n(\\kappa^2 - \\Delta)^{\\alpha/2} S(s)\n= \\mathcal{W}(x),\n\\]\nwhere:\n\n\\(\\Delta\\) is the Laplacian operator\n\\(\\mathcal{W}(x)\\) is Gaussian white noise\nParameters \\((\\kappa, \\alpha)\\) control range and smoothness"
+    "text": "From covariance to SPDE\nA key result (Whittle, 1954):\nA Matérn GRF is the solution to the SPDE: \\[\n(\\kappa^2 - \\Delta)^{\\alpha/2} S(s)\n= \\mathcal{W}(s),\n\\]\nwhere:\n\n\\(\\Delta\\) is the Laplacian operator\n\\(\\mathcal{W}(s)\\) is Gaussian white noise\nParameters \\((\\kappa, \\alpha)\\) control range and smoothness"
   },
   {
     "objectID": "slides/day1_slides.html#matérn-parameters-vs-spde-parameters",

@@ -27,7 +27,7 @@ format:
 -   Completed a Bachelor's degree in Statistics at FUTA
 -   Master's in Mathamatical Sciences at AIMS-Tanzania
 -   PhD in Statistics and Epidemiology at University of Lancaster
--   Postdoc at University of Manchester
+-   Postdoc at University of Lancaster
 -   Lecturer in Statistics at the University of Manchester
 
 
@@ -707,13 +707,13 @@ A key result (Whittle, 1954):
 A Matérn GRF is the solution to the SPDE:
 $$
 (\kappa^2 - \Delta)^{\alpha/2} S(s)
-= \mathcal{W}(x),
+= \mathcal{W}(s),
 $$
 
 where:
 
 - $\Delta$ is the Laplacian operator
-- $\mathcal{W}(x)$ is Gaussian white noise
+- $\mathcal{W}(s)$ is Gaussian white noise
 - Parameters $(\kappa, \alpha)$ control range and smoothness
 
 
