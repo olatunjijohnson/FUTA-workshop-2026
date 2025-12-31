@@ -25,7 +25,8 @@ website:
             text: Day 3 slides
       - href: data.zip
         text: Download data
-
+      - href: practice_ex.qmd
+        text: Workshop practice
 format:
   html:
     theme: cosmo

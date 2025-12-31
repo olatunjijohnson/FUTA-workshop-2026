@@ -1,6 +1,6 @@
 ---
 title: "Geostatistical Modelling with inlabru"
-author: "Olatunji Johnson"
+author: "Dr Olatunji Johnson"
 format: html
 editor: visual
 ---

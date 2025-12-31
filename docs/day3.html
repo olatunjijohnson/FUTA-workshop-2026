@@ -190,6 +190,10 @@ window.Quarto = {
     <a class="nav-link" href="./data.zip"> 
 <span class="menu-text">Download data</span></a>
   </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="./practice_ex.html"> 
+<span class="menu-text">Workshop practice</span></a>
+  </li>  
 </ul>
           </div> <!-- /navcollapse -->
             <div class="quarto-navbar-tools">
@@ -469,8 +473,8 @@ Posterior summaries for the linear predictor and the fitted values are computed
 </section>
 <section id="target-for-ml" class="level2">
 <h2 class="anchored" data-anchor-id="target-for-ml">Target for ML</h2>
-<p>We want ML to model the systematic component. There are two common choices: A) ML on prevalence and B) ML on the transformed prevalence (empirical logit transformation). We will use B in this tutorial. There are many other transformations that can be considered. Hence, we can create a pseudo-response: <span class="math display">\[\tilde{\eta}_i = \text{log}\left(\frac{y_i + 0.5}{n-y +0.5}\right)\]</span></p>
-<p>Then e will use ML to predict <span class="math inline">\(\tilde{\eta}_i\)</span></p>
+<p>We want ML to model the systematic component. There are two common choices: A) ML on prevalence and B) ML on the transformed prevalence (empirical logit transformation). We will use B in this tutorial. There are many other transformations that can be considered. Hence, we can create a pseudo-response: <span class="math display">\[\tilde{\eta}_i = \text{log}\left(\frac{y_i + 0.5}{n_i -y_i +0.5}\right)\]</span></p>
+<p>Then we will use ML to predict <span class="math inline">\(\tilde{\eta}_i\)</span></p>
 </section>
 <section id="create-ml-training-response-logit-prevalence" class="level2">
 <h2 class="anchored" data-anchor-id="create-ml-training-response-logit-prevalence">Create ML training response (logit-prevalence)</h2>
@@ -614,7 +618,7 @@ R squared (OOB):                  0.3906921 </code></pre>
 <li>stable behaviour</li>
 <li>interpretability</li>
 </ul>
-<p>For the hybrid pipeline, either is fine. We proceed with RF, but RF works similarly.</p>
+<p>For the hybrid pipeline, either is fine. We proceed with RF, but XGBoost works similarly.</p>
 </section>
 </section>
 <section id="part-3-spatial-residual-modelling-of-ml-residuals" class="level1">

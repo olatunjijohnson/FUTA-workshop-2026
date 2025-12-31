@@ -1,0 +1,403 @@
+---
+title: "Practice Exercises"
+subtitle: "Extensions of Geostatistical Modelling with inlabru"
+author: "Olatunji Johnson"
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    number-sections: true
+---
+
+# Introduction
+
+These exercises are designed as **follow-up practice** for the workshop  
+*“Geostatistical Modelling with inlabru”*, using **synthetic onchocerciasis data for Nigeria**.
+
+- All data are in the `oncho_data/` folder and documented in `oncho_data/README.md`.
+- You can download the onchocerciasis practice data as a zip: [Onchocerciasis practice data (ZIP)](oncho_data.zip)
+- The data are documented in: [`oncho_data/README.md`](oncho_data/README.md)
+- You **do not** need the simulation code.
+- Many tasks are **extensions** of what was taught in the workshop.  
+- They are marked as **Extension** and may require you to combine ideas,
+  check documentation, or be creative in your modelling.
+
+You are encouraged to:
+
+- Work in small groups,
+- Document your modelling choices,
+- Compare different model specifications,
+- Reflect on model assumptions and limitations.
+
+You will use the following files:
+
+- Day 1:  
+  - `spatial_oncho_binomial_data.csv`  
+  - `spatial_oncho_poisson_data.csv`  
+  - `spatiotemporal_oncho_binomial_data.csv`
+
+- Day 2:  
+  - `joint_oncho_processes.csv`  
+  - `nonstationary_oncho_data.csv`  
+  - (Optionally) `spatial_oncho_poisson_data.csv` for multi-likelihood extensions
+
+- Day 3:  
+  - `hybrid_ml_geostatistical_oncho_data.csv`  
+  - `oncho_prediction_grid_utm.csv`
+
+---
+
+# Day 1 – Spatial & Spatio-Temporal Modelling (Onchocerciasis)
+
+## 1.1 Getting started with the spatial binomial data
+
+Use: `data/spatial_oncho_binomial_data.csv`.
+
+**Tasks**
+
+1. Load the data and inspect:
+
+   - Plot locations (`utm_x`, `utm_y`) on a map (optionally overlay `nga_shapefile`).
+   - Summarise `n_examined`, `n_pos`, and empirical prevalence.
+
+2. Fit a **non-spatial** binomial model:
+
+   - Response: `n_pos` / `n_examined`.  
+   - Predictors: at least `river_index`, `north_index`, `elevation`, `ndvi`, `urban`,
+     and 1–2 others of your choice (`rainfall`, `temperature`, `pop_density`).
+
+3. Inspect model residuals:
+
+   - Map residuals.
+   - Compute an empirical variogram of residuals.
+
+4. Fit a **spatial binomial** model in inlabru:
+
+   - Use UTM coordinates to build a mesh and SPDE model.
+   - Include the same fixed effects as in (2), plus a spatial random field.
+
+5. Compare:
+
+   - How do coefficient estimates and uncertainties change when you add the spatial field?
+   - Does the spatial field capture meaningful residual structure?
+
+**Extension A (not taught explicitly)**  
+
+6. Fit a binomial model with a **non-standard link** (e.g., complementary log–log) and compare:
+
+   - Does this change the interpretation of covariate effects?
+   - How do fitted probabilities change in high-risk vs low-risk areas?
+
+---
+
+## 1.2 Mesh design and sensitivity
+
+Use: `spatial_oncho_binomial_data.csv`.
+
+**Tasks**
+
+1. Construct **two different meshes**:
+
+   - Mesh 1: coarser (fewer nodes, larger max edge).  
+   - Mesh 2: finer (more nodes, smaller max edge, better boundary resolution).
+
+2. Fit the same spatial binomial model under both meshes.
+
+3. Compare:
+
+   - Posterior range and marginal variance of the spatial field.
+   - Predicted prevalence surface on a grid (using `oncho_prediction_grid_utm.csv`).
+   - Computation time and stability.
+
+**Extension B (not taught explicitly)**  
+
+4. Experiment with **different PC priors** for range and marginal standard deviation:
+
+   - Make range smaller vs larger a priori.  
+   - Discuss how prior choices influence the spatial field and predictions.
+
+---
+
+## 1.3 Spatial Poisson incidence model
+
+Use: `spatial_oncho_poisson_data.csv`.
+
+**Tasks**
+
+1. Fit a **Poisson spatial model**:
+
+   - Response: `cases`, offset: `log(population)`.  
+   - Predictors: at least `river_index`, `north_index`, `ndvi`, `rainfall`, `temperature`,
+     and 1–2 others.
+   - Include a spatial SPDE field.
+
+2. Map the predicted **incidence rate** and compare to observed crude rates.
+
+3. Inspect posterior uncertainty (e.g., posterior SD) of the spatial field.
+
+**Extension C (not taught explicitly)**  
+
+4. Fit a **negative binomial spatial model** (if you know how to specify one in INLA/inlabru):
+
+   - Compare fit (WAIC or similar) with the Poisson model.
+   - Discuss whether overdispersion appears to matter for this dataset.
+
+---
+
+## 1.4 Spatio-temporal prevalence of onchocerciasis
+
+Use: `spatiotemporal_oncho_binomial_data.csv`.
+
+**Tasks**
+
+1. Explore:
+
+   - Plot prevalence over time for a few randomly selected sites.
+   - Map aggregated prevalence by time (e.g., mean per time point).
+
+2. Fit a **separable spatio-temporal model**:
+
+   - Spatial SPDE field.
+   - Temporal RW1 or RW2 effect (`time` index).
+   - Fixed effects: a subset of the covariates (e.g., `river_index`, `north_index`, `ndvi`).
+
+3. Generate predicted prevalence surfaces for at least two time points  
+   (e.g., earliest and latest).
+
+**Extension D (not taught explicitly)**  
+
+4. Add a **space–time interaction** term:
+
+   - For example, a group-indexed spatial field varying by a simple time grouping  
+     (early vs late), or another structure not covered in detail in the workshop.
+   - Compare model fit and predicted dynamics to the separable model:
+     - Do you see evidence that the spatial pattern changes over time?
+
+---
+
+# Day 2 – Joint & Non-Stationary Processes (Onchocerciasis)
+
+## 2.1 Joint modelling of multiple onchocerciasis processes
+
+Use: `joint_oncho_processes.csv`.
+
+**Tasks**
+
+1. Explore the data:
+
+   - How do `n_examined` and `n_pos` differ between `group` levels?
+   - Are there obvious spatial differences between groups?
+
+2. Fit a **joint binomial model** with:
+
+   - Shared spatial field across groups,
+   - Group-specific intercepts,
+   - Common covariate effects (e.g., `river_index`, `north_index`, `ndvi`).
+
+3. Extend to a model with **group-specific covariate effects** for at least one key predictor  
+   (e.g., `river_index` × `group`).
+
+4. Map group-specific predicted prevalence and group-specific spatial fields (if used).
+
+**Extension E (not fully taught)**  
+
+5. Fit a model that includes a **group-specific spatial field component** in addition to the shared field:
+
+   - Compare the magnitude of shared vs group-specific spatial variability.
+   - Discuss when adding group-specific spatial fields is justified and when it might overfit.
+
+---
+
+## 2.2 Non-stationary spatial structure
+
+Use: `nonstationary_oncho_data.csv`.
+
+**Tasks**
+
+1. Explore:
+
+   - Plot `weight_north` against latitude (if you convert UTM to lat/long or just inspect `weight_north`).  
+   - Map `prevalence` and `S_nonstationary`.
+
+2. Fit a **stationary spatial model** (single SPDE field):
+
+   - Response: `n_pos` / `n_examined`,
+   - Fixed effects: some covariates (e.g., `river_index`, `north_index`, `ndvi`),
+   - One spatial field.
+
+3. Compare the model’s spatial residuals to `S_nonstationary` (roughly) and comment on where the stationary model seems to misrepresent the pattern.
+
+**Extension F (not taught explicitly)**  
+
+4. Propose and fit a **non-stationary model**, for example:
+
+   - Two spatial fields with different ranges, combined with a spatially varying weight  
+     (e.g., function of `north_index`),
+   - Or spatially varying coefficients for `river_index` (e.g., effect stronger in the north).
+
+5. Compare:
+
+   - Predictions,
+   - Uncertainty,
+   - A model selection criterion (e.g., WAIC),
+   between the stationary and non-stationary models.
+
+---
+
+## 2.3 Multi-likelihood modelling (binomial + Poisson)
+
+Use: `spatial_oncho_binomial_data.csv` and `spatial_oncho_poisson_data.csv`.
+
+These datasets were not simulated at identical coordinates, but you can link them approximately.
+
+**Tasks**
+
+1. Construct an approximate **joint dataset**:
+
+   - For each binomial location, find the closest Poisson location (e.g., using nearest neighbour based on UTM coordinates).
+   - Create a combined data frame that records:
+     - Binomial outcome (`n_pos`, `n_examined`),
+     - Poisson outcome (`cases`, `population`),
+     - Shared covariates (e.g., from the binomial dataset).
+
+2. Fit a **joint model** with:
+
+   - Binomial likelihood for the prevalence data.
+   - Poisson likelihood (with offset) for the count data.
+   - A **shared spatial field**.
+
+**Extension G (not taught in detail)**  
+
+3. Compare:
+
+   - Separate models for each outcome vs the joint model.
+   - Spatial fields and covariate effects.
+   - Discuss how the joint model “borrows strength” between data sources and when that might be beneficial or risky.
+
+---
+
+# Day 3 – Hybrid Machine Learning + Geostatistics
+
+## 3.1 ML-only models
+
+Use: `hybrid_ml_geostatistical_oncho_data.csv`.
+
+**Tasks**
+
+1. Split data:
+
+   - Randomly assign ~70% of locations to a training set and the rest to a test set.
+
+2. Fit at least **two ML models** (outside inlabru), for example:
+
+   - Random Forest,
+   - XGBoost,
+   - Gradient Boosting Machine, or others you know.
+
+   Use covariates such as:
+   `elevation`, `ndvi`, `urban`, `rainfall`, `temperature`, `pop_density`,
+   `river_index`, `north_index`.
+
+3. Evaluate ML predictions on the test set:
+
+   - Use appropriate metrics (e.g., RMSE on prevalence, Brier score, etc.).
+   - Inspect variable importance (if available).
+
+4. Compute and map **residuals** (observed – predicted) on the full dataset.
+
+**Extension H (not taught explicitly)**  
+
+5. Compute a **spatial variogram** of residuals and assess:
+
+   - Whether there is remaining spatial structure.
+   - Which ML method leaves the least spatial structure.
+
+---
+
+## 3.2 Hybrid ML + spatial residuals in inlabru
+
+Use: `hybrid_ml_geostatistical_oncho_data.csv`.
+
+**Tasks**
+
+1. For your **best ML model** from 3.1:
+
+   - Save the fitted values at all locations.
+   - Add them to the data as a new covariate (e.g. `ml_pred`).
+
+2. Fit a **hybrid model in inlabru**:
+
+   - Use `ml_pred` as an offset or fixed covariate.
+   - Add a spatial SPDE residual field.
+
+3. Compare:
+
+   - Spatial residual field from the hybrid model,
+   - Residuals from the ML-only model.
+
+4. Map:
+
+   - Hybrid model predictions on the `oncho_prediction_grid_utm.csv` grid.
+   - Posterior SD of the spatial residual field.
+
+**Extension I (not taught explicitly)**  
+
+5. Try a **two-stage hybrid**:
+
+   - Fit the ML model on the training set only.
+   - Use the spatial residual model on top of **out-of-sample** ML predictions.
+   - Evaluate on the test set whether the hybrid model systematically improves predictions.
+
+---
+
+## 3.3 Robustness and scenario experiments
+
+Use: `hybrid_ml_geostatistical_oncho_data.csv`.
+
+**Tasks**
+
+1. Create modified versions of the dataset with **covariate issues**:
+
+   - Version A: randomly set 20–30% of `rainfall` values to `NA`.
+   - Version B: add strong noise to `ndvi` in the north only (e.g., for high `north_index`).
+
+2. Refit:
+
+   - ML-only model,
+   - Hybrid model (ML + spatial),
+
+   to each version.
+
+3. Compare:
+
+   - Prediction performance (on the original uncorrupted test subset, if you keep one aside).
+   - Stability of spatial fields and covariate effects.
+
+**Extension J (not taught explicitly)**  
+
+4. Write a short report (~1–2 pages) summarising:
+
+   - When the **spatial residual component** helps buffer against covariate problems,
+   - When it fails to compensate,
+   - Implications for real-world onchocerciasis mapping in Nigeria.
+
+---
+
+# Optional: Cross-Day Extension Projects
+
+If you have time and interest, you can combine ideas from multiple days:
+
+1. **Full pipeline for onchocerciasis risk mapping:**
+
+   - Start from a **spatial binomial model**,
+   - Add **non-stationarity** or multiple groups,
+   - Integrate **ML** for complex covariate effects,
+   - Produce prediction and uncertainty maps for Nigeria,
+   - Reflect on choices at each step.
+
+2. **Model comparison and reporting:**
+
+   - Pick 3–4 models (e.g., stationary vs non-stationary, GLM vs spatial vs hybrid ML),
+   - Compare them using a consistent set of metrics (WAIC, cross-validation, residual diagnostics),
+   - Produce a short **“modelling report”** as if for a real onchocerciasis mapping project.
+

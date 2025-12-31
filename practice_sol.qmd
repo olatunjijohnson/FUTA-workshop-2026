@@ -1,0 +1,455 @@
+---
+title: "FUTA Workshop 2026 – Onchocerciasis Practice: Worked Solutions"
+subtitle: "Geostatistical Modelling with inlabru"
+author: "Olatunji Johnson"
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    number-sections: true
+execute:
+  echo: true
+  warning: false
+  message: false
+---
+
+```{r setup}
+# Load required packages
+library(dplyr)
+library(readr)
+library(ggplot2)
+library(sf)
+library(INLA)
+library(inlabru)
+library(sp)
+library(patchwork)
+library(stars)
+library(tidyr)
+
+# Set a seed for reproducibility
+set.seed(2026)
+
+# Helper: a minimal theme for plots
+theme_min <- theme_bw() + theme(plot.title = element_text(face = "bold"))
+```
+
+# 1. Data and basic setup
+
+We assume the data files and shapefile are in a folder called oncho_data.
+
+```{r}
+# Adjust path as needed
+
+spatial_oncho_binom  <- read_csv("oncho_data/spatial_oncho_binomial_data.csv")
+spatial_oncho_pois   <- read_csv("oncho_data/spatial_oncho_poisson_data.csv")
+st_oncho_binom       <- read_csv("oncho_data/spatiotemporal_oncho_binomial_data.csv")
+joint_oncho          <- read_csv("oncho_data/joint_oncho_processes.csv")
+nonstat_oncho        <- read_csv("oncho_data/nonstationary_oncho_data.csv")
+hybrid_oncho         <- read_csv("oncho_data/hybrid_ml_geostatistical_oncho_data.csv")
+pred_grid_oncho      <- read_csv("oncho_data/oncho_prediction_grid_utm.csv")
+
+# Nigeria admin-1 shapefile (UTM 32N)
+
+nga_sf <- st_read("oncho_data/nga_shapefile.shp", quiet = TRUE)
+```
+
+We’ll also define a small helper to create a mesh from point data.
+
+```{r}
+make_spde_mesh <- function(df, max_edge = c(200000, 600000), cutoff = 50000) {
+pts <- df |>
+select(utm_x, utm_y) |>
+unique()
+coordinates(pts) <- ~ utm_x + utm_y
+inla.mesh.2d(
+loc = coordinates(pts),
+max.edge = max_edge,
+cutoff = cutoff
+)
+}
+```
+
+# 2. Day 1 – Spatial & Spatio-Temporal Onchocerciasis
+
+## 2.1 Spatial binomial prevalence (basic model → spatial model)
+
+We use `spatial_oncho_binomial_data.csv` and explore and plot locations.
+
+```{r}
+spatial_oncho_binom |>
+glimpse()
+
+ggplot() +
+geom_sf(data = nga_sf, fill = NA, colour = "grey40") +
+geom_point(
+data = spatial_oncho_binom,
+aes(x = utm_x, y = utm_y, colour = n_pos / n_examined),
+size = 1.8
+) +
+scale_colour_viridis_c(name = "Observed\nprevalence") +
+coord_sf() +
+labs(
+title = "Onchocerciasis survey locations (synthetic)",
+x = "UTM X", y = "UTM Y"
+) +
+theme_min
+
+```
+
+Explanation
+
+- Prevalence is computed as n_pos / n_examined.
+- You should see higher prevalences in the north (top of the map) and near the synthetic river band.
+
+
+### 2.1.1 Non-spatial binomial GLM
+
+We fit a simple logistic regression with multiple predictors.
+
+```{r}
+oncho_glm <- glm(
+cbind(n_pos, n_examined - n_pos) ~
+river_index + north_index + elevation + ndvi +
+urban + rainfall + temperature + pop_density,
+data = spatial_oncho_binom,
+family = binomial
+)
+
+summary(oncho_glm)
+
+```
+
+Map the residuals
+
+```{r}
+spatial_oncho_binom <- spatial_oncho_binom |>
+mutate(
+fitted_glm = fitted(oncho_glm),
+resid_glm  = n_pos / n_examined - fitted_glm
+)
+
+ggplot(spatial_oncho_binom) +
+geom_sf(data = nga_sf, fill = NA, colour = "grey60") +
+geom_point(aes(x = utm_x, y = utm_y, colour = resid_glm)) +
+scale_colour_gradient2(
+name = "Raw\nresidual",
+midpoint = 0
+) +
+labs(title = "GLM residuals (non-spatial model)") +
+theme_min
+```
+
+Compute the empirical variogram od the residuals
+
+```{r}
+library(geoR)
+
+coords <- spatial_oncho_binom[, c("utm_x","utm_y")]
+geodata <- as.geodata(
+cbind(coords, spatial_oncho_binom$resid_glm),
+coords.col = 1:2,
+data.col = 3
+)
+
+v <- variog(geodata, max.dist = 600000)
+plot(v, main = "Empirical variogram of ML residuals")
+
+vari.mc <- variog.mc.env(geodata, obj.variog=v, nsim=1000)
+plot(v, envelope.obj=vari.mc, main = "Empirical variogram of ML residuals with envelope")
+```
+
+This motivates adding a spatial random field.
+
+## 2.2 Spatial binomial model in inlabru
+
+```{r}
+mesh_binom <- make_spde_mesh(spatial_oncho_binom)
+plot(mesh_binom)
+points(spatial_oncho_binom$utm_x, spatial_oncho_binom$utm_y, col = "red", pch = 16, cex = 0.4)
+title("Mesh for spatial binomial model")
+
+oncho_sf <- spatial_oncho_binom |>
+st_as_sf(coords = c("utm_x", "utm_y"), crs = 32632)
+
+spde_model <- inla.spde2.pcmatern(
+mesh = mesh_binom,
+alpha = 2,
+prior.range = c(300000, 0.5),     # P(range < 300km) = 0.5
+prior.sigma = c(1, 0.01)          # P(sigma > 1) = 0.01
+)
+
+cmp_oncho_binom <- n_pos ~
+river_index + north_index + elevation + ndvi +
+urban + rainfall + temperature + pop_density +
+spde(spde_field, model = spde_model)
+
+# Link SPDE field to geometry
+
+oncho_components <- list(
+spde_field = inla.spde.make.A(mesh_binom, loc = st_coordinates(oncho_sf))
+)
+
+
+fit_oncho_spatial <- bru(
+components = ~
+Intercept(1) +
+river_index + north_index + elevation + ndvi +
+urban + rainfall + temperature + pop_density +
+spde(geometry, model = spde_model),
+family = "binomial",
+data = oncho_sf,
+formula = n_pos ~ Intercept +
+river_index + north_index + elevation + ndvi +
+urban + rainfall + temperature + pop_density +
+spde,
+Ntrials = oncho_sf$n_examined,
+options = list(control.compute = list(dic = TRUE, waic = TRUE))
+# # control.family  = list(link = "cloglog")
+)
+
+summary(fit_oncho_spatial)
+
+```
+
+
+### 2.2.1 Predict on a grid
+
+We now use oncho_prediction_grid_utm.csv for mapping.
+
+```{r}
+pred_sf <- pred_grid_oncho |>
+st_as_sf(coords = c("utm_x", "utm_y"), crs = 32632)
+
+pred_mean <- predict(
+fit_oncho_spatial,
+pred_sf,
+~ plogis(Intercept + river_index + north_index + elevation + ndvi +
+urban + rainfall + temperature + pop_density + spde)
+)
+
+# pred <- predict(
+#   fit_oncho_cloglog_spatial,
+#   pred_sf,
+#   ~ 1 - exp(-exp(Intercept +
+#                  river_index + north_index + elevation + ndvi +
+#                  urban + rainfall + temperature + pop_density +
+#                  spde))
+# )
+# 
+# head(pred)
+
+
+head(pred_mean)
+
+pred_mean_r <- st_rasterize(pred_mean["mean"], dx=10000, dy=10000)
+pred_mean_r <- pred_mean_r[st_union(nga_sf)]
+
+ggplot() +
+  geom_stars(data=pred_mean_r, na.rm = TRUE) +
+  geom_sf(data=nga_sf, fill=NA, color = "black") +
+  coord_sf() +
+  scale_fill_viridis_c(name = "Predicted\nprevalence", na.value = NA) +
+  theme_minimal() +
+  theme(
+    panel.background = element_rect(fill = "white", colour = NA),
+    plot.background  = element_rect(fill = "white", colour = NA),
+    panel.grid       = element_blank()
+  )
+
+```
+
+
+## 2.3 Spatio-temporal model (brief illustration)
+
+We give a simple separable spatio-temporal model with a spatial field + RW1 in time.
+
+```{r}
+st_oncho_binom |>
+glimpse()
+
+st_sites <- st_oncho_binom |>
+distinct(site, utm_x, utm_y) |>
+st_as_sf(coords = c("utm_x", "utm_y"), crs = 32632)
+
+mesh_st <- make_spde_mesh(st_oncho_binom)
+
+spde_st <- inla.spde2.pcmatern(
+mesh = mesh_st,
+alpha = 2,
+prior.range = c(300000, 0.5),
+prior.sigma = c(1, 0.01)
+)
+
+st_oncho_sf <- st_oncho_binom |>
+st_as_sf(coords = c("utm_x", "utm_y"), crs = 32632)
+
+
+fit_st <- bru(
+components = ~
+Intercept(1) +
+river_index + north_index + ndvi +
+spde(geometry, model = spde_st) +
+rw1(time, model = "rw1"),
+family = "binomial",
+data = st_oncho_sf,
+formula = n_pos ~ Intercept +
+river_index + north_index + ndvi +
+spde +
+rw1,
+Ntrials = st_oncho_sf$n_examined,
+options = list(control.compute = list(dic = TRUE, waic = TRUE))
+
+)
+
+summary(fit_st)
+
+
+```
+
+To visualise, we can predict on the grid for two time points (e.g., 1 and 6).
+
+```{r}
+# Example code outline (may need adaptation)
+
+# Create a prediction data frame with grid + time
+
+pred_st <- pred_grid_oncho |>
+expand_grid(time = c(1, 6)) |>
+st_as_sf(coords = c("utm_x", "utm_y"), crs = 32632)
+
+pred_st_mean <- predict(
+fit_st,
+pred_st,
+~ plogis(Intercept + river_index + north_index + ndvi +
+spde + rw1)
+)
+```
+
+
+# 3. Day 2 – Joint & Non-Stationary Onchocerciasis Models
+
+## 3.1 Joint modelling of multiple groups
+
+We use `joint_oncho_processes.csv`. Each row is a (location, group).
+
+```{r}
+joint_oncho |>
+count(group)
+
+joint_oncho |>
+group_by(group) |>
+summarise(
+mean_prev = mean(n_pos / n_examined),
+n = n()
+)
+
+ggplot() +
+geom_sf(data = nga_sf, fill = NA, colour = "grey60") +
+geom_point(
+data = joint_oncho,
+aes(x = utm_x, y = utm_y, colour = n_pos / n_examined),
+size = 1.5
+) +
+facet_wrap(~ group) +
+scale_colour_viridis_c(name = "Observed\nprevalence") +
+theme_min +
+labs(title = "Onchocerciasis prevalence by group")
+
+
+```
+
+## 3.1.1 Joint spatial model with shared field
+
+We start with shared spatial field and group-specific intercepts.
+
+```{r}
+joint_sf <- joint_oncho |>
+st_as_sf(coords = c("utm_x", "utm_y"), crs = 32632)
+
+mesh_joint <- make_spde_mesh(joint_oncho)
+spde_joint <- inla.spde2.pcmatern(
+mesh = mesh_joint,
+alpha = 2,
+prior.range = c(300000, 0.5),
+prior.sigma = c(1, 0.01)
+)
+
+fit_joint_shared <- bru(
+components = ~
+Intercept(1) +
+group(group, model = "factor") +
+river_index + north_index + ndvi +
+spde(geometry, model = spde_joint),
+family = "binomial",
+data = joint_sf,
+formula = n_pos ~ Intercept +
+group +
+river_index + north_index + ndvi +
+spde,
+Ntrials = joint_sf$n_examined,
+options = list(control.compute = list(dic = TRUE, waic = TRUE))
+)
+
+summary(fit_joint_shared)
+```
+
+`group(group, model = "factor")` gives group-specific intercepts. All other covariate effects are shared between groups. The spatial field is shared: it reflects underlying risk that is common to both groups.
+
+
+## 3.1.2 Extension: group-specific covariate effect
+
+For example, allow `river_index` effect to differ by group using an interaction.
+
+```{r}
+joint_sf <- joint_sf |>
+mutate(
+river_group = river_index * as.numeric(as.factor(group))
+)
+
+fit_joint_interaction <- bru(
+components = ~
+Intercept(1) +
+group(group, model = "factor") +
+river_index +
+river_group +
+north_index + ndvi +
+spde(geometry, model = spde_joint),
+family = "binomial",
+data = joint_sf,
+formula = n_pos ~ Intercept +
+group +
+river_index +
+river_group +
+north_index + ndvi +
+spde,
+Ntrials = joint_sf$n_examined,
+options = list(control.compute = list(dic = TRUE, waic = TRUE))
+)
+
+summary(fit_joint_interaction)
+```
+
+This is a simple way to let the slope of river_index vary by group.
+
+## 3.2 Non-stationary spatial structure
+
+Use nonstationary_oncho_data.csv.
+
+```{r}
+nonstat_oncho |>
+glimpse()
+
+p1 <- ggplot(nonstat_oncho) +
+geom_point(aes(x = utm_x, y = utm_y, colour = S_nonstationary), size = 1.2) +
+scale_colour_viridis_c(name = "S_nonstationary") +
+theme_min +
+labs(title = "Non-stationary spatial field (simulation truth)")
+
+p2 <- ggplot(nonstat_oncho) +
+geom_point(aes(x = utm_x, y = utm_y, colour = weight_north), size = 1.2) +
+scale_colour_viridis_c(name = "weight_north") +
+theme_min +
+labs(title = "Weight toward 'smooth north' field")
+
+p1 + p2
+```

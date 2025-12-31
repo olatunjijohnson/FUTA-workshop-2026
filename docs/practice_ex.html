@@ -1,0 +1,1038 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.6.42">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Olatunji Johnson">
+
+<title>Practice Exercises – Geostatistical Modelling with inlabru</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+</style>
+
+
+<script src="site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="site_libs/quarto-nav/headroom.min.js"></script>
+<script src="site_libs/clipboard/clipboard.min.js"></script>
+<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="site_libs/quarto-search/fuse.min.js"></script>
+<script src="site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="./">
+<script src="site_libs/quarto-html/quarto.js"></script>
+<script src="site_libs/quarto-html/popper.min.js"></script>
+<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="site_libs/quarto-html/anchor.min.js"></script>
+<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-2f5df379a58b258e96c21c0638c20c03.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="site_libs/bootstrap/bootstrap-89d830207bfa9d58fd33e7bbb3174db8.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+
+</head>
+
+<body class="nav-fixed">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="./index.html">
+    <span class="navbar-title">Geostatistical Modelling with inlabru</span>
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll me-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="./index.html"> 
+<span class="menu-text">Home</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="./day1.html"> 
+<span class="menu-text">Day 1</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="./day2.html"> 
+<span class="menu-text">Day 2</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="./day3.html"> 
+<span class="menu-text">Day 3</span></a>
+  </li>  
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-slides" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Slides</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-slides">    
+        <li>
+    <a class="dropdown-item" href="./slides/day1_slides.html">
+ <span class="dropdown-text">Day 1 slides</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="./slides/day2_slides.html">
+ <span class="dropdown-text">Day 2 slides</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="./slides/day3_slides.html">
+ <span class="dropdown-text">Day 3 slides</span></a>
+  </li>  
+    </ul>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link" href="./data.zip"> 
+<span class="menu-text">Download data</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link active" href="./practice_ex.html" aria-current="page"> 
+<span class="menu-text">Workshop practice</span></a>
+  </li>  
+</ul>
+          </div> <!-- /navcollapse -->
+            <div class="quarto-navbar-tools">
+</div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#introduction" id="toc-introduction" class="nav-link active" data-scroll-target="#introduction"><span class="header-section-number">1</span> Introduction</a></li>
+  <li><a href="#day-1-spatial-spatio-temporal-modelling-onchocerciasis" id="toc-day-1-spatial-spatio-temporal-modelling-onchocerciasis" class="nav-link" data-scroll-target="#day-1-spatial-spatio-temporal-modelling-onchocerciasis"><span class="header-section-number">2</span> Day 1 – Spatial &amp; Spatio-Temporal Modelling (Onchocerciasis)</a>
+  <ul class="collapse">
+  <li><a href="#getting-started-with-the-spatial-binomial-data" id="toc-getting-started-with-the-spatial-binomial-data" class="nav-link" data-scroll-target="#getting-started-with-the-spatial-binomial-data"><span class="header-section-number">2.1</span> 1.1 Getting started with the spatial binomial data</a></li>
+  <li><a href="#mesh-design-and-sensitivity" id="toc-mesh-design-and-sensitivity" class="nav-link" data-scroll-target="#mesh-design-and-sensitivity"><span class="header-section-number">2.2</span> 1.2 Mesh design and sensitivity</a></li>
+  <li><a href="#spatial-poisson-incidence-model" id="toc-spatial-poisson-incidence-model" class="nav-link" data-scroll-target="#spatial-poisson-incidence-model"><span class="header-section-number">2.3</span> 1.3 Spatial Poisson incidence model</a></li>
+  <li><a href="#spatio-temporal-prevalence-of-onchocerciasis" id="toc-spatio-temporal-prevalence-of-onchocerciasis" class="nav-link" data-scroll-target="#spatio-temporal-prevalence-of-onchocerciasis"><span class="header-section-number">2.4</span> 1.4 Spatio-temporal prevalence of onchocerciasis</a></li>
+  </ul></li>
+  <li><a href="#day-2-joint-non-stationary-processes-onchocerciasis" id="toc-day-2-joint-non-stationary-processes-onchocerciasis" class="nav-link" data-scroll-target="#day-2-joint-non-stationary-processes-onchocerciasis"><span class="header-section-number">3</span> Day 2 – Joint &amp; Non-Stationary Processes (Onchocerciasis)</a>
+  <ul class="collapse">
+  <li><a href="#joint-modelling-of-multiple-onchocerciasis-processes" id="toc-joint-modelling-of-multiple-onchocerciasis-processes" class="nav-link" data-scroll-target="#joint-modelling-of-multiple-onchocerciasis-processes"><span class="header-section-number">3.1</span> 2.1 Joint modelling of multiple onchocerciasis processes</a></li>
+  <li><a href="#non-stationary-spatial-structure" id="toc-non-stationary-spatial-structure" class="nav-link" data-scroll-target="#non-stationary-spatial-structure"><span class="header-section-number">3.2</span> 2.2 Non-stationary spatial structure</a></li>
+  <li><a href="#multi-likelihood-modelling-binomial-poisson" id="toc-multi-likelihood-modelling-binomial-poisson" class="nav-link" data-scroll-target="#multi-likelihood-modelling-binomial-poisson"><span class="header-section-number">3.3</span> 2.3 Multi-likelihood modelling (binomial + Poisson)</a></li>
+  </ul></li>
+  <li><a href="#day-3-hybrid-machine-learning-geostatistics" id="toc-day-3-hybrid-machine-learning-geostatistics" class="nav-link" data-scroll-target="#day-3-hybrid-machine-learning-geostatistics"><span class="header-section-number">4</span> Day 3 – Hybrid Machine Learning + Geostatistics</a>
+  <ul class="collapse">
+  <li><a href="#ml-only-models" id="toc-ml-only-models" class="nav-link" data-scroll-target="#ml-only-models"><span class="header-section-number">4.1</span> 3.1 ML-only models</a></li>
+  <li><a href="#hybrid-ml-spatial-residuals-in-inlabru" id="toc-hybrid-ml-spatial-residuals-in-inlabru" class="nav-link" data-scroll-target="#hybrid-ml-spatial-residuals-in-inlabru"><span class="header-section-number">4.2</span> 3.2 Hybrid ML + spatial residuals in inlabru</a></li>
+  <li><a href="#robustness-and-scenario-experiments" id="toc-robustness-and-scenario-experiments" class="nav-link" data-scroll-target="#robustness-and-scenario-experiments"><span class="header-section-number">4.3</span> 3.3 Robustness and scenario experiments</a></li>
+  </ul></li>
+  <li><a href="#optional-cross-day-extension-projects" id="toc-optional-cross-day-extension-projects" class="nav-link" data-scroll-target="#optional-cross-day-extension-projects"><span class="header-section-number">5</span> Optional: Cross-Day Extension Projects</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Practice Exercises</h1>
+<p class="subtitle lead">Extensions of Geostatistical Modelling with inlabru</p>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Olatunji Johnson </p>
+          </div>
+  </div>
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="introduction" class="level1" data-number="1">
+<h1 data-number="1"><span class="header-section-number">1</span> Introduction</h1>
+<p>These exercises are designed as <strong>follow-up practice</strong> for the workshop<br>
+<em>“Geostatistical Modelling with inlabru”</em>, using <strong>synthetic onchocerciasis data for Nigeria</strong>.</p>
+<ul>
+<li>All data are in the <code>oncho_data/</code> folder and documented in <code>oncho_data/README.md</code>.</li>
+<li>You can download the onchocerciasis practice data as a zip: <a href="oncho_data.zip">Onchocerciasis practice data (ZIP)</a></li>
+<li>The data are documented in: <a href="oncho_data/README.md"><code>oncho_data/README.md</code></a></li>
+<li>You <strong>do not</strong> need the simulation code.</li>
+<li>Many tasks are <strong>extensions</strong> of what was taught in the workshop.<br>
+</li>
+<li>They are marked as <strong>Extension</strong> and may require you to combine ideas, check documentation, or be creative in your modelling.</li>
+</ul>
+<p>You are encouraged to:</p>
+<ul>
+<li>Work in small groups,</li>
+<li>Document your modelling choices,</li>
+<li>Compare different model specifications,</li>
+<li>Reflect on model assumptions and limitations.</li>
+</ul>
+<p>You will use the following files:</p>
+<ul>
+<li>Day 1:
+<ul>
+<li><code>spatial_oncho_binomial_data.csv</code><br>
+</li>
+<li><code>spatial_oncho_poisson_data.csv</code><br>
+</li>
+<li><code>spatiotemporal_oncho_binomial_data.csv</code></li>
+</ul></li>
+<li>Day 2:
+<ul>
+<li><code>joint_oncho_processes.csv</code><br>
+</li>
+<li><code>nonstationary_oncho_data.csv</code><br>
+</li>
+<li>(Optionally) <code>spatial_oncho_poisson_data.csv</code> for multi-likelihood extensions</li>
+</ul></li>
+<li>Day 3:
+<ul>
+<li><code>hybrid_ml_geostatistical_oncho_data.csv</code><br>
+</li>
+<li><code>oncho_prediction_grid_utm.csv</code></li>
+</ul></li>
+</ul>
+<hr>
+</section>
+<section id="day-1-spatial-spatio-temporal-modelling-onchocerciasis" class="level1" data-number="2">
+<h1 data-number="2"><span class="header-section-number">2</span> Day 1 – Spatial &amp; Spatio-Temporal Modelling (Onchocerciasis)</h1>
+<section id="getting-started-with-the-spatial-binomial-data" class="level2" data-number="2.1">
+<h2 data-number="2.1" class="anchored" data-anchor-id="getting-started-with-the-spatial-binomial-data"><span class="header-section-number">2.1</span> 1.1 Getting started with the spatial binomial data</h2>
+<p>Use: <code>data/spatial_oncho_binomial_data.csv</code>.</p>
+<p><strong>Tasks</strong></p>
+<ol type="1">
+<li><p>Load the data and inspect:</p>
+<ul>
+<li>Plot locations (<code>utm_x</code>, <code>utm_y</code>) on a map (optionally overlay <code>nga_shapefile</code>).</li>
+<li>Summarise <code>n_examined</code>, <code>n_pos</code>, and empirical prevalence.</li>
+</ul></li>
+<li><p>Fit a <strong>non-spatial</strong> binomial model:</p>
+<ul>
+<li>Response: <code>n_pos</code> / <code>n_examined</code>.<br>
+</li>
+<li>Predictors: at least <code>river_index</code>, <code>north_index</code>, <code>elevation</code>, <code>ndvi</code>, <code>urban</code>, and 1–2 others of your choice (<code>rainfall</code>, <code>temperature</code>, <code>pop_density</code>).</li>
+</ul></li>
+<li><p>Inspect model residuals:</p>
+<ul>
+<li>Map residuals.</li>
+<li>Compute an empirical variogram of residuals.</li>
+</ul></li>
+<li><p>Fit a <strong>spatial binomial</strong> model in inlabru:</p>
+<ul>
+<li>Use UTM coordinates to build a mesh and SPDE model.</li>
+<li>Include the same fixed effects as in (2), plus a spatial random field.</li>
+</ul></li>
+<li><p>Compare:</p>
+<ul>
+<li>How do coefficient estimates and uncertainties change when you add the spatial field?</li>
+<li>Does the spatial field capture meaningful residual structure?</li>
+</ul></li>
+</ol>
+<p><strong>Extension A (not taught explicitly)</strong></p>
+<ol start="6" type="1">
+<li><p>Fit a binomial model with a <strong>non-standard link</strong> (e.g., complementary log–log) and compare:</p>
+<ul>
+<li>Does this change the interpretation of covariate effects?</li>
+<li>How do fitted probabilities change in high-risk vs low-risk areas?</li>
+</ul></li>
+</ol>
+<hr>
+</section>
+<section id="mesh-design-and-sensitivity" class="level2" data-number="2.2">
+<h2 data-number="2.2" class="anchored" data-anchor-id="mesh-design-and-sensitivity"><span class="header-section-number">2.2</span> 1.2 Mesh design and sensitivity</h2>
+<p>Use: <code>spatial_oncho_binomial_data.csv</code>.</p>
+<p><strong>Tasks</strong></p>
+<ol type="1">
+<li><p>Construct <strong>two different meshes</strong>:</p>
+<ul>
+<li>Mesh 1: coarser (fewer nodes, larger max edge).<br>
+</li>
+<li>Mesh 2: finer (more nodes, smaller max edge, better boundary resolution).</li>
+</ul></li>
+<li><p>Fit the same spatial binomial model under both meshes.</p></li>
+<li><p>Compare:</p>
+<ul>
+<li>Posterior range and marginal variance of the spatial field.</li>
+<li>Predicted prevalence surface on a grid (using <code>oncho_prediction_grid_utm.csv</code>).</li>
+<li>Computation time and stability.</li>
+</ul></li>
+</ol>
+<p><strong>Extension B (not taught explicitly)</strong></p>
+<ol start="4" type="1">
+<li><p>Experiment with <strong>different PC priors</strong> for range and marginal standard deviation:</p>
+<ul>
+<li>Make range smaller vs larger a priori.<br>
+</li>
+<li>Discuss how prior choices influence the spatial field and predictions.</li>
+</ul></li>
+</ol>
+<hr>
+</section>
+<section id="spatial-poisson-incidence-model" class="level2" data-number="2.3">
+<h2 data-number="2.3" class="anchored" data-anchor-id="spatial-poisson-incidence-model"><span class="header-section-number">2.3</span> 1.3 Spatial Poisson incidence model</h2>
+<p>Use: <code>spatial_oncho_poisson_data.csv</code>.</p>
+<p><strong>Tasks</strong></p>
+<ol type="1">
+<li><p>Fit a <strong>Poisson spatial model</strong>:</p>
+<ul>
+<li>Response: <code>cases</code>, offset: <code>log(population)</code>.<br>
+</li>
+<li>Predictors: at least <code>river_index</code>, <code>north_index</code>, <code>ndvi</code>, <code>rainfall</code>, <code>temperature</code>, and 1–2 others.</li>
+<li>Include a spatial SPDE field.</li>
+</ul></li>
+<li><p>Map the predicted <strong>incidence rate</strong> and compare to observed crude rates.</p></li>
+<li><p>Inspect posterior uncertainty (e.g., posterior SD) of the spatial field.</p></li>
+</ol>
+<p><strong>Extension C (not taught explicitly)</strong></p>
+<ol start="4" type="1">
+<li><p>Fit a <strong>negative binomial spatial model</strong> (if you know how to specify one in INLA/inlabru):</p>
+<ul>
+<li>Compare fit (WAIC or similar) with the Poisson model.</li>
+<li>Discuss whether overdispersion appears to matter for this dataset.</li>
+</ul></li>
+</ol>
+<hr>
+</section>
+<section id="spatio-temporal-prevalence-of-onchocerciasis" class="level2" data-number="2.4">
+<h2 data-number="2.4" class="anchored" data-anchor-id="spatio-temporal-prevalence-of-onchocerciasis"><span class="header-section-number">2.4</span> 1.4 Spatio-temporal prevalence of onchocerciasis</h2>
+<p>Use: <code>spatiotemporal_oncho_binomial_data.csv</code>.</p>
+<p><strong>Tasks</strong></p>
+<ol type="1">
+<li><p>Explore:</p>
+<ul>
+<li>Plot prevalence over time for a few randomly selected sites.</li>
+<li>Map aggregated prevalence by time (e.g., mean per time point).</li>
+</ul></li>
+<li><p>Fit a <strong>separable spatio-temporal model</strong>:</p>
+<ul>
+<li>Spatial SPDE field.</li>
+<li>Temporal RW1 or RW2 effect (<code>time</code> index).</li>
+<li>Fixed effects: a subset of the covariates (e.g., <code>river_index</code>, <code>north_index</code>, <code>ndvi</code>).</li>
+</ul></li>
+<li><p>Generate predicted prevalence surfaces for at least two time points<br>
+(e.g., earliest and latest).</p></li>
+</ol>
+<p><strong>Extension D (not taught explicitly)</strong></p>
+<ol start="4" type="1">
+<li><p>Add a <strong>space–time interaction</strong> term:</p>
+<ul>
+<li>For example, a group-indexed spatial field varying by a simple time grouping<br>
+(early vs late), or another structure not covered in detail in the workshop.</li>
+<li>Compare model fit and predicted dynamics to the separable model:
+<ul>
+<li>Do you see evidence that the spatial pattern changes over time?</li>
+</ul></li>
+</ul></li>
+</ol>
+<hr>
+</section>
+</section>
+<section id="day-2-joint-non-stationary-processes-onchocerciasis" class="level1" data-number="3">
+<h1 data-number="3"><span class="header-section-number">3</span> Day 2 – Joint &amp; Non-Stationary Processes (Onchocerciasis)</h1>
+<section id="joint-modelling-of-multiple-onchocerciasis-processes" class="level2" data-number="3.1">
+<h2 data-number="3.1" class="anchored" data-anchor-id="joint-modelling-of-multiple-onchocerciasis-processes"><span class="header-section-number">3.1</span> 2.1 Joint modelling of multiple onchocerciasis processes</h2>
+<p>Use: <code>joint_oncho_processes.csv</code>.</p>
+<p><strong>Tasks</strong></p>
+<ol type="1">
+<li><p>Explore the data:</p>
+<ul>
+<li>How do <code>n_examined</code> and <code>n_pos</code> differ between <code>group</code> levels?</li>
+<li>Are there obvious spatial differences between groups?</li>
+</ul></li>
+<li><p>Fit a <strong>joint binomial model</strong> with:</p>
+<ul>
+<li>Shared spatial field across groups,</li>
+<li>Group-specific intercepts,</li>
+<li>Common covariate effects (e.g., <code>river_index</code>, <code>north_index</code>, <code>ndvi</code>).</li>
+</ul></li>
+<li><p>Extend to a model with <strong>group-specific covariate effects</strong> for at least one key predictor<br>
+(e.g., <code>river_index</code> × <code>group</code>).</p></li>
+<li><p>Map group-specific predicted prevalence and group-specific spatial fields (if used).</p></li>
+</ol>
+<p><strong>Extension E (not fully taught)</strong></p>
+<ol start="5" type="1">
+<li><p>Fit a model that includes a <strong>group-specific spatial field component</strong> in addition to the shared field:</p>
+<ul>
+<li>Compare the magnitude of shared vs group-specific spatial variability.</li>
+<li>Discuss when adding group-specific spatial fields is justified and when it might overfit.</li>
+</ul></li>
+</ol>
+<hr>
+</section>
+<section id="non-stationary-spatial-structure" class="level2" data-number="3.2">
+<h2 data-number="3.2" class="anchored" data-anchor-id="non-stationary-spatial-structure"><span class="header-section-number">3.2</span> 2.2 Non-stationary spatial structure</h2>
+<p>Use: <code>nonstationary_oncho_data.csv</code>.</p>
+<p><strong>Tasks</strong></p>
+<ol type="1">
+<li><p>Explore:</p>
+<ul>
+<li>Plot <code>weight_north</code> against latitude (if you convert UTM to lat/long or just inspect <code>weight_north</code>).<br>
+</li>
+<li>Map <code>prevalence</code> and <code>S_nonstationary</code>.</li>
+</ul></li>
+<li><p>Fit a <strong>stationary spatial model</strong> (single SPDE field):</p>
+<ul>
+<li>Response: <code>n_pos</code> / <code>n_examined</code>,</li>
+<li>Fixed effects: some covariates (e.g., <code>river_index</code>, <code>north_index</code>, <code>ndvi</code>),</li>
+<li>One spatial field.</li>
+</ul></li>
+<li><p>Compare the model’s spatial residuals to <code>S_nonstationary</code> (roughly) and comment on where the stationary model seems to misrepresent the pattern.</p></li>
+</ol>
+<p><strong>Extension F (not taught explicitly)</strong></p>
+<ol start="4" type="1">
+<li><p>Propose and fit a <strong>non-stationary model</strong>, for example:</p>
+<ul>
+<li>Two spatial fields with different ranges, combined with a spatially varying weight<br>
+(e.g., function of <code>north_index</code>),</li>
+<li>Or spatially varying coefficients for <code>river_index</code> (e.g., effect stronger in the north).</li>
+</ul></li>
+<li><p>Compare:</p>
+<ul>
+<li>Predictions,</li>
+<li>Uncertainty,</li>
+<li>A model selection criterion (e.g., WAIC), between the stationary and non-stationary models.</li>
+</ul></li>
+</ol>
+<hr>
+</section>
+<section id="multi-likelihood-modelling-binomial-poisson" class="level2" data-number="3.3">
+<h2 data-number="3.3" class="anchored" data-anchor-id="multi-likelihood-modelling-binomial-poisson"><span class="header-section-number">3.3</span> 2.3 Multi-likelihood modelling (binomial + Poisson)</h2>
+<p>Use: <code>spatial_oncho_binomial_data.csv</code> and <code>spatial_oncho_poisson_data.csv</code>.</p>
+<p>These datasets were not simulated at identical coordinates, but you can link them approximately.</p>
+<p><strong>Tasks</strong></p>
+<ol type="1">
+<li><p>Construct an approximate <strong>joint dataset</strong>:</p>
+<ul>
+<li>For each binomial location, find the closest Poisson location (e.g., using nearest neighbour based on UTM coordinates).</li>
+<li>Create a combined data frame that records:
+<ul>
+<li>Binomial outcome (<code>n_pos</code>, <code>n_examined</code>),</li>
+<li>Poisson outcome (<code>cases</code>, <code>population</code>),</li>
+<li>Shared covariates (e.g., from the binomial dataset).</li>
+</ul></li>
+</ul></li>
+<li><p>Fit a <strong>joint model</strong> with:</p>
+<ul>
+<li>Binomial likelihood for the prevalence data.</li>
+<li>Poisson likelihood (with offset) for the count data.</li>
+<li>A <strong>shared spatial field</strong>.</li>
+</ul></li>
+</ol>
+<p><strong>Extension G (not taught in detail)</strong></p>
+<ol start="3" type="1">
+<li><p>Compare:</p>
+<ul>
+<li>Separate models for each outcome vs the joint model.</li>
+<li>Spatial fields and covariate effects.</li>
+<li>Discuss how the joint model “borrows strength” between data sources and when that might be beneficial or risky.</li>
+</ul></li>
+</ol>
+<hr>
+</section>
+</section>
+<section id="day-3-hybrid-machine-learning-geostatistics" class="level1" data-number="4">
+<h1 data-number="4"><span class="header-section-number">4</span> Day 3 – Hybrid Machine Learning + Geostatistics</h1>
+<section id="ml-only-models" class="level2" data-number="4.1">
+<h2 data-number="4.1" class="anchored" data-anchor-id="ml-only-models"><span class="header-section-number">4.1</span> 3.1 ML-only models</h2>
+<p>Use: <code>hybrid_ml_geostatistical_oncho_data.csv</code>.</p>
+<p><strong>Tasks</strong></p>
+<ol type="1">
+<li><p>Split data:</p>
+<ul>
+<li>Randomly assign ~70% of locations to a training set and the rest to a test set.</li>
+</ul></li>
+<li><p>Fit at least <strong>two ML models</strong> (outside inlabru), for example:</p>
+<ul>
+<li>Random Forest,</li>
+<li>XGBoost,</li>
+<li>Gradient Boosting Machine, or others you know.</li>
+</ul>
+<p>Use covariates such as: <code>elevation</code>, <code>ndvi</code>, <code>urban</code>, <code>rainfall</code>, <code>temperature</code>, <code>pop_density</code>, <code>river_index</code>, <code>north_index</code>.</p></li>
+<li><p>Evaluate ML predictions on the test set:</p>
+<ul>
+<li>Use appropriate metrics (e.g., RMSE on prevalence, Brier score, etc.).</li>
+<li>Inspect variable importance (if available).</li>
+</ul></li>
+<li><p>Compute and map <strong>residuals</strong> (observed – predicted) on the full dataset.</p></li>
+</ol>
+<p><strong>Extension H (not taught explicitly)</strong></p>
+<ol start="5" type="1">
+<li><p>Compute a <strong>spatial variogram</strong> of residuals and assess:</p>
+<ul>
+<li>Whether there is remaining spatial structure.</li>
+<li>Which ML method leaves the least spatial structure.</li>
+</ul></li>
+</ol>
+<hr>
+</section>
+<section id="hybrid-ml-spatial-residuals-in-inlabru" class="level2" data-number="4.2">
+<h2 data-number="4.2" class="anchored" data-anchor-id="hybrid-ml-spatial-residuals-in-inlabru"><span class="header-section-number">4.2</span> 3.2 Hybrid ML + spatial residuals in inlabru</h2>
+<p>Use: <code>hybrid_ml_geostatistical_oncho_data.csv</code>.</p>
+<p><strong>Tasks</strong></p>
+<ol type="1">
+<li><p>For your <strong>best ML model</strong> from 3.1:</p>
+<ul>
+<li>Save the fitted values at all locations.</li>
+<li>Add them to the data as a new covariate (e.g.&nbsp;<code>ml_pred</code>).</li>
+</ul></li>
+<li><p>Fit a <strong>hybrid model in inlabru</strong>:</p>
+<ul>
+<li>Use <code>ml_pred</code> as an offset or fixed covariate.</li>
+<li>Add a spatial SPDE residual field.</li>
+</ul></li>
+<li><p>Compare:</p>
+<ul>
+<li>Spatial residual field from the hybrid model,</li>
+<li>Residuals from the ML-only model.</li>
+</ul></li>
+<li><p>Map:</p>
+<ul>
+<li>Hybrid model predictions on the <code>oncho_prediction_grid_utm.csv</code> grid.</li>
+<li>Posterior SD of the spatial residual field.</li>
+</ul></li>
+</ol>
+<p><strong>Extension I (not taught explicitly)</strong></p>
+<ol start="5" type="1">
+<li><p>Try a <strong>two-stage hybrid</strong>:</p>
+<ul>
+<li>Fit the ML model on the training set only.</li>
+<li>Use the spatial residual model on top of <strong>out-of-sample</strong> ML predictions.</li>
+<li>Evaluate on the test set whether the hybrid model systematically improves predictions.</li>
+</ul></li>
+</ol>
+<hr>
+</section>
+<section id="robustness-and-scenario-experiments" class="level2" data-number="4.3">
+<h2 data-number="4.3" class="anchored" data-anchor-id="robustness-and-scenario-experiments"><span class="header-section-number">4.3</span> 3.3 Robustness and scenario experiments</h2>
+<p>Use: <code>hybrid_ml_geostatistical_oncho_data.csv</code>.</p>
+<p><strong>Tasks</strong></p>
+<ol type="1">
+<li><p>Create modified versions of the dataset with <strong>covariate issues</strong>:</p>
+<ul>
+<li>Version A: randomly set 20–30% of <code>rainfall</code> values to <code>NA</code>.</li>
+<li>Version B: add strong noise to <code>ndvi</code> in the north only (e.g., for high <code>north_index</code>).</li>
+</ul></li>
+<li><p>Refit:</p>
+<ul>
+<li>ML-only model,</li>
+<li>Hybrid model (ML + spatial),</li>
+</ul>
+<p>to each version.</p></li>
+<li><p>Compare:</p>
+<ul>
+<li>Prediction performance (on the original uncorrupted test subset, if you keep one aside).</li>
+<li>Stability of spatial fields and covariate effects.</li>
+</ul></li>
+</ol>
+<p><strong>Extension J (not taught explicitly)</strong></p>
+<ol start="4" type="1">
+<li><p>Write a short report (~1–2 pages) summarising:</p>
+<ul>
+<li>When the <strong>spatial residual component</strong> helps buffer against covariate problems,</li>
+<li>When it fails to compensate,</li>
+<li>Implications for real-world onchocerciasis mapping in Nigeria.</li>
+</ul></li>
+</ol>
+<hr>
+</section>
+</section>
+<section id="optional-cross-day-extension-projects" class="level1" data-number="5">
+<h1 data-number="5"><span class="header-section-number">5</span> Optional: Cross-Day Extension Projects</h1>
+<p>If you have time and interest, you can combine ideas from multiple days:</p>
+<ol type="1">
+<li><p><strong>Full pipeline for onchocerciasis risk mapping:</strong></p>
+<ul>
+<li>Start from a <strong>spatial binomial model</strong>,</li>
+<li>Add <strong>non-stationarity</strong> or multiple groups,</li>
+<li>Integrate <strong>ML</strong> for complex covariate effects,</li>
+<li>Produce prediction and uncertainty maps for Nigeria,</li>
+<li>Reflect on choices at each step.</li>
+</ul></li>
+<li><p><strong>Model comparison and reporting:</strong></p>
+<ul>
+<li>Pick 3–4 models (e.g., stationary vs non-stationary, GLM vs spatial vs hybrid ML),</li>
+<li>Compare them using a consistent set of metrics (WAIC, cross-validation, residual diagnostics),</li>
+<li>Produce a short <strong>“modelling report”</strong> as if for a real onchocerciasis mapping project.</li>
+</ul></li>
+</ol>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const onCopySuccess = function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  }
+  const getTextToCopy = function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+    text: getTextToCopy
+  });
+  clipboard.on('success', onCopySuccess);
+  if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+    const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+      text: getTextToCopy,
+      container: window.document.getElementById('quarto-embedded-source-code-modal')
+    });
+    clipboardModal.on('success', onCopySuccess);
+  }
+    var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+    var mailtoRegex = new RegExp(/^mailto:/);
+      var filterRegex = new RegExp('/' + window.location.host + '/');
+    var isInternal = (href) => {
+        return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+    }
+    // Inspect non-navigation links and adorn them if external
+ 	var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+    for (var i=0; i<links.length; i++) {
+      const link = links[i];
+      if (!isInternal(link.href)) {
+        // undo the damage that might have been done by quarto-nav.js in the case of
+        // links that we want to consider external
+        if (link.dataset.originalHref !== undefined) {
+          link.href = link.dataset.originalHref;
+        }
+      }
+    }
+  function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+    const config = {
+      allowHTML: true,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start',
+    };
+    if (contentFn) {
+      config.content = contentFn;
+    }
+    if (onTriggerFn) {
+      config.onTrigger = onTriggerFn;
+    }
+    if (onUntriggerFn) {
+      config.onUntrigger = onUntriggerFn;
+    }
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      if (note) {
+        return note.innerHTML;
+      } else {
+        return "";
+      }
+    });
+  }
+  const xrefs = window.document.querySelectorAll('a.quarto-xref');
+  const processXRef = (id, note) => {
+    // Strip column container classes
+    const stripColumnClz = (el) => {
+      el.classList.remove("page-full", "page-columns");
+      if (el.children) {
+        for (const child of el.children) {
+          stripColumnClz(child);
+        }
+      }
+    }
+    stripColumnClz(note)
+    if (id === null || id.startsWith('sec-')) {
+      // Special case sections, only their first couple elements
+      const container = document.createElement("div");
+      if (note.children && note.children.length > 2) {
+        container.appendChild(note.children[0].cloneNode(true));
+        for (let i = 1; i < note.children.length; i++) {
+          const child = note.children[i];
+          if (child.tagName === "P" && child.innerText === "") {
+            continue;
+          } else {
+            container.appendChild(child.cloneNode(true));
+            break;
+          }
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(container);
+        }
+        return container.innerHTML
+      } else {
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        return note.innerHTML;
+      }
+    } else {
+      // Remove any anchor links if they are present
+      const anchorLink = note.querySelector('a.anchorjs-link');
+      if (anchorLink) {
+        anchorLink.remove();
+      }
+      if (window.Quarto?.typesetMath) {
+        window.Quarto.typesetMath(note);
+      }
+      if (note.classList.contains("callout")) {
+        return note.outerHTML;
+      } else {
+        return note.innerHTML;
+      }
+    }
+  }
+  for (var i=0; i<xrefs.length; i++) {
+    const xref = xrefs[i];
+    tippyHover(xref, undefined, function(instance) {
+      instance.disable();
+      let url = xref.getAttribute('href');
+      let hash = undefined; 
+      if (url.startsWith('#')) {
+        hash = url;
+      } else {
+        try { hash = new URL(url).hash; } catch {}
+      }
+      if (hash) {
+        const id = hash.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note !== null) {
+          try {
+            const html = processXRef(id, note.cloneNode(true));
+            instance.setContent(html);
+          } finally {
+            instance.enable();
+            instance.show();
+          }
+        } else {
+          // See if we can fetch this
+          fetch(url.split('#')[0])
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.getElementById(id);
+            if (note !== null) {
+              const html = processXRef(id, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      } else {
+        // See if we can fetch a full url (with no hash to target)
+        // This is a special case and we should probably do some content thinning / targeting
+        fetch(url)
+        .then(res => res.text())
+        .then(html => {
+          const parser = new DOMParser();
+          const htmlDoc = parser.parseFromString(html, "text/html");
+          const note = htmlDoc.querySelector('main.content');
+          if (note !== null) {
+            // This should only happen for chapter cross references
+            // (since there is no id in the URL)
+            // remove the first header
+            if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+              note.children[0].remove();
+            }
+            const html = processXRef(null, note);
+            instance.setContent(html);
+          } 
+        }).finally(() => {
+          instance.enable();
+          instance.show();
+        });
+      }
+    }, function(instance) {
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            div.style.left = 0;
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+        // Handle positioning of the toggle
+    window.addEventListener(
+      "resize",
+      throttle(() => {
+        elRect = undefined;
+        if (selectedAnnoteEl) {
+          selectCodeLines(selectedAnnoteEl);
+        }
+      }, 10)
+    );
+    function throttle(fn, ms) {
+    let throttle = false;
+    let timer;
+      return (...args) => {
+        if(!throttle) { // first call gets through
+            fn.apply(this, args);
+            throttle = true;
+        } else { // all the others get throttled
+            if(timer) clearTimeout(timer); // cancel #2
+            timer = setTimeout(() => {
+              fn.apply(this, args);
+              timer = throttle = false;
+            }, ms);
+        }
+      };
+    }
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>
