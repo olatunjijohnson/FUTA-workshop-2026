@@ -375,7 +375,7 @@
     "href": "slides/day1_slides.html#matérn-correlation-function-nu",
     "title": "Day 1 – Spatial & Spatio-temporal Modelling",
     "section": "Matérn correlation function – \\(\\nu\\)",
-    "text": "Matérn correlation function – \\(\\nu\\)\n\\[\nr(u; \\rho, \\nu)\n= \\frac{1}{2^{\\nu-1}\\Gamma(\\nu)}\n\\left(\\frac{u}{\\rho}\\right)^\\nu\nK_\\nu\\!\\left(\\frac{u}{\\rho}\\right),\n\\]\n\nExponential correlation function: \\(r(u; \\rho, 0.5) = \\exp\\{-u/\\rho\\}\\)"
+    "text": "Matérn correlation function – \\(\\nu\\)\n\\[\nr(u; \\rho, \\nu)\n= \\frac{1}{2^{\\nu-1}\\Gamma(\\nu)}\n\\left(\\frac{u}{\\rho}\\right)^\\nu\nK_\\nu\\!\\left(\\frac{u}{\\rho}\\right),\n\\] \nExponential correlation function: \\(r(u; \\rho, 0.5) = \\exp\\{-u/\\rho\\}\\)"
   },
   {
     "objectID": "slides/day1_slides.html#the-scale-of-the-spatial-correlation-rho",
@@ -870,7 +870,7 @@
   {
     "objectID": "index.html",
     "href": "index.html",
-    "title": "Geostatistical Modelling with inlabru",
+    "title": "Advanced Geostatistical Modelling",
     "section": "",
     "text": "This workshop is funded by the London Mathematical Society (LMS) Scheme 5 and Department of Mathematics, University of Manchester, UK.\n\nWelcome to the Geostatistical Modelling with inlabru workshop.\nThis 3-day workshop covers:\n\nSpatial and spatio-temporal analysis (different likelihoods)\nJoint modelling of multiple malaria processes\nNon-stationary spatial processes\nHybrid machine learning + geostatistical models"
   },

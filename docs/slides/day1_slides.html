@@ -10,7 +10,7 @@
   <meta name="generator" content="quarto-1.6.42">
 
   <meta name="author" content="Olatunji Johnson">
-  <title>Geostatistical Modelling with inlabru – Day 1 – Spatial &amp; Spatio-temporal Modelling</title>
+  <title>Advanced Geostatistical Modelling – Day 1 – Spatial &amp; Spatio-temporal Modelling</title>
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
@@ -365,7 +365,7 @@ Account for spatial correlation to improve prediction and inference.</p></li>
 <li>The term <strong>Model-based Geostatistics (MBG)</strong> was coined by Peter Diggle in 1998 <span class="citation" data-cites="diggle1998model diggle2019model">(<a href="#/references" role="doc-biblioref" onclick="">Diggle, Tawn, and Moyeed 1998</a>; <a href="#/references" role="doc-biblioref" onclick="">Diggle and Giorgi 2019</a>)</span>.</li>
 <li>MBG applies general principles of statistical modelling and inference to the analysis of geostatistical data.</li>
 <li>It emphasises the use of likelihood-based inference.</li>
-<li><strong><span style="color:red;">and the use of latent spatial process (Gaussian or stochastic process)</span></strong></li>
+<li><span style="color:red;"><strong>and the use of latent spatial process (Gaussian or stochastic process)</strong></span></li>
 </ul>
 </section>
 <section id="standard-mbg-model" class="slide level2">
@@ -387,12 +387,12 @@ Y_i = \beta_0
 <h2>Modelling <span class="math inline">\(S(s)\)</span> and <span class="math inline">\(Z_j\)</span></h2>
 <ul>
 <li><span class="math inline">\(Z_i \sim N(0, \tau^2)\)</span></li>
-<li>We assume that <span class="math inline">\(S(s)\)</span> is a zero-mean <strong><span style="color:blue;">stationary and isotropic Gaussian Random Field</span></strong>. i.e <span class="math inline">\(S \sim \text{MVN}(0, \Sigma)\)</span></li>
+<li>We assume that <span class="math inline">\(S(s)\)</span> is a zero-mean <span style="color:blue;"><strong>stationary and isotropic Gaussian Random Field</strong></span>. i.e <span class="math inline">\(S \sim \text{MVN}(0, \Sigma)\)</span></li>
 <li>The <span class="math inline">\((i,j)\)</span>th entry of <span class="math inline">\(\Sigma\)</span> is <span class="math display">\[
 \Sigma_{ij} = \operatorname{Cov}\big(S(s_i), S(s_j)\big) = \sigma^2 r(u)
 \]</span></li>
 <li><span class="math inline">\(u = \|s_i - s_j\|\)</span> is the Euclidean distance between locations <span class="math inline">\(s_i\)</span> and <span class="math inline">\(s_j\)</span></li>
-<li><strong><span style="color:blue;">How do we choose parametric correlation function <span class="math inline">\(r(\cdot)\)</span>?</span></strong></li>
+<li><span style="color:blue;"><strong>How do we choose parametric correlation function</strong> <span class="math inline">\(r(\cdot)\)</span>?</span></li>
 </ul>
 </section>
 <section id="the-matérn-correlation-function" class="slide level2 smaller">
@@ -405,12 +405,12 @@ K_\nu\!\left(\frac{u}{\rho}\right),
 \]</span></p>
 <ul>
 <li><p><span class="math inline">\(K_\nu(\cdot)\)</span>: modified Bessel function of order <span class="math inline">\(\nu\)</span></p></li>
-<li><p><strong><span style="color:red;">Interpretation</span></strong></p>
+<li><p><span style="color:red;"><strong>Interpretation</strong></span></p>
 <ul>
 <li><span class="math inline">\(\nu\)</span> determines the smoothness: <span class="math inline">\(\nu &gt; r \Rightarrow S(s)\)</span> is <span class="math inline">\(r\)</span> times differentiable</li>
 <li><span class="math inline">\(\rho\)</span> determines the scale/range of spatial correlation</li>
 </ul></li>
-<li><p><strong><span style="color:red;">Special cases</span></strong></p>
+<li><p><span style="color:red;"><strong>Special cases</strong></span></p>
 <ul>
 <li><span class="math inline">\(\nu = 0.5 \Rightarrow r(u) = \exp\{-u/\rho\}\)</span></li>
 <li><span class="math inline">\(\nu \to \infty \Rightarrow r(u) = \exp\{-(u/\rho)^2\}\)</span></li>
@@ -425,9 +425,8 @@ r(u; \rho, \nu)
 = \frac{1}{2^{\nu-1}\Gamma(\nu)}
 \left(\frac{u}{\rho}\right)^\nu
 K_\nu\!\left(\frac{u}{\rho}\right),
-\]</span></p>
-
-<img data-src="images2/correlationfuncplot1.png" style="width:50.0%" class="r-stretch"><p><strong><span style="color:blue;">Exponential correlation function:</span></strong> <span class="math inline">\(r(u; \rho, 0.5) = \exp\{-u/\rho\}\)</span></p>
+\]</span> <img data-src="images2/correlationfuncplot1.png" style="width:50.0%"></p>
+<p><span style="color:blue;"><strong>Exponential correlation function:</strong></span> <span class="math inline">\(r(u; \rho, 0.5) = \exp\{-u/\rho\}\)</span></p>
 </section>
 <section id="the-scale-of-the-spatial-correlation-rho" class="slide level2">
 <h2>The scale of the spatial correlation – <span class="math inline">\(\rho\)</span></h2>
@@ -487,7 +486,7 @@ N(u)=\{(i,j): \lVert s_i-s_j\rVert=u\}
 <section id="inference-maximum-likelihood-estimation" class="slide level2 smaller">
 <h2>Inference: Maximum likelihood estimation</h2>
 <ul>
-<li><p><strong><span style="color:red;">Multivariate Gaussian distribution</span></strong><br>
+<li><p><span style="color:red;"><strong>Multivariate Gaussian distribution</strong></span><br>
 <span class="math display">\[
 Y \sim \text{MVN}(D\beta, \sigma^2 R + \tau^2 I)
 \]</span></p>
@@ -497,7 +496,7 @@ Y \sim \text{MVN}(D\beta, \sigma^2 R + \tau^2 I)
 <li><span class="math inline">\(R\)</span>: spatial correlation matrix,<br>
 <span class="math inline">\([R]_{ij} = r(u_{ij})\)</span>, with <span class="math inline">\(u_{ij} = \|s_i - s_j\|\)</span></li>
 </ul></li>
-<li><p><strong><span style="color:red;">Fitting process</span></strong></p>
+<li><p><span style="color:red;"><strong>Fitting process</strong></span></p>
 <ol type="1">
 <li>Initialise <span class="math inline">\(\beta\)</span> (e.g.&nbsp;using ordinary least squares)</li>
 <li>Initialise <span class="math inline">\(\theta\)</span> (e.g.&nbsp;using the empirical variogram)</li>
@@ -680,7 +679,7 @@ y_i \mid \eta_i, \theta \sim \pi(y_i \mid \eta_i, \theta),
 <p>where:</p>
 <ul>
 <li><span class="math inline">\(Q\)</span> is the <strong>precision matrix</strong></li>
-<li><strong>Zeros in <span class="math inline">\(Q\)</span></strong> encode conditional independence</li>
+<li><strong>Zeros in</strong> <span class="math inline">\(Q\)</span> encode conditional independence</li>
 </ul>
 </section>
 <section class="slide level2">

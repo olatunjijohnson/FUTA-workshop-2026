@@ -15,9 +15,6 @@ format:
     include-in-header: beamer-header.tex
 ---
 
-
-
-
 # Introduction
 
 ------------------------------------------------------------------------
@@ -30,7 +27,6 @@ format:
 -   Postdoc at University of Lancaster
 -   Lecturer in Statistics at the University of Manchester
 
-
 ------------------------------------------------------------------------
 
 ## Overview of the 3 days
@@ -39,7 +35,6 @@ format:
 -   Joint modelling of multiple malaria processes
 -   Non-stationary spatial processes
 -   Hybrid machine learning + geostatistical models
-
 
 ------------------------------------------------------------------------
 
@@ -53,7 +48,6 @@ format:
     -   Homoscedasticity (constant variance)
     -   Normality of errors
 
-
 ------------------------------------------------------------------------
 
 ## Generalized Linear Models (GLMs)
@@ -62,13 +56,12 @@ format:
 -   Three components:
     -   Random component: Distribution from the exponential family (e.g., Binomial, Poisson).
     -   Systematic component: Linear predictor $\eta = X\beta$.
-    -   Link function: Relates $E(Y)$ to  $\eta$.
+    -   Link function: Relates $E(Y)$ to $\eta$.
 -   Examples:
     -   Logistic regression for binary outcomes – [`logit link function`]{style="color: blue;"}
     -   Poisson regression for count data – [`log link function`]{style="color: blue;"}
 
-
-::: {.smaller}
+::: smaller
 ## Why Spatial Statistics?
 
 -   **Spatial Dependence:**\
@@ -90,14 +83,13 @@ format:
     Account for spatial correlation to improve prediction and inference.
 :::
 
-
 # Spatial Analysis
 
 ------------------------------------------------------------------------
 
 ## Spatial Statistics
 
-::: columns
+::::: columns
 ::: column
 ![Cressie 1991](images2/cressie2.png){fig-align="center"}
 :::
@@ -105,25 +97,22 @@ format:
 ::: column
 ![Gelfand 2010](images2/gelfand.png){fig-align="center"}
 :::
-:::
+:::::
 
-::: {.smaller}
-
+::: smaller
 ## Classification of spatial statistics
 
 Cressie’s book classifies spatial statistics according to **data format**:
 
-1. Geostatistical data  
-2. Lattice data  
-3. Point patterns  
+1.  Geostatistical data\
+2.  Lattice data\
+3.  Point patterns
 
 Gelfand’s book classifies spatial statistics according to **spatial variation**:
 
-1. Discrete spatial variation: Gaussian Markov Random Field (GMRF)  
-2. Continuous spatial variation: Gaussian Random Field (GRF)  
-
-::: 
-
+1.  Discrete spatial variation: Gaussian Markov Random Field (GMRF)\
+2.  Continuous spatial variation: Gaussian Random Field (GRF)
+:::
 
 ## Geostatistical data: River blindness in Cameroon
 
@@ -135,13 +124,11 @@ Gelfand’s book classifies spatial statistics according to **spatial variation*
 
 ![Lattice data: COPD emergency admission](images2/incidence_rate.png){fig-align="center"}
 
-
 ------------------------------------------------------------------------
 
 ## Point pattern: Primary biliary cirrhosis data
 
 ![Point pattern: Primary biliary cirrhosis data](images2/point_map2.png){fig-align="center"}
-
 
 # Model-based Geostatistics
 
@@ -149,11 +136,10 @@ Gelfand’s book classifies spatial statistics according to **spatial variation*
 
 ## Modelling Geostatistical Data – Model-based Geostatistics
 
-- The term **Model-based Geostatistics (MBG)** was coined by Peter Diggle in 1998 [@diggle1998model; @diggle2019model].
-- MBG applies general principles of statistical modelling and inference to the analysis of geostatistical data.
-- It emphasises the use of likelihood-based inference.
-- **[and the use of latent spatial process (Gaussian or stochastic process)]{style="color:red;"}**
-
+-   The term **Model-based Geostatistics (MBG)** was coined by Peter Diggle in 1998 [@diggle1998model; @diggle2019model].
+-   MBG applies general principles of statistical modelling and inference to the analysis of geostatistical data.
+-   It emphasises the use of likelihood-based inference.
+-   [**and the use of latent spatial process (Gaussian or stochastic process)**]{style="color:red;"}
 
 ------------------------------------------------------------------------
 
@@ -167,27 +153,24 @@ $$
 
 where
 
-- $\beta_0$, $\beta_1$, and $\beta_2$ are regression coefficients;
-- $d_1(x)$ and $d_2(x)$ denote covariates/predictors at location $x$;
-- $S(s)$ is the stochastic spatial process;
-- $Z_j$ represents measurement error.
+-   $\beta_0$, $\beta_1$, and $\beta_2$ are regression coefficients;
+-   $d_1(x)$ and $d_2(x)$ denote covariates/predictors at location $x$;
+-   $S(s)$ is the stochastic spatial process;
+-   $Z_j$ represents measurement error.
 
 ------------------------------------------------------------------------
 
 ## Modelling $S(s)$ and $Z_j$
 
-- $Z_i \sim N(0, \tau^2)$
-- We assume that $S(s)$ is a zero-mean **[stationary and isotropic Gaussian Random Field]{style="color:blue;"}**. i.e $S \sim \text{MVN}(0, \Sigma)$
-- The $(i,j)$th entry of $\Sigma$ is
-  $$
-  \Sigma_{ij} = \operatorname{Cov}\big(S(s_i), S(s_j)\big) = \sigma^2 r(u)
-  $$
-- $u = \|s_i - s_j\|$ is the Euclidean distance between locations $s_i$ and $s_j$
-- **[How do we choose parametric correlation function $r(\cdot)$?]{style="color:blue;"}**
+-   $Z_i \sim N(0, \tau^2)$
+-   We assume that $S(s)$ is a zero-mean [**stationary and isotropic Gaussian Random Field**]{style="color:blue;"}. i.e $S \sim \text{MVN}(0, \Sigma)$
+-   The $(i,j)$th entry of $\Sigma$ is $$
+    \Sigma_{ij} = \operatorname{Cov}\big(S(s_i), S(s_j)\big) = \sigma^2 r(u)
+    $$
+-   $u = \|s_i - s_j\|$ is the Euclidean distance between locations $s_i$ and $s_j$
+-   [**How do we choose parametric correlation function** $r(\cdot)$?]{style="color:blue;"}
 
-
-
-::: {.smaller}
+::: smaller
 ## The Matérn correlation function
 
 $$
@@ -197,22 +180,22 @@ r(u; \rho, \nu)
 K_\nu\!\left(\frac{u}{\rho}\right),
 $$
 
-- $K_\nu(\cdot)$: modified Bessel function of order $\nu$
+-   $K_\nu(\cdot)$: modified Bessel function of order $\nu$
 
-- **[Interpretation]{style="color:red;"}**
-  - $\nu$ determines the smoothness:
-    $\nu > r \Rightarrow S(s)$ is $r$ times differentiable
-  - $\rho$ determines the scale/range of spatial correlation
+-   [**Interpretation**]{style="color:red;"}
 
-- **[Special cases]{style="color:red;"}**
-  - $\nu = 0.5 \Rightarrow r(u) = \exp\{-u/\rho\}$
-  - $\nu \to \infty \Rightarrow r(u) = \exp\{-(u/\rho)^2\}$
+    -   $\nu$ determines the smoothness: $\nu > r \Rightarrow S(s)$ is $r$ times differentiable
+    -   $\rho$ determines the scale/range of spatial correlation
 
-- Often sufficient to choose $\nu \in \{0.5, 1.5, 2.5\}$
+-   [**Special cases**]{style="color:red;"}
+
+    -   $\nu = 0.5 \Rightarrow r(u) = \exp\{-u/\rho\}$
+    -   $\nu \to \infty \Rightarrow r(u) = \exp\{-(u/\rho)^2\}$
+
+-   Often sufficient to choose $\nu \in \{0.5, 1.5, 2.5\}$
 :::
 
-
-::: {.smaller}
+::: smaller
 ## Matérn correlation function – $\nu$
 
 $$
@@ -221,172 +204,141 @@ r(u; \rho, \nu)
 \left(\frac{u}{\rho}\right)^\nu
 K_\nu\!\left(\frac{u}{\rho}\right),
 $$
+![](images2/correlationfuncplot1.png){width="50%"}
 
-
-![](images2/correlationfuncplot1.png){width=50%}
-
-
-**[Exponential correlation function:]{style="color:blue;"}**
-$r(u; \rho, 0.5) = \exp\{-u/\rho\}$
-
+[**Exponential correlation function:**]{style="color:blue;"} $r(u; \rho, 0.5) = \exp\{-u/\rho\}$
 :::
-
-
 
 ## The scale of the spatial correlation – $\rho$
 
-![](images2/spatial_cor){width=50%}
+![](images2/spatial_cor){width="50%"}
 
-
----
+------------------------------------------------------------------------
 
 ## Do we need the process $S(s)$?
 
-- Regression residuals  
-  $$
-  \hat{r}_i = Y_i - \hat{Y}_i
-  $$
-  from a GLM
+-   Regression residuals\
+    $$
+    \hat{r}_i = Y_i - \hat{Y}_i
+    $$ from a GLM
 
-- Each $\hat{r}_i$ estimates  
-  $$
-  S(s_i) + Z_i
-  $$
+-   Each $\hat{r}_i$ estimates\
+    $$
+    S(s_i) + Z_i
+    $$
 
-::: {.smaller}
-
+::::::: smaller
 ## The variogram
 
-::: columns
+:::::: columns
 ::: column
-- **Empirical variogram**
-  $$
-  \hat{V}(u) = \frac{1}{2|N(u)|}\sum_{(i,j)\in N(u)}(\hat{r}_i-\hat{r}_j)^2
-  $$
+-   **Empirical variogram** $$
+    \hat{V}(u) = \frac{1}{2|N(u)|}\sum_{(i,j)\in N(u)}(\hat{r}_i-\hat{r}_j)^2
+    $$
 
-- where  
-  $$
-  N(u)=\{(i,j): \lVert s_i-s_j\rVert=u\}
-  $$
+-   where\
+    $$
+    N(u)=\{(i,j): \lVert s_i-s_j\rVert=u\}
+    $$
 :::
 
-::: column
-::: {.text-end}
-![](images2/lead1997_vario){width=50%}
+:::: column
+::: text-end
+![](images2/lead1997_vario){width="50%"}
 :::
-:::
-:::
+::::
+::::::
+:::::::
 
-:::
-
-::: {.smaller}
-
+:::::: smaller
 ## Confirming existence of spatial correlation
 
-::: columns
+::::: columns
 ::: column
-1. Randomly permute the $\hat{r}_i$ while holding the locations $x$ fixed  
-2. Compute the empirical variogram using the permuted $\hat{r}_i$  
-3. Repeat steps 1–2 $B$ times  
-4. Use the resulting $B$ variograms to compute **pointwise 95% tolerance bands** at each distance bin  
-5. If the observed variogram lies outside the 95% band, this indicates **residual spatial correlation**
+1.  Randomly permute the $\hat{r}_i$ while holding the locations $x$ fixed\
+2.  Compute the empirical variogram using the permuted $\hat{r}_i$\
+3.  Repeat steps 1–2 $B$ times\
+4.  Use the resulting $B$ variograms to compute **pointwise 95% tolerance bands** at each distance bin\
+5.  If the observed variogram lies outside the 95% band, this indicates **residual spatial correlation**
 :::
 
 ::: column
-![](images2/lead1997_permuted_vario){width=75%}
+![](images2/lead1997_permuted_vario){width="75%"}
 :::
-:::
+:::::
+::::::
 
-:::
-
-
-
-::: {.smaller}
-
+::: smaller
 ## Inference: Maximum likelihood estimation
 
-- **[Multivariate Gaussian distribution]{style="color:red;"}**  
-  $$
-  Y \sim \text{MVN}(D\beta, \sigma^2 R + \tau^2 I)
-  $$
+-   [**Multivariate Gaussian distribution**]{style="color:red;"}\
+    $$
+    Y \sim \text{MVN}(D\beta, \sigma^2 R + \tau^2 I)
+    $$
 
-  - $D$: matrix of covariates, $[D]_{ik} = d_k(s_i)$  
-  - $R$: spatial correlation matrix,  
-    $[R]_{ij} = r(u_{ij})$, with $u_{ij} = \|s_i - s_j\|$
+    -   $D$: matrix of covariates, $[D]_{ik} = d_k(s_i)$\
+    -   $R$: spatial correlation matrix,\
+        $[R]_{ij} = r(u_{ij})$, with $u_{ij} = \|s_i - s_j\|$
 
-- **[Fitting process]{style="color:red;"}**
-  1. Initialise $\beta$ (e.g. using ordinary least squares)
-  2. Initialise $\theta$ (e.g. using the empirical variogram)
-  3. Maximise
-     $$
-     \ell(\theta) = \log\{f(y; \beta, \theta)\},
-     $$
-     where $f(\cdot; \beta, \theta)$ is the multivariate Gaussian density
+-   [**Fitting process**]{style="color:red;"}
 
+    1.  Initialise $\beta$ (e.g. using ordinary least squares)
+    2.  Initialise $\theta$ (e.g. using the empirical variogram)
+    3.  Maximise $$
+        \ell(\theta) = \log\{f(y; \beta, \theta)\},
+        $$ where $f(\cdot; \beta, \theta)$ is the multivariate Gaussian density
 :::
-
 
 ## Beyond Gaussian responses
 
-So far, we assumed:
-$$
+So far, we assumed: $$
 Y \sim \text{MVN}(D\beta, \sigma^2 R + \tau^2 I)
 $$
 
 However, many geostatistical datasets are:
 
-- Binary (presence / absence)
-- Counts (number of cases)
-- Rates or proportions
+-   Binary (presence / absence)
+-   Counts (number of cases)
+-   Rates or proportions
 
 A **Gaussian likelihood is no longer appropriate**
 
-
-::: {.smaller}
+::: smaller
 ## Separating data and process models
 
 Model-based geostatistics distinguishes between:
 
-- **Observation model (likelihood):**
-  $$
-  Y_i \mid \eta_i \sim \pi(y_i \mid \eta_i)
-  $$
+-   **Observation model (likelihood):** $$
+    Y_i \mid \eta_i \sim \pi(y_i \mid \eta_i)
+    $$
 
-- **Latent process model:**
-  $$
-  \eta_i = X_i \beta + S(s_i) + Z_i
-  $$
+-   **Latent process model:** $$
+    \eta_i = X_i \beta + S(s_i) + Z_i
+    $$
 
 Key idea:
 
-- Non-Gaussian data
-- Gaussian latent structure
+-   Non-Gaussian data
+-   Gaussian latent structure
 :::
 
-::: {.smaller}
+::: smaller
 ## Common likelihoods in practice
 
-- **Gaussian**
-  $$
-  Y_i \mid \eta_i \sim N(\eta_i, \sigma^2)
-  $$
-  Continuous measurements (e.g. pollution levels)
+-   **Gaussian** $$
+    Y_i \mid \eta_i \sim N(\eta_i, \sigma^2)
+    $$ Continuous measurements (e.g. pollution levels)
 
-- **Binomial**
-  $$
-  Y_i \mid \eta_i \sim \text{Binomial}(n_i, p_i),
-  \qquad \text{logit}(p_i) = \eta_i
-  $$
-  Prevalence survey data
+-   **Binomial** $$
+    Y_i \mid \eta_i \sim \text{Binomial}(n_i, p_i),
+    \qquad \text{logit}(p_i) = \eta_i
+    $$ Prevalence survey data
 
-- **Poisson**
-  $$
-  Y_i \mid \eta_i \sim \text{Poisson}(\lambda_i),
-  \qquad \log(\lambda_i) = \eta_i
-  $$
-  Disease counts, event data
+-   **Poisson** $$
+    Y_i \mid \eta_i \sim \text{Poisson}(\lambda_i),
+    \qquad \log(\lambda_i) = \eta_i
+    $$ Disease counts, event data
 :::
-
 
 ## Link functions
 
@@ -398,96 +350,84 @@ $$
 
 Examples:
 
-- Identity link → Gaussian data
-- Logit link → Binomial data
-- Log link → Poisson data
+-   Identity link → Gaussian data
+-   Logit link → Binomial data
+-   Log link → Poisson data
 
 This gives a **generalized linear mixed model (GLMM)** structure
 
-
-::: {.smaller}
-
+::: smaller
 ## Computational challenges
 
 For non-Gaussian likelihoods:
 
-- The marginal likelihood requires:
-  $$
-  L(\theta) = \int \pi(y \mid S, \theta)\pi(S \mid \theta)\,dS
-  $$
+-   The marginal likelihood requires: $$
+    L(\theta) = \int \pi(y \mid S, \theta)\pi(S \mid \theta)\,dS
+    $$
 
-- High-dimensional integral over latent field $x$
-- No closed-form solution
+-   High-dimensional integral over latent field $x$
+
+-   No closed-form solution
 
 Consequences:
 
-- Maximum likelihood is expensive
-- Bayesian inference via MCMC is slow
-
-
-::: 
+-   Maximum likelihood is expensive
+-   Bayesian inference via MCMC is slow
+:::
 
 ## Classical solutions and limitations
 
-- Laplace approximation
-- Penalised quasi-likelihood (PQL)
-- MCMC-based Bayesian inference
+-   Laplace approximation
+-   Penalised quasi-likelihood (PQL)
+-   MCMC-based Bayesian inference
 
 Limitations:
 
-- Poor scalability for large spatial fields
-- Long runtimes
-- Difficult model exploration
+-   Poor scalability for large spatial fields
+-   Long runtimes
+-   Difficult model exploration
 
-
----
+------------------------------------------------------------------------
 
 ## Key takeaway
 
 We want:
 
-- Flexible likelihoods (Binomial, Poisson, etc.)
-- Spatial and spatio-temporal random effects
-- Bayesian inference
-- Computational efficiency
+-   Flexible likelihoods (Binomial, Poisson, etc.)
+-   Spatial and spatio-temporal random effects
+-   Bayesian inference
+-   Computational efficiency
 
 This motivates **Integrated Nested Laplace Approximation (INLA)**
 
-
-
----
+------------------------------------------------------------------------
 
 ## From likelihoods to INLA
 
 Hierarchical models setup:
 
-- Data likelihood: possibly non-Gaussian
-- Latent field: Gaussian with spatial dependence
-- Hyperparameters: low-dimensional
+-   Data likelihood: possibly non-Gaussian
+-   Latent field: Gaussian with spatial dependence
+-   Hyperparameters: low-dimensional
 
 This class of models is known as **Latent Gaussian Models**
 
 INLA is designed specifically for this class
 
-
----
+------------------------------------------------------------------------
 
 ## Why INLA?
 
-- Fully Bayesian inference for latent Gaussian models is often computationally expensive
-- Markov chain Monte Carlo (MCMC):
-  - Accurate but slow for large spatial datasets
-  - Poor scaling with dimension of latent field
+-   Fully Bayesian inference for latent Gaussian models is often computationally expensive
+-   Markov chain Monte Carlo (MCMC):
+    -   Accurate but slow for large spatial datasets
+    -   Poor scaling with dimension of latent field
+-   **INLA** provides:
+    -   Deterministic (non-sampling) approximation
+    -   Orders-of-magnitude speed-ups
+    -   Accurate marginal posterior distributions
 
-- **INLA** provides:
-  - Deterministic (non-sampling) approximation
-  - Orders-of-magnitude speed-ups
-  - Accurate marginal posterior distributions
-
-
-
-::: {.smaller}
-
+::: smaller
 ## Latent Gaussian models
 
 INLA is designed for **latent Gaussian models (LGMs)**:
@@ -500,48 +440,45 @@ $$
 
 where
 
-- $S \sim \mathcal{N}(0, Q(\theta)^{-1})$ is a latent Gaussian field
-- $A$ is a known design / projection matrix
-- $\theta$ are low-dimensional hyperparameters
+-   $S \sim \mathcal{N}(0, Q(\theta)^{-1})$ is a latent Gaussian field
+-   $A$ is a known design / projection matrix
+-   $\theta$ are low-dimensional hyperparameters
 
 Examples of $S$:
 
-  - Spatial Gaussian random fields
-  - Temporal effects
-  - Random effects and smoothers
-
+-   Spatial Gaussian random fields
+-   Temporal effects
+-   Random effects and smoothers
 :::
-
 
 ## Key idea: sparsity
 
-- Latent field $S$ is modelled as a **Gaussian Markov Random Field (GMRF)**
-- GMRFs have **sparse precision matrices** $Q(\theta)$
+-   Latent field $S$ is modelled as a **Gaussian Markov Random Field (GMRF)**
+-   GMRFs have **sparse precision matrices** $Q(\theta)$
 
 Why this matters:
 
-- Sparse matrix algebra is fast
-- Enables scalable inference for large spatial problems
-- Crucial for INLA’s computational efficiency
+-   Sparse matrix algebra is fast
+-   Enables scalable inference for large spatial problems
+-   Crucial for INLA’s computational efficiency
 
----
+------------------------------------------------------------------------
 
 ## Gaussian Markov Random Fields (GMRFs)
 
-A **Gaussian Markov Random Field (GMRF)** is a Gaussian random vector with
-**conditional independence** structure.
+A **Gaussian Markov Random Field (GMRF)** is a Gaussian random vector with **conditional independence** structure.
 
-Let  
+Let\
 $$
 \mathbf{S} = (S_1,\dots,S_n)^\top \sim \mathcal{N}(0, Q^{-1})
 $$
 
 where:
 
-- $Q$ is the **precision matrix**
-- **Zeros in $Q$** encode conditional independence
+-   $Q$ is the **precision matrix**
+-   **Zeros in** $Q$ encode conditional independence
 
----
+------------------------------------------------------------------------
 
 ### Markov property (key idea)
 
@@ -554,133 +491,115 @@ $$
 
 Interpretation:
 
-- Each location depends **only on its neighbours**
-- No long-range conditional dependence
+-   Each location depends **only on its neighbours**
+-   No long-range conditional dependence
 
-
-::: {.smaller}
-
+::: smaller
 ## Stage 1: Hyperparameter inference
 
-Goal:
-$$
+Goal: $$
 \pi(\theta \mid y) \propto \frac{\pi(y \mid S, \theta)\pi(S \mid \theta)\pi(\theta)}
 {\pi(S \mid y, \theta)}
 $$
 
-- INLA uses a **Laplace approximation** to integrate out $S$
-- Produces an accurate approximation to:
-  $$
-  \pi(\theta \mid y)
-  $$
+-   INLA uses a **Laplace approximation** to integrate out $S$
+-   Produces an accurate approximation to: $$
+    \pi(\theta \mid y)
+    $$
 
 Key point:
 
-- $\theta$ is low-dimensional → numerical optimisation is feasible
-
+-   $\theta$ is low-dimensional → numerical optimisation is feasible
 :::
 
-
-::: {.smaller}
+::: smaller
 ## Stage 2: Latent field given $\theta$
 
-- Conditional on $\theta$, INLA approximates:
-  $$
-  \pi(S \mid \theta, y)
-  $$
+-   Conditional on $\theta$, INLA approximates: $$
+    \pi(S \mid \theta, y)
+    $$
 
-- Approximation:
+-   Approximation:
 
-  - Gaussian
-  - Centered at the mode of the conditional posterior
-  - Uses local curvature (Hessian)
+    -   Gaussian
+    -   Centered at the mode of the conditional posterior
+    -   Uses local curvature (Hessian)
 
 This step exploits:
 
-- Gaussian structure of $S$
-- Sparse precision matrix
+-   Gaussian structure of $S$
+-   Sparse precision matrix
 :::
 
-
-::: {.smaller}
-
+::: smaller
 ## Stage 3: Marginal posteriors
 
-Final goal:
-$$
+Final goal: $$
 \pi(S_i \mid y), \qquad \pi(\theta_j \mid y)
 $$
 
-INLA computes:
-$$
+INLA computes: $$
 \pi(S_i \mid y)
 =
 \int \pi(S_i \mid \theta, y)\,\pi(\theta \mid y)\,d\theta
 $$
 
-- Integration performed numerically
-- Output:
+-   Integration performed numerically
 
-  - Marginal posterior means
-  - Credible intervals
-  - Full marginal densities
+-   Output:
 
+    -   Marginal posterior means
+    -   Credible intervals
+    -   Full marginal densities
 :::
 
-
-## GRF vs GMRF: concept vs computation 
+## GRF vs GMRF: concept vs computation
 
 @lindgren2011explicit provides the link between the two.
 
-- **Gaussian Random Field (GRF):**
-  - Defined on a continuous spatial domain
-  - Used for geostatistical modelling
-  - Dense covariance structure
-
-- **Gaussian Markov Random Field (GMRF):**
-  - Defined on a finite set of locations
-  - Sparse precision matrix
-  - Computationally efficient
+-   **Gaussian Random Field (GRF):**
+    -   Defined on a continuous spatial domain
+    -   Used for geostatistical modelling
+    -   Dense covariance structure
+-   **Gaussian Markov Random Field (GMRF):**
+    -   Defined on a finite set of locations
+    -   Sparse precision matrix
+    -   Computationally efficient
 
 Key point:
 
-In INLA, a **GMRF is used as a computational approximation**
-to a **continuous GRF**
+In INLA, a **GMRF is used as a computational approximation** to a **continuous GRF**
 
-
-::: {.smaller}
-
+::: smaller
 ## Spatial modelling in INLA: SPDE approach
 
-- Continuous Gaussian random fields are represented via:
-  **Stochastic Partial Differential Equations (SPDEs)**
+-   Continuous Gaussian random fields are represented via: **Stochastic Partial Differential Equations (SPDEs)**
 
 Key ideas:
 
-- Start with a Matérn GRF (continuous)
-- Approximate it on a triangulated mesh
-- Obtain a **computational GMRF**
-- Retain Matérn covariance structure
+-   Start with a Matérn GRF (continuous)
+-   Approximate it on a triangulated mesh
+-   Obtain a **computational GMRF**
+-   Retain Matérn covariance structure
 
 Benefits:
 
-- Sparse precision matrix
-- Fast Bayesian inference with INLA
-
+-   Sparse precision matrix
+-   Fast Bayesian inference with INLA
 :::
 
 ## Why the SPDE approach?
 
-- In geostatistics, we often model spatial dependence using
-  **Gaussian random fields (GRFs)** with Matérn covariance
+-   In geostatistics, we often model spatial dependence using **Gaussian random fields (GRFs)** with Matérn covariance
 
-- For observations at locations $s_1, \dots, s_n$:
-  - Covariance matrix is **dense**
-  - Computational cost is $\mathcal{O}(n^3)$
+-   For observations at locations $s_1, \dots, s_n$:
+
+    -   Covariance matrix is **dense**
+    -   Computational cost is $\mathcal{O}(n^3)$
 
 This becomes infeasible for large spatial datasets
 
----
+------------------------------------------------------------------------
 
 ## Gaussian random fields
 
@@ -690,203 +609,179 @@ $$
 S(s) \sim \text{GRF}(0, C(\cdot))
 $$
 
-with covariance function:
-$$
+with covariance function: $$
 \text{Cov}\{S(s), S(s')\} = C(\|s - s'\|)
 $$
 
-- The Matérn family is widely used
-- Defined on a **continuous spatial domain**
+-   The Matérn family is widely used
+-   Defined on a **continuous spatial domain**
 
----
+------------------------------------------------------------------------
 
 ## From covariance to SPDE
 
 A key result (Whittle, 1954):
 
-A Matérn GRF is the solution to the SPDE:
-$$
+A Matérn GRF is the solution to the SPDE: $$
 (\kappa^2 - \Delta)^{\alpha/2} S(s)
 = \mathcal{W}(s),
 $$
 
 where:
 
-- $\Delta$ is the Laplacian operator
-- $\mathcal{W}(s)$ is Gaussian white noise
-- Parameters $(\kappa, \alpha)$ control range and smoothness
+-   $\Delta$ is the Laplacian operator
+-   $\mathcal{W}(s)$ is Gaussian white noise
+-   Parameters $(\kappa, \alpha)$ control range and smoothness
 
-
-::: {.smaller}
-
+::: smaller
 ## Matérn parameters vs SPDE parameters
 
 We often describe a Matérn GRF using:
 
-- **Range** $\rho$: distance where correlation becomes small  
-- **Marginal standard deviation** $\sigma$ 
-- **Smoothness** $\nu$
+-   **Range** $\rho$: distance where correlation becomes small\
+-   **Marginal standard deviation** $\sigma$
+-   **Smoothness** $\nu$
 
 INLA/SPDE uses a different (equivalent) parameterisation:
 
-- $\kappa$: controls the range  
-- $\tau$: controls the marginal variance  
-- $\alpha = \nu + d/2$ (with spatial dimension $d=2$)
-
+-   $\kappa$: controls the range\
+-   $\tau$: controls the marginal variance\
+-   $\alpha = \nu + d/2$ (with spatial dimension $d=2$)
 :::
 
-
-::: {.smaller}
-
+::: smaller
 ## From SPDE parameters to range and variance
 
 Key relationships (common INLA convention):
 
-- **Practical range**
-  $$
-  \rho \approx \frac{\sqrt{8\nu}}{\kappa}
-  $$
-- **Marginal variance**
-  $$
-  \text{Var}\{S(s)\} = \sigma^2 \propto \frac{1}{\tau^2 \kappa^{2\nu}}
-  $$
+-   **Practical range** $$
+    \rho \approx \frac{\sqrt{8\nu}}{\kappa}
+    $$
+-   **Marginal variance** $$
+    \text{Var}\{S(s)\} = \sigma^2 \propto \frac{1}{\tau^2 \kappa^{2\nu}}
+    $$
 
 Interpretation:
 
-- larger $\kappa$  $\Rightarrow$ shorter range (rougher field)
-- larger $\tau$    $\Rightarrow$ smaller marginal variance
-
+-   larger $\kappa$ $\Rightarrow$ shorter range (rougher field)
+-   larger $\tau$ $\Rightarrow$ smaller marginal variance
 :::
-
 
 ## What INLA reports (hyperparameters)
 
 In INLA output you will often see hyperparameters related to:
 
-- **Range** $\rho$
-- **Stdev** $\sigma$
-- **Nugget / observation noise** $\tau_\epsilon$ (depending on model)
+-   **Range** $\rho$
+-   **Stdev** $\sigma$
+-   **Nugget / observation noise** $\tau_\epsilon$ (depending on model)
 
 Even if the underlying SPDE uses $(\kappa,\tau)$, INLA/inlabru often provides summaries in the more interpretable scale:
 
-- range (km or m)
-- marginal sd
+-   range (km or m)
+-   marginal sd
 
----
+------------------------------------------------------------------------
 
 ## PC priors in practice (what you set in code)
 
 In `inla.spde2.pcmatern()` you specify:
 
-```r
+``` r
 prior.range = c(r0, p)   # P(range < r0) = p
 prior.sigma = c(s0, p)   # P(sigma > s0) = p
 ```
 
----
+------------------------------------------------------------------------
 
 ## Discretising the SPDE
 
-- The spatial domain is discretised using a **triangular mesh**
-- The continuous field is approximated as:
-  $$
-  S(s) \approx \sum_{k=1}^K w_k \psi_k(s)
-  $$
-where:
+-   The spatial domain is discretised using a **triangular mesh**
 
-- $\psi_k(s)$ are basis functions
-- $w_k$ are random weights
+-   The continuous field is approximated as: $$
+    S(s) \approx \sum_{k=1}^K w_k \psi_k(s)
+    $$ where:
+
+-   $\psi_k(s)$ are basis functions
+
+-   $w_k$ are random weights
 
 Local support of basis functions ⇒ sparsity
 
-
----
+------------------------------------------------------------------------
 
 ## From GRF to GMRF
 
-- The SPDE discretisation yields
-  $$
-  \mathbf{w} \sim \mathcal{N}(0, Q^{-1})
-  $$
+-   The SPDE discretisation yields $$
+    \mathbf{w} \sim \mathcal{N}(0, Q^{-1})
+    $$
 
-- Precision matrix $Q$ is **sparse**
-- This defines a **Gaussian Markov Random Field (GMRF)**
+-   Precision matrix $Q$ is **sparse**
+
+-   This defines a **Gaussian Markov Random Field (GMRF)**
 
 Key consequence:
 
-- Fast computation
-- Scales to large spatial problems
+-   Fast computation
+-   Scales to large spatial problems
 
----
+------------------------------------------------------------------------
 
 ## SPDE approach: summary
 
-- Specify a Matérn Gaussian random field
-- Use its equivalent SPDE representation
-- Approximate the SPDE on a triangulated mesh
-- Obtain a sparse GMRF representation
-- Perform fast Bayesian inference using INLA
+-   Specify a Matérn Gaussian random field
+-   Use its equivalent SPDE representation
+-   Approximate the SPDE on a triangulated mesh
+-   Obtain a sparse GMRF representation
+-   Perform fast Bayesian inference using INLA
 
-
----
+------------------------------------------------------------------------
 
 ## When should you use INLA?
 
 INLA is well suited for:
 
-- Spatial and spatio-temporal models
-- Latent Gaussian models
-- Large datasets with structured dependence
+-   Spatial and spatio-temporal models
+-   Latent Gaussian models
+-   Large datasets with structured dependence
 
 INLA is less suitable for:
 
-- Highly non-Gaussian latent structures
-- Very high-dimensional hyperparameter spaces
-- Models requiring full joint posterior samples
+-   Highly non-Gaussian latent structures
+-   Very high-dimensional hyperparameter spaces
+-   Models requiring full joint posterior samples
 
-
-
-::: {.smaller}
-
+::: smaller
 ## `INLA` and `inlabru` R packages
 
 **What is `inlabru`?**
 
-- An R package built on top of `INLA`
-- Designed for spatial and spatio-temporal modelling using  
-  **Integrated Nested Laplace Approximation (INLA)**
-- Provides an intuitive interface for:
-  - Spatial point process models
-  - Geostatistical models
+-   An R package built on top of `INLA`
 
-- Install `INLA`:  <https://www.r-inla.org/download-install>
+-   Designed for spatial and spatio-temporal modelling using\
+    **Integrated Nested Laplace Approximation (INLA)**
 
-- Examples and documentation: <https://inlabru-org.github.io/inlabru/>
+-   Provides an intuitive interface for:
+
+    -   Spatial point process models
+    -   Geostatistical models
+
+-   Install `INLA`: <https://www.r-inla.org/download-install>
+
+-   Examples and documentation: <https://inlabru-org.github.io/inlabru/>
 
 **Key features**
 
-- Formula-based model specification
-- Flexible integration with `sf`, `sp`, and `raster`
-
+-   Formula-based model specification
+-   Flexible integration with `sf`, `sp`, and `raster`
 :::
 
----
-
+------------------------------------------------------------------------
 
 ## Navigation
 
-- [Back to website home](../index.html)
-- [Day 1 slides](day1_slides.html)
-- [Day 2 slides](day2_slides.html)
-- [Day 3 slides](day3_slides.html)
-
-
+-   [Back to website home](../index.html)
+-   [Day 1 slides](day1_slides.html)
+-   [Day 2 slides](day2_slides.html)
+-   [Day 3 slides](day3_slides.html)
 
 ## References
-
-
-
-
-
-
-
